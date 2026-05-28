@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="sino">
+    <div class="dropdown notif-bell-wrap">
+        <button type="button"
+                class="btn btn-light btn-notif-bell position-relative dropdown-toggle"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                aria-expanded="false"
+                th:attr="aria-label=${exibirBolinhaNotificacaoRelatorio == true} ? 'Voce tem notificacao do relatorio mensal' : 'Notificacoes'"
+                title="Notificacoes">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6V11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.13 5.36 5.5 7.92 5.5 11v5l-2 2v1h17v-1l-2-2z"/>
+            </svg>
+            <span th:if="${exibirBolinhaNotificacaoRelatorio}"
+                  class="notif-bell-badge"
+                  aria-hidden="true"></span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end shadow notif-bell-panel p-3">
+            <th:block th:if="${exibirBolinhaNotificacaoRelatorio}">
+                <p class="notif-bell-kicker mb-1">Relatorio mensal</p>
+                <p class="notif-bell-title mb-2"
+                   th:text="${notificacaoRelatorioMensal.mensagemResumo}">Relatorio pronto</p>
+                <p class="notif-bell-text mb-3"
+                   th:text="${notificacaoRelatorioMensal.mensagemPainel}">Mensagem</p>
+                <a th:href="@{/agendamentos/relatorio/mensal(viaNotificacao=1)}"
+                   class="btn btn-warning w-100"
+                   th:text="${notificacaoRelatorioMensal.pendenteArquivamento} ? 'Ver relatorio do mes passado' : 'Relatorio gerado — baixar PDF'">
+                    Abrir relatorio
+                </a>
+            </th:block>
+            <th:block th:unless="${exibirBolinhaNotificacaoRelatorio}">
+                <p class="notif-bell-kicker mb-1">Notificacoes</p>
+                <p class="notif-bell-empty mb-0">Nao tem notificacao.</p>
+            </th:block>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

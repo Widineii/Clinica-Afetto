@@ -1,0 +1,272 @@
+package com.clinica.sistema.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+@Entity
+@Table(name = "agendamentos")
+@Data
+public class Agendamento {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "id_usuario")
+    private Usuario profissional;
+
+    @ManyToOne
+    @JoinColumn(name = "id_sala")
+    private Sala sala; // O Repository usa esse nome 'sala' para o 'BySalaId'
+
+    private String nomeCliente;
+
+    // O Repository usa esse nome 'dataHoraInicio' para o 'AndDataHoraInicio'
+    private LocalDateTime dataHoraInicio;
+
+    private LocalDateTime dataHoraFim;
+
+    private Boolean fixo;
+
+    private String serieFixaId;
+
+    @Column(name = "tipo_recorrencia")
+    private String tipoRecorrencia;
+
+    @Column(name = "valor_profissional_recebe", precision = 12, scale = 2)
+    private BigDecimal valorProfissionalRecebe;
+
+    @Column(name = "valor_clinica_cobra", precision = 12, scale = 2)
+    private BigDecimal valorClinicaCobra;
+
+    @Column(name = "valor_liquido_profissional", precision = 12, scale = 2)
+    private BigDecimal valorLiquidoProfissional;
+
+    @Column(name = "indicacao_dona")
+    private Boolean indicacaoDona;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "status_pagamento", length = 40)
+    private PagamentoStatus statusPagamento;
+
+    @Column(name = "pagamento_order_nsu")
+    private String pagamentoOrderNsu;
+
+    @Column(name = "pagamento_link", length = 512)
+    private String pagamentoLink;
+
+    @Column(name = "pagamento_slug")
+    private String pagamentoSlug;
+
+    @Column(name = "valor_pagamento", precision = 12, scale = 2)
+    private BigDecimal valorPagamento;
+
+    @Column(name = "data_pagamento")
+    private LocalDateTime dataPagamento;
+
+    @Column(name = "pagamento_iniciado_em")
+    private LocalDateTime pagamentoIniciadoEm;
+
+    @Column(name = "pagamento_expira_em")
+    private LocalDateTime pagamentoExpiraEm;
+
+    @Column(name = "liberado_em")
+    private LocalDateTime liberadoEm;
+
+    @Transient
+    private String recorrencia;
+
+    @Transient
+    public boolean isQuinzenal() {
+        if ("QUINZENAL".equalsIgnoreCase(recorrencia) || "QUINZENAL".equalsIgnoreCase(tipoRecorrencia)) {
+            return true;
+        }
+        return possuiMarcadorSerie("quinzenal");
+    }
+
+    @Transient
+    public boolean isFixoSemanal() {
+        if ("SEMANAL".equalsIgnoreCase(recorrencia) || "SEMANAL".equalsIgnoreCase(tipoRecorrencia)) {
+            return true;
+        }
+        if (isQuinzenal()) {
+            return false;
+        }
+        return Boolean.TRUE.equals(fixo) && possuiMarcadorSerie("semanal");
+    }
+
+    private boolean possuiMarcadorSerie(String marcador) {
+        if (serieFixaId == null || serieFixaId.isBlank()) {
+            return false;
+        }
+        String id = serieFixaId.toLowerCase(Locale.ROOT);
+        return id.startsWith(marcador + "-") || id.contains("-" + marcador + "-");
+    }
+
+    @Transient
+    public boolean isAvulso() {
+        return !Boolean.TRUE.equals(fixo);
+    }
+
+    @Transient
+    public String getRecorrenciaLabel() {
+        if (isQuinzenal()) {
+            return "Quinzenal";
+        }
+        if (isFixoSemanal()) {
+            return "Fixo";
+        }
+        return "Avulso";
+    }
+
+    @Transient
+    public boolean possuiValoresConsulta() {
+        return valorProfissionalRecebe != null || valorClinicaCobra != null;
+    }
+
+    @Transient
+    public String getValorProfissionalRecebeFormatado() {
+        return formatarMoeda(valorProfissionalRecebe);
+    }
+
+    @Transient
+    public String getValorClinicaCobraFormatado() {
+        return formatarMoeda(valorClinicaCobra);
+    }
+
+    @Transient
+    public String getValorLiquidoProfissionalFormatado() {
+        return formatarMoeda(valorLiquidoProfissional);
+    }
+
+    @Transient
+    public String getValoresConsultaResumo() {
+        if (!possuiValoresConsulta()) {
+            return null;
+        }
+        String resumo = "Prof. " + getValorProfissionalRecebeFormatado()
+                + " | Clin. " + getValorClinicaCobraFormatado()
+                + " | Liq. " + getValorLiquidoProfissionalFormatado();
+        if (Boolean.TRUE.equals(indicacaoDona)) {
+            resumo += " | Indicacao 30%";
+        }
+        return resumo;
+    }
+
+    @Transient
+    public String getValorPagamentoFormatado() {
+        return formatarMoeda(valorPagamento);
+    }
+
+    @Transient
+    public boolean isPagamentoPendente() {
+        return statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO
+                || statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO;
+    }
+
+    @Transient
+    public boolean isEsperandoConfirmacaoPagamento() {
+        return statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO;
+    }
+
+    @Transient
+    public boolean isPagamentoPago() {
+        return statusPagamento == PagamentoStatus.PAGO;
+    }
+
+    @Transient
+    public boolean isLiberadoPorFaltaPagamento() {
+        return statusPagamento == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO;
+    }
+
+    @Transient
+    public boolean isReservaPendenteNaGrade() {
+        return statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO
+                || statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO
+                || statusPagamento == PagamentoStatus.PAGAMENTO_FUTURO
+                || statusPagamento == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO;
+    }
+
+    @Transient
+    public String rotuloPendenteNaGrade(boolean podeVerPagamento) {
+        if (!isReservaPendenteNaGrade()) {
+            return "";
+        }
+        if (!podeVerPagamento) {
+            return "Aguardando confirmacoes";
+        }
+        if (statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO) {
+            return "Esperando pagamento";
+        }
+        if (statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO) {
+            return "Aguardando pagamento";
+        }
+        if (statusPagamento == PagamentoStatus.PAGAMENTO_FUTURO) {
+            return "Pagamento em " + formatarDiaPagamentoFuturo();
+        }
+        if (statusPagamento == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO) {
+            return podeVerPagamento
+                    ? "Vaga liberada - pague para recuperar"
+                    : "Aguardando confirmacoes";
+        }
+        return "";
+    }
+
+    @Transient
+    public String rotuloPagoNaGrade(boolean podeVerPagamento) {
+        if (!isPagamentoPago()) {
+            return "";
+        }
+        return podeVerPagamento ? "Pago" : "Sala confirmada";
+    }
+
+    private String formatarDiaPagamentoFuturo() {
+        if (dataHoraInicio == null) {
+            return "—";
+        }
+        return dataHoraInicio.toLocalDate().minusDays(1).format(DateTimeFormatter.ofPattern("dd/MM"));
+    }
+
+    @Transient
+    public boolean possuiQrPagamentoAtivo() {
+        return isEsperandoConfirmacaoPagamento()
+                && pagamentoLink != null
+                && !pagamentoLink.isBlank()
+                && pagamentoExpiraEm != null
+                && pagamentoExpiraEm.isAfter(LocalDateTime.now());
+    }
+
+    @Transient
+    public long getSegundosRestantesPagamento() {
+        if (pagamentoExpiraEm == null) {
+            return 0;
+        }
+        long segundos = java.time.Duration.between(LocalDateTime.now(), pagamentoExpiraEm).getSeconds();
+        return Math.max(0, segundos);
+    }
+
+    @Transient
+    public String getTempoRestantePagamentoFormatado() {
+        long segundos = getSegundosRestantesPagamento();
+        long minutos = segundos / 60;
+        long resto = segundos % 60;
+        return String.format("%d:%02d", minutos, resto);
+    }
+
+    private String formatarMoeda(BigDecimal valor) {
+        if (valor == null) {
+            return "—";
+        }
+        NumberFormat formato = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+        return formato.format(valor);
+    }
+}

@@ -1,0 +1,22 @@
+# Render = site (Web Service). Banco = Neon (DATABASE_URL no dashboard).
+# Defina ADMIN_PASSWORD e DATABASE_URL (connection string do Neon) antes do deploy.
+
+services:
+  - type: web
+    name: clinica-agenda
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: ADMIN_LOGIN
+        value: admin
+      - key: ADMIN_NAME
+        value: Administracao
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false

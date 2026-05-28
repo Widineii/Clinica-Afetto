@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="hero (titulo, subtitulo)">
+    <section class="financeiro-hero hero-band mb-4">
+        <style>
+            .financeiro-hero {
+                background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+                border-radius: 24px;
+                color: #fff;
+                padding: 1.75rem 1.75rem 1.5rem;
+                box-shadow: 0 16px 40px rgba(15, 118, 110, 0.25);
+            }
+
+            .financeiro-hero__titulo {
+                font-family: 'Poppins', sans-serif;
+                font-size: clamp(1.5rem, 3vw, 2rem);
+                font-weight: 700;
+                margin: 0 0 0.35rem;
+            }
+
+            .financeiro-hero__subtitulo {
+                margin: 0;
+                opacity: 0.92;
+                font-size: 1rem;
+                max-width: 720px;
+            }
+
+            .financeiro-hero__topo {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+        </style>
+        <div class="financeiro-hero__topo">
+            <div>
+                <h1 class="financeiro-hero__titulo" th:text="${titulo}">Gestao financeira</h1>
+                <p class="financeiro-hero__subtitulo" th:text="${subtitulo}">Despesas mensais e unicas.</p>
+            </div>
+            <div th:replace="~{fragments/financeiro-topo-acoes :: acoes}"></div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

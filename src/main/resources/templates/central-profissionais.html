@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Central dos profissionais - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <th:block th:replace="~{fragments/estilos-notificacao-relatorio :: css}"></th:block>
+    <style>
+        html {
+            -webkit-text-size-adjust: 100%;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100vh;
+            overflow-x: hidden;
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .app-shell {
+            width: min(1200px, 100%);
+            margin-inline: auto;
+            padding: clamp(12px, 2vw, 24px) clamp(12px, 2vw, 16px) 48px;
+        }
+
+        .hero-band {
+            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            color: #fff;
+            border-radius: 24px;
+            padding: clamp(16px, 3vw, 24px);
+            box-shadow: 0 18px 40px rgba(15, 118, 110, 0.22);
+        }
+
+        .hero-band h1 {
+            font-size: clamp(1.35rem, 2.8vw, 1.75rem);
+            line-height: 1.2;
+            font-weight: 700;
+        }
+
+        .top-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .top-actions form {
+            display: flex;
+            margin: 0;
+        }
+
+        .shell-card {
+            border: 0;
+            border-radius: 24px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        .central-panel__head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .central-panel__title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 4px;
+        }
+
+        .central-panel__hint {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin: 0;
+            max-width: 36rem;
+        }
+
+        .central-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: #e0f2f1;
+            color: #0f766e;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .central-stat__num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #0f766e;
+            color: #fff;
+            font-size: 0.78rem;
+        }
+
+        .prof-table-wrap {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #fafbfc;
+        }
+
+        .prof-table {
+            margin-bottom: 0;
+            --bs-table-bg: transparent;
+        }
+
+        .prof-table thead th {
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 16px;
+        }
+
+        .prof-table tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-color: #e8eef4;
+            background: #fff;
+        }
+
+        .prof-row {
+            cursor: pointer;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .prof-row:hover td {
+            background: #f8fafc;
+        }
+
+        .prof-row.selected td {
+            background: #ecfdf5;
+            box-shadow: inset 3px 0 0 #0f766e;
+        }
+
+        .prof-row.selected .prof-avatar {
+            background: #0f766e;
+            color: #fff;
+        }
+
+        .prof-identity {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .prof-avatar {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%);
+            color: #0f766e;
+            font-size: 0.8rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.02em;
+        }
+
+        .prof-name {
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        .prof-login {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+        }
+
+        .badge-perfil {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-perfil--dona {
+            background: rgba(15, 118, 110, 0.12);
+            color: #0f766e;
+            border: 1px solid rgba(15, 118, 110, 0.25);
+        }
+
+        .badge-perfil--prof {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .prof-radio {
+            width: 1.1rem;
+            height: 1.1rem;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #0f766e;
+        }
+
+        .actions-toolbar {
+            margin-top: 20px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .actions-toolbar__hint {
+            font-size: 0.82rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .actions-toolbar__hint strong {
+            color: #0f766e;
+        }
+
+        .actions-toolbar__buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn-teal {
+            background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+            border: 0;
+            color: #fff;
+            font-weight: 600;
+            padding: 0.5rem 1.1rem;
+            border-radius: 999px;
+            box-shadow: 0 4px 14px rgba(15, 118, 110, 0.28);
+        }
+
+        .btn-teal:hover {
+            background: linear-gradient(135deg, #115e59 0%, #134e4a 100%);
+            color: #fff;
+        }
+
+        .btn-pill-outline {
+            border-radius: 999px;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+        }
+
+        .central-empty {
+            text-align: center;
+            padding: 48px 24px;
+            border: 2px dashed #dbe7f0;
+            border-radius: 16px;
+            background: #fafbfc;
+        }
+
+        .central-empty__icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 16px;
+            border-radius: 16px;
+            background: #e0f2f1;
+            color: #0f766e;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .admin-modal .modal-content {
+            border: 0;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .admin-modal .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #f8fafc 0%, #eef4f7 100%);
+        }
+
+        .admin-modal .modal-title {
+            font-weight: 700;
+        }
+
+        @media (max-width: 767.98px) {
+            .top-actions {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .top-actions .btn,
+            .top-actions form {
+                flex: 1 1 calc(50% - 5px);
+            }
+
+            .top-actions form .btn {
+                width: 100%;
+            }
+
+            .actions-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .actions-toolbar__buttons {
+                flex-direction: column;
+            }
+
+            .actions-toolbar__buttons .btn,
+            .actions-toolbar__buttons form {
+                width: 100%;
+            }
+
+            .prof-table thead {
+                display: none;
+            }
+
+            .prof-table tbody tr {
+                display: block;
+                margin-bottom: 10px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+
+            .prof-table tbody td {
+                display: block;
+                border: 0;
+                padding: 10px 14px;
+            }
+
+            .prof-table tbody td:first-child {
+                padding-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div class="hero-band mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75">Sistema de agenda da clinica</p>
+                <h1 class="h2 mb-2">Central dos profissionais</h1>
+                <p class="mb-0 opacity-75">
+                    Usuario: <strong th:text="${usuarioLogado.nome}">Nome</strong>
+                </p>
+            </div>
+            <div class="top-actions">
+                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
+                <a th:if="${isAdmin}" th:href="@{/agendamentos/admin/uso-banco}" class="btn btn-warning btn-sm">Uso do banco</a>
+                <a th:href="@{/agendamentos/manual#dona-admin}" class="btn btn-light">Manual</a>
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
+                <form th:action="@{/logout}" method="post">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit" class="btn btn-light">Sair</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${sucesso}" class="alert alert-success shell-card border-0 px-4 py-3 mb-3" th:text="${sucesso}"></div>
+    <div th:if="${erro}" class="alert alert-danger shell-card border-0 px-4 py-3 mb-3" th:text="${erro}"></div>
+
+    <div class="card shell-card">
+        <div class="card-body p-4 p-md-5">
+            <div class="central-panel__head">
+                <div>
+                    <h2 class="central-panel__title">Equipe cadastrada</h2>
+                    <p class="central-panel__hint">
+                        Selecione um profissional na lista para trocar senha ou excluir. Clique na linha inteira para marcar.
+                    </p>
+                </div>
+                <div class="central-stat" th:if="${!#lists.isEmpty(profissionais)}">
+                    <span class="central-stat__num" th:text="${#lists.size(profissionais)}">0</span>
+                    <span th:text="${#lists.size(profissionais) == 1 ? 'profissional' : 'profissionais'}">profissionais</span>
+                </div>
+            </div>
+
+            <div class="prof-table-wrap" th:if="${!#lists.isEmpty(profissionais)}">
+                <table class="table prof-table align-middle" id="tabelaProfissionais">
+                    <thead>
+                    <tr>
+                        <th style="width: 52px;"></th>
+                        <th>Profissional</th>
+                        <th class="d-none d-md-table-cell">Login</th>
+                        <th>Perfil</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="prof : ${profissionais}"
+                        class="prof-row"
+                        th:attr="data-id=${prof.id},data-iniciais=${#strings.substring(prof.nome, 0, 1)}">
+                        <td>
+                            <input type="radio"
+                                   name="usuarioSelecionado"
+                                   class="form-check-input prof-radio usuario-radio"
+                                   th:value="${prof.id}"
+                                   th:attr="aria-label=${'Selecionar ' + prof.nome}">
+                        </td>
+                        <td>
+                            <div class="prof-identity">
+                                <span class="prof-avatar"
+                                      th:text="${#strings.toUpperCase(#strings.substring(prof.nome, 0, 1))}">A</span>
+                                <div>
+                                    <div class="prof-name" th:text="${prof.nome}">Nome</div>
+                                    <div class="prof-login d-md-none" th:text="${prof.login}">login</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <span class="prof-login" th:text="${prof.login}">login</span>
+                        </td>
+                        <td>
+                            <span th:if="${prof.donaClinica}" class="badge-perfil badge-perfil--dona">Dona da clinica</span>
+                            <span th:unless="${prof.donaClinica}" class="badge-perfil badge-perfil--prof">Profissional</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${#lists.isEmpty(profissionais)}" class="central-empty">
+                <div class="central-empty__icon">+</div>
+                <h3 class="h5 mb-2">Nenhum profissional cadastrado</h3>
+                <p class="text-muted mb-3">Comece cadastrando o primeiro acesso da equipe.</p>
+                <button type="button" class="btn btn-teal" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
+                    Cadastrar profissional
+                </button>
+            </div>
+
+            <div class="actions-toolbar" th:if="${!#lists.isEmpty(profissionais)}">
+                <p class="actions-toolbar__hint mb-0" id="selecaoHint">
+                    Nenhum profissional selecionado.
+                </p>
+                <div class="actions-toolbar__buttons">
+                    <button type="button" class="btn btn-teal" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
+                        Cadastrar profissional
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-pill-outline" id="btnAbrirTrocarSenha" disabled>
+                        Trocar senha
+                    </button>
+                    <form id="formExcluir"
+                          th:action="@{/agendamentos/central-profissionais/excluir}"
+                          method="post"
+                          class="d-inline">
+                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                        <input type="hidden" name="usuarioId" id="excluirUsuarioId">
+                        <button type="submit"
+                                class="btn btn-outline-danger btn-pill-outline"
+                                id="btnExcluir"
+                                disabled
+                                onclick="return confirmarExclusao();">
+                            Excluir usuario
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade admin-modal" id="cadastroProfissionalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1">Cadastrar profissional</h2>
+                    <p class="text-muted small mb-0">Novo acesso a agenda da clinica.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <form th:action="@{/agendamentos/central-profissionais/cadastrar}"
+                      th:object="${cadastroProfissionalForm}"
+                      method="post"
+                      class="row g-3">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <div class="col-12">
+                        <label class="form-label">Nome completo</label>
+                        <input th:field="*{nome}" type="text" class="form-control" maxlength="120" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Login</label>
+                        <input th:field="*{login}" type="text" class="form-control" maxlength="60" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Senha inicial</label>
+                        <input th:field="*{senha}" type="password" class="form-control" maxlength="60" required autocomplete="new-password">
+                    </div>
+                    <div class="col-12 d-grid pt-1">
+                        <button type="submit" class="btn btn-teal">Criar acesso</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1">Trocar senha</h2>
+                    <p class="text-muted small mb-0">A nova senha vale no proximo login.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <form th:action="@{/agendamentos/central-profissionais/trocar-senha}"
+                      th:object="${trocarSenhaAdminForm}"
+                      method="post"
+                      class="row g-3">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <input type="hidden" th:field="*{usuarioId}" id="trocarSenhaUsuarioId">
+                    <div class="col-12">
+                        <label class="form-label">Usuario</label>
+                        <select class="form-select" id="selectUsuarioSenha" required>
+                            <option value="">Selecione</option>
+                            <option th:each="u : ${usuariosSenha}"
+                                    th:value="${u.id}"
+                                    th:text="|${u.nome} (${u.login})|">Usuario</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nova senha</label>
+                        <input th:field="*{novaSenha}" type="password" class="form-control" maxlength="60" required autocomplete="new-password">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Confirmar senha</label>
+                        <input th:field="*{confirmarSenha}" type="password" class="form-control" maxlength="60" required autocomplete="new-password">
+                    </div>
+                    <div class="col-12 d-grid pt-1">
+                        <button type="submit" class="btn btn-teal">Salvar nova senha</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var radios = document.querySelectorAll('.usuario-radio');
+        var btnTrocar = document.getElementById('btnAbrirTrocarSenha');
+        var btnExcluir = document.getElementById('btnExcluir');
+        var excluirInput = document.getElementById('excluirUsuarioId');
+        var trocarInput = document.getElementById('trocarSenhaUsuarioId');
+        var selectSenha = document.getElementById('selectUsuarioSenha');
+        var selecaoHint = document.getElementById('selecaoHint');
+        var rows = document.querySelectorAll('.prof-row');
+
+        function nomeSelecionado() {
+            var row = document.querySelector('.prof-row.selected');
+            if (!row) return null;
+            var nome = row.querySelector('.prof-name');
+            return nome ? nome.textContent.trim() : null;
+        }
+
+        function usuarioSelecionado() {
+            var selecionado = document.querySelector('.usuario-radio:checked');
+            return selecionado ? selecionado.value : null;
+        }
+
+        function atualizarBotoes() {
+            var id = usuarioSelecionado();
+            var ativo = !!id;
+            if (btnTrocar) btnTrocar.disabled = !ativo;
+            if (btnExcluir) btnExcluir.disabled = !ativo;
+            if (excluirInput) excluirInput.value = id || '';
+            if (trocarInput) trocarInput.value = id || '';
+            if (selectSenha && id) selectSenha.value = id;
+            rows.forEach(function (row) {
+                row.classList.toggle('selected', row.getAttribute('data-id') === id);
+            });
+            if (selecaoHint) {
+                var nome = nomeSelecionado();
+                selecaoHint.innerHTML = ativo && nome
+                    ? 'Selecionado: <strong>' + nome + '</strong>'
+                    : 'Nenhum profissional selecionado.';
+            }
+        }
+
+        radios.forEach(function (radio) {
+            radio.addEventListener('change', atualizarBotoes);
+        });
+
+        rows.forEach(function (row) {
+            row.addEventListener('click', function (event) {
+                if (event.target && event.target.classList.contains('usuario-radio')) return;
+                var radio = row.querySelector('.usuario-radio');
+                if (radio) {
+                    radio.checked = true;
+                    atualizarBotoes();
+                }
+            });
+        });
+
+        if (btnTrocar) {
+            btnTrocar.addEventListener('click', function () {
+                var id = usuarioSelecionado();
+                if (!id) return;
+                if (trocarInput) trocarInput.value = id;
+                if (selectSenha) selectSenha.value = id;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trocarSenhaModal')).show();
+            });
+        }
+
+        if (selectSenha) {
+            selectSenha.addEventListener('change', function () {
+                if (trocarInput) trocarInput.value = selectSenha.value;
+            });
+        }
+
+        window.confirmarExclusao = function () {
+            if (!usuarioSelecionado()) {
+                alert('Selecione um profissional na lista.');
+                return false;
+            }
+            var nome = nomeSelecionado() || 'este usuario';
+            return confirm('Excluir ' + nome + ' e os agendamentos vinculados?');
+        };
+
+        atualizarBotoes();
+    });
+</script>
+<script th:if="${abrirModalCadastro != null and abrirModalCadastro}">
+    document.addEventListener('DOMContentLoaded', function () {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('cadastroProfissionalModal')).show();
+    });
+</script>
+<script th:if="${abrirModalTrocarSenha != null and abrirModalTrocarSenha}">
+    document.addEventListener('DOMContentLoaded', function () {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('trocarSenhaModal')).show();
+    });
+</script>
+</body>
+</html>

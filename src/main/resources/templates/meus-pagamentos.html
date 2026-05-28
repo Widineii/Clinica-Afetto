@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus pagamentos - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+        }
+        .app-shell {
+            width: min(1200px, 100%);
+            margin-inline: auto;
+            padding: 24px 16px 40px;
+        }
+        .hero-band {
+            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            color: #fff;
+            border-radius: 24px;
+            padding: clamp(16px, 3vw, 24px);
+        }
+        .shell-card {
+            border: 0;
+            border-radius: 24px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+        .pagamentos-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1.25rem;
+        }
+        .pagamentos-tabs .tab-btn {
+            flex: 1;
+            border: 0;
+            background: transparent;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .pagamentos-tabs .tab-btn:hover {
+            color: #0f766e;
+        }
+        .pagamentos-tabs .tab-btn.active {
+            color: #0f766e;
+            border-bottom-color: #0f766e;
+        }
+        .pagamentos-tabs .tab-sep {
+            align-self: center;
+            color: #cbd5e1;
+            font-weight: 300;
+            user-select: none;
+            padding: 0 0.25rem;
+        }
+        .tab-panel[hidden] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div class="hero-band mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75">Sistema de agenda da clinica</p>
+                <h1 class="h2 mb-2">Meus pagamentos</h1>
+                <p class="mb-0 opacity-75">
+                    Usuario: <strong th:text="${usuarioLogado.nome}">Nome</strong>
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/agendamentos/manual#pagamentos}" class="btn btn-light">Manual</a>
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit" class="btn btn-warning">Sair</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
+    <div th:if="${erro}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+
+    <div class="card shell-card" id="meus-pagamentos-card">
+        <div class="card-body p-4">
+            <nav class="pagamentos-tabs" role="tablist" aria-label="Tipo de pagamento">
+                <button type="button"
+                        class="tab-btn active"
+                        id="tab-pendentes"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="panel-pendentes"
+                        data-tab="pendentes">
+                    Pagamentos pendentes
+                    <span class="badge text-bg-warning ms-1"
+                          th:text="${totalMeusPagamentosPendentes}">0</span>
+                </button>
+                <span class="tab-sep" aria-hidden="true">|</span>
+                <button type="button"
+                        class="tab-btn"
+                        id="tab-semana"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="panel-semana"
+                        data-tab="semana">
+                    Pagar a semana toda
+                    <span class="badge text-bg-primary ms-1"
+                          th:text="${totalConsultasPagamentoSemana}">0</span>
+                </button>
+            </nav>
+
+            <div id="panel-pendentes"
+                 class="tab-panel"
+                 role="tabpanel"
+                 aria-labelledby="tab-pendentes">
+                <p class="small text-muted mb-3">
+                    Consultas de <strong>amanha</strong>
+                    (<span th:text="${rotuloProximoDiaPendentes}">01/06/2026</span>)
+                    para pagar hoje (D-1), e consultas de <strong>hoje</strong> que voce esqueceu de pagar:
+                    continuam aqui ate o horario da consulta, se a vaga ainda estiver livre.
+                </p>
+
+                <div th:if="${#lists.isEmpty(meusPagamentosPendentes)}" class="alert alert-success mb-0">
+                    Nenhum pagamento pendente no momento.
+                </div>
+
+                <div th:if="${!#lists.isEmpty(meusPagamentosPendentes)}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 p-3 rounded border bg-light">
+                        <div>
+                            <span class="small text-muted d-block">Total selecionado</span>
+                            <strong class="fs-5" id="totalPendentesSelecionados">R$ 0,00</strong>
+                            <span class="small text-muted ms-1" id="qtdPendentesSelecionados">(0 consulta(s))</span>
+                        </div>
+                        <form id="formPagarPendentesSelecionados"
+                              th:action="@{/pagamentos/gerar-link-dia-selecionados}"
+                              method="post"
+                              class="d-inline">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <div id="idsPendentesContainer"></div>
+                            <button type="submit"
+                                    id="btnPagarPendentesSelecionados"
+                                    class="btn btn-warning"
+                                    disabled>
+                                Pagar selecionadas (PIX unico)
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th style="width: 2.5rem;">
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           id="selecionarTodasPendentes"
+                                           title="Selecionar todas">
+                                </th>
+                                <th>Data</th>
+                                <th>Horario</th>
+                                <th>Sala</th>
+                                <th>Cliente</th>
+                                <th>Taxa</th>
+                                <th>Status</th>
+                                <th>Acao</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="pendencia : ${meusPagamentosPendentes}">
+                                <td>
+                                    <input type="checkbox"
+                                           class="form-check-input pendencia-check"
+                                           th:data-id="${pendencia.id}"
+                                           th:data-taxa="${pagamentoService.formatarValorTaxaPix(pendencia)}"
+                                           th:disabled="${pendencia.possuiQrPagamentoAtivo()}">
+                                </td>
+                                <td th:text="${#temporals.format(pendencia.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
+                                <td th:text="${#temporals.format(pendencia.dataHoraInicio, 'HH:mm')}">08:00</td>
+                                <td th:text="${pendencia.sala != null ? pendencia.sala.nome : '-'}">Sala 2</td>
+                                <td th:text="${pendencia.nomeCliente}">Cliente</td>
+                                <td class="pendencia-taxa" th:text="${pagamentoService.formatarValorTaxaPix(pendencia)}">R$ 35,00</td>
+                                <td>
+                                    <span th:if="${pendencia.possuiQrPagamentoAtivo()}"
+                                          class="badge text-bg-info">Aguardando confirmacao</span>
+                                    <span th:if="${!pendencia.possuiQrPagamentoAtivo() and pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
+                                          class="badge text-bg-secondary">Recuperar vaga</span>
+                                    <span th:if="${!pendencia.possuiQrPagamentoAtivo() and !pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
+                                          class="badge text-bg-warning">Pagar hoje</span>
+                                </td>
+                                <td>
+                                    <form th:if="${!pendencia.possuiQrPagamentoAtivo()}"
+                                          th:action="@{/pagamentos/{id}/gerar-link(id=${pendencia.id})}"
+                                          method="post"
+                                          class="d-inline">
+                                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Pagar uma</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-semana"
+                 class="tab-panel"
+                 role="tabpanel"
+                 aria-labelledby="tab-semana"
+                 hidden>
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <p class="small text-muted mb-0"
+                       th:if="${!pagamentoService.adiantamentoSemanaEhProxima()}">
+                        Adiante as consultas desta semana (segunda a sabado, 07:00 as 21:00) com um unico PIX somando todas as taxas.
+                    </p>
+                    <p class="small text-muted mb-0"
+                       th:if="${pagamentoService.adiantamentoSemanaEhProxima()}">
+                        Hoje e domingo: a clinica nao atende, mas voce pode adiantar o PIX da <strong>proxima semana</strong>
+                        (segunda a sabado) de uma vez.
+                    </p>
+                    <span class="badge text-bg-primary"
+                          th:text="${rotuloSemanaAtual}">28/05 a 03/06</span>
+                </div>
+
+                <div th:if="${#lists.isEmpty(consultasPagamentoSemana)}" class="alert alert-light border mb-0">
+                    Nenhuma consulta da semana disponivel para adiantar pagamento no momento.
+                </div>
+
+                <div th:if="${!#lists.isEmpty(consultasPagamentoSemana)}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 p-3 rounded border bg-light">
+                        <div>
+                            <span class="small text-muted d-block">Total estimado da semana</span>
+                            <strong class="fs-5" th:text="${totalTaxaSemana}">R$ 0,00</strong>
+                            <span class="small text-muted ms-1"
+                                  th:text="'(' + ${totalConsultasPagamentoSemana} + ' consulta(s))'">(0 consulta(s))</span>
+                        </div>
+                        <form th:action="@{/pagamentos/gerar-links-semana-atual}" method="post" class="d-inline">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    onclick="return confirm('Gerar um unico PIX com o total da semana? Todas as consultas listadas serao quitadas de uma vez.');">
+                                Pagar semana inteira (PIX unico)
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Horario</th>
+                                <th>Sala</th>
+                                <th>Cliente</th>
+                                <th>Taxa</th>
+                                <th>Acao</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="consulta : ${consultasPagamentoSemana}">
+                                <td th:text="${#temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy')}">29/05/2026</td>
+                                <td th:text="${#temporals.format(consulta.dataHoraInicio, 'HH:mm')}">10:00</td>
+                                <td th:text="${consulta.sala != null ? consulta.sala.nome : '-'}">Sala 1</td>
+                                <td th:text="${consulta.nomeCliente}">Cliente</td>
+                                <td th:text="${pagamentoService.formatarValorTaxaPix(consulta)}">R$ 35,00</td>
+                                <td>
+                                    <form th:action="@{/pagamentos/{id}/gerar-link(id=${consulta.id})}"
+                                          method="post"
+                                          class="d-inline">
+                                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Gerar QR</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/ajuda-suporte :: rodape}"></th:block>
+</div>
+<script>
+    (function () {
+        var tabPendentes = document.getElementById('tab-pendentes');
+        var tabSemana = document.getElementById('tab-semana');
+        var panelPendentes = document.getElementById('panel-pendentes');
+        var panelSemana = document.getElementById('panel-semana');
+
+        function ativarAba(aba) {
+            var semana = aba === 'semana';
+            tabPendentes.classList.toggle('active', !semana);
+            tabSemana.classList.toggle('active', semana);
+            tabPendentes.setAttribute('aria-selected', !semana);
+            tabSemana.setAttribute('aria-selected', semana);
+            panelPendentes.hidden = semana;
+            panelSemana.hidden = !semana;
+            history.replaceState(null, '', semana ? '#pagamentos-semana' : '#pagamentos-pendentes');
+        }
+
+        tabPendentes.addEventListener('click', function () { ativarAba('pendentes'); });
+        tabSemana.addEventListener('click', function () { ativarAba('semana'); });
+
+        if (window.location.hash === '#pagamentos-semana') {
+            ativarAba('semana');
+        }
+
+        var checks = document.querySelectorAll('.pendencia-check');
+        if (checks.length === 0) return;
+
+        var totalEl = document.getElementById('totalPendentesSelecionados');
+        var qtdEl = document.getElementById('qtdPendentesSelecionados');
+        var btnLote = document.getElementById('btnPagarPendentesSelecionados');
+        var formLote = document.getElementById('formPagarPendentesSelecionados');
+        var idsContainer = document.getElementById('idsPendentesContainer');
+        var selecionarTodas = document.getElementById('selecionarTodasPendentes');
+
+        function parseTaxa(texto) {
+            if (!texto) return 0;
+            var limpo = texto.replace(/[^\d,]/g, '').replace(',', '.');
+            return parseFloat(limpo) || 0;
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function atualizarSelecao() {
+            var selecionados = Array.prototype.filter.call(checks, function (c) {
+                return c.checked && !c.disabled;
+            });
+            var total = selecionados.reduce(function (acc, c) {
+                return acc + parseTaxa(c.getAttribute('data-taxa'));
+            }, 0);
+            totalEl.textContent = formatarMoeda(total);
+            qtdEl.textContent = '(' + selecionados.length + ' consulta(s))';
+            btnLote.disabled = selecionados.length === 0;
+            idsContainer.innerHTML = '';
+            selecionados.forEach(function (c) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'agendamentoIds';
+                input.value = c.getAttribute('data-id');
+                idsContainer.appendChild(input);
+            });
+            if (selecionarTodas) {
+                var habilitados = Array.prototype.filter.call(checks, function (c) { return !c.disabled; });
+                selecionarTodas.checked = habilitados.length > 0
+                    && selecionados.length === habilitados.length;
+            }
+        }
+
+        checks.forEach(function (c) {
+            c.addEventListener('change', atualizarSelecao);
+        });
+        if (selecionarTodas) {
+            selecionarTodas.addEventListener('change', function () {
+                checks.forEach(function (c) {
+                    if (!c.disabled) c.checked = selecionarTodas.checked;
+                });
+                atualizarSelecao();
+            });
+        }
+        formLote.addEventListener('submit', function (e) {
+            var qtd = idsContainer.querySelectorAll('input').length;
+            if (qtd === 0) {
+                e.preventDefault();
+                return;
+            }
+            if (!confirm('Gerar um unico PIX para ' + qtd + ' consulta(s) do proximo dia?')) {
+                e.preventDefault();
+            }
+        });
+        atualizarSelecao();
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:fragment="css">
+        <style>
+            .hero-band {
+                overflow: visible;
+            }
+
+            .hero-band .top-actions {
+                overflow: visible;
+            }
+
+            .notif-bell-wrap {
+                position: relative;
+            }
+
+            .notif-bell-wrap .dropdown-toggle::after {
+                display: none;
+            }
+
+            .notif-bell-wrap .dropdown-menu {
+                z-index: 1080;
+            }
+
+            .btn-notif-bell {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 44px;
+                min-height: 44px;
+                padding: 0.5rem;
+                border-radius: 12px;
+            }
+
+            .notif-bell-badge {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #f59e0b;
+                border: 2px solid #fff;
+                box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+            }
+
+            .notif-bell-panel {
+                width: min(320px, calc(100vw - 24px));
+                border: 0;
+                border-radius: 16px;
+            }
+
+            .notif-bell-kicker {
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #0f766e;
+            }
+
+            .notif-bell-title {
+                font-size: 1rem;
+                font-weight: 700;
+                color: #0f172a;
+                line-height: 1.35;
+            }
+
+            .notif-bell-text {
+                font-size: 0.9rem;
+                color: #475569;
+                line-height: 1.45;
+                margin-bottom: 0;
+            }
+
+            .notif-bell-empty {
+                font-size: 0.95rem;
+                color: #64748b;
+                line-height: 1.45;
+            }
+        </style>
+    </th:block>
+</head>
+<body></body>
+</html>

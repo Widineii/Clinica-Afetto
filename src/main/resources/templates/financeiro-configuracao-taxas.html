@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conferencia de atendimentos - Clinica Afetto</title>
+    <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
+</head>
+<body class="financeiro-page">
+<div class="financeiro-wrap">
+
+    <div th:replace="~{fragments/financeiro-hero :: hero(
+        titulo='Conferencia de atendimentos',
+        subtitulo='Painel para conferir se os pagamentos e valores estao certinhos.'
+    )}"></div>
+
+    <div th:replace="~{fragments/financeiro-filtro-mes-profissional :: filtro(
+        filtro=${filtro},
+        actionUrl=@{/agendamentos/financeiro/configuracao-taxas}
+    )}"></div>
+
+    <div th:replace="~{fragments/financeiro-bloqueios-pagamento :: painel(
+        bloqueios=${profissionaisBloqueadosPagamento},
+        filtro=${filtro}
+    )}"></div>
+
+    <div class="financeiro-card">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Atendimentos do mes</h2>
+                    <p class="financeiro-hint mb-0">
+                        Profissional:
+                        <strong th:text="${filtro.profissionalNome != null ? filtro.profissionalNome : 'Nenhum'}">Julia</strong>
+                    </p>
+                </div>
+                <span class="badge rounded-pill text-bg-light border"
+                      th:text="${atendimentosView.totalNoMes + ' atendimento(s)'}">0 atendimento(s)</span>
+            </div>
+
+            <div th:if="${filtro.profissionalId == null}" class="financeiro-empty">
+                Selecione um profissional com agendamento neste mes.
+            </div>
+
+            <div th:if="${filtro.profissionalId != null and atendimentosView.vazio}" class="financeiro-empty">
+                Nenhum atendimento encontrado para este profissional em
+                <span th:text="${filtro.mesAnoLabelCurto}">maio 2026</span>.
+            </div>
+
+            <div th:if="${filtro.profissionalId != null and !atendimentosView.vazio}"
+                 th:replace="~{fragments/financeiro-configuracao-taxas-caderno :: painel(
+                     atendimentosView=${atendimentosView},
+                     pagamentoService=${pagamentoService}
+                 )}"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

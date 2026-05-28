@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<input type="hidden" th:fragment="token" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+</body>
+</html>

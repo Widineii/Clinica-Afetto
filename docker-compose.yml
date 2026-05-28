@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinica-agenda-postgres
+    environment:
+      POSTGRES_DB: clinica_agenda
+      POSTGRES_USER: clinica
+      POSTGRES_PASSWORD: clinica123
+    ports:
+      - "5432:5432"
+    volumes:
+      - clinica_agenda_pgdata:/var/lib/postgresql/data
+
+volumes:
+  clinica_agenda_pgdata:

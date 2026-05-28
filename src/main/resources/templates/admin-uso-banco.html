@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Uso do banco - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+        }
+        .app-shell {
+            width: min(960px, 100%);
+            margin-inline: auto;
+            padding: 24px 16px 40px;
+        }
+        .hero-band {
+            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            color: #fff;
+            border-radius: 24px;
+            padding: clamp(16px, 3vw, 24px);
+        }
+        .shell-card {
+            border: 0;
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+        }
+        .stat-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-box h3 {
+            font-size: 1.75rem;
+            margin: 0;
+            color: #0f766e;
+        }
+        .stat-box p {
+            margin: 6px 0 0;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .progress {
+            height: 14px;
+            border-radius: 999px;
+        }
+        .progress-bar.ok { background: #0f766e; }
+        .progress-bar.atencao { background: #d97706; }
+        .progress-bar.critico { background: #dc2626; }
+        .hint {
+            font-size: 0.9rem;
+            color: #64748b;
+            line-height: 1.55;
+        }
+        dl.row dt { color: #64748b; font-weight: 500; }
+        dl.row dd { font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div th:if="${erro}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+
+    <div class="hero-band mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75">Administracao</p>
+                <h1 class="h2 mb-2">Uso do banco (Neon)</h1>
+                <p class="mb-0 opacity-75">
+                    Acompanhe quantos agendamentos estao gravados e uma estimativa do espaco.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
+                <a th:href="@{/agendamentos/central-profissionais}" class="btn btn-light">Central dos profissionais</a>
+                <form th:action="@{/logout}" method="post">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit" class="btn btn-light">Sair</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="shell-card">
+        <h2 class="h5 mb-3">Armazenamento</h2>
+        <p class="mb-2" th:if="${resumo.postgresComTamanhoReal}">
+            Tamanho real do banco (PostgreSQL/Neon):
+            <strong th:text="${resumo.tamanhoBancoRealLabel}">0 MB</strong>
+        </p>
+        <p class="mb-2" th:unless="${resumo.postgresComTamanhoReal}">
+            Estimativa (ambiente local ou sem leitura do Postgres):
+            <strong th:text="${resumo.tamanhoEstimadoLabel}">0 MB</strong>
+        </p>
+        <p class="hint mb-3">
+            Limite configurado do plano Neon:
+            <strong th:text="|${resumo.limiteNeonMb} MB (0,5 GB)|">512 MB</strong>.
+            <span th:if="${resumo.postgresComTamanhoReal}">
+                Estimativa por contagem: <span th:text="${resumo.tamanhoEstimadoLabel}">—</span>.
+            </span>
+        </p>
+        <div class="progress mb-2" role="progressbar"
+             th:attr="aria-valuenow=${resumo.barraPercentual},aria-valuemin=0,aria-valuemax=100">
+            <div th:class="|progress-bar ${resumo.nivelAlerta}|"
+                 th:style="|width: ${resumo.barraPercentual}%|"></div>
+        </div>
+        <p class="mb-0">
+            <strong th:text="${resumo.percentualLabel}">0%</strong>
+            do limite
+            <span th:if="${resumo.nivelAlerta == 'ok'}" class="text-success">— tranquilo</span>
+            <span th:if="${resumo.nivelAlerta == 'atencao'}" class="text-warning">— atencao</span>
+            <span th:if="${resumo.nivelAlerta == 'critico'}" class="text-danger">— perto do limite</span>
+        </p>
+    </div>
+
+    <div class="shell-card">
+        <h2 class="h5 mb-3">Agendamentos</h2>
+        <div class="stat-grid mb-3">
+            <div class="stat-box">
+                <h3 th:text="${resumo.totalAgendamentos}">0</h3>
+                <p>Total no banco</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${resumo.agendamentosHoje}">0</h3>
+                <p>Com inicio hoje</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${resumo.agendamentosMesAtual}">0</h3>
+                <p>Inicio neste mes</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${resumo.totalProfissionais}">0</h3>
+                <p>Profissionais cadastrados</p>
+            </div>
+        </div>
+        <dl class="row mb-0">
+            <dt class="col-sm-6">Avulsos (1 linha cada)</dt>
+            <dd class="col-sm-6" th:text="${resumo.agendamentosAvulsos}">0</dd>
+            <dt class="col-sm-6">Fixos / quinzenais (series)</dt>
+            <dd class="col-sm-6" th:text="${resumo.agendamentosFixosOuQuinzenais}">0</dd>
+            <dt class="col-sm-6">Ja encerrados (fim no passado)</dt>
+            <dd class="col-sm-6" th:text="${resumo.agendamentosJaEncerrados}">0</dd>
+        </dl>
+        <p class="hint mt-3 mb-0">
+            Avulsos do mes passado sao removidos no dia 3 (fechamento mensal).
+            Fixos antigos permanecem ate cancelar ou encerrar a serie — e isso que mais cresce com o tempo.
+        </p>
+    </div>
+
+    <div class="shell-card">
+        <h2 class="h5 mb-3">Relatorios e cadastros</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-6">Meses arquivados (JSON)</dt>
+            <dd class="col-sm-6" th:text="${resumo.relatoriosMensaisArquivados}">0</dd>
+            <dt class="col-sm-6">Tamanho do JSON arquivado</dt>
+            <dd class="col-sm-6" th:text="${resumo.bytesJsonLabel}">0</dd>
+            <dt class="col-sm-6">PDF legado ainda no banco</dt>
+            <dd class="col-sm-6">
+                <span th:text="${resumo.relatoriosComPdfLegado}">0</span> arquivo(s),
+                <span th:text="${resumo.bytesPdfLegadoLabel}">0</span>
+            </dd>
+            <dt class="col-sm-6">Usuarios / salas</dt>
+            <dd class="col-sm-6" th:text="|${resumo.totalUsuarios} / ${resumo.totalSalas}|">0 / 4</dd>
+        </dl>
+        <p class="hint mt-3 mb-0">
+            PDF mensal nao e mais gravado; o scheduler do dia 10 remove PDFs antigos se ainda existirem.
+        </p>
+    </div>
+</div>
+</body>
+</html>

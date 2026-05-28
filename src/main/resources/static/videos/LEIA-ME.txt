@@ -1,0 +1,8 @@
+Coloque aqui o video de demonstracao da clinica, por exemplo:
+  manual-amostra.mp4
+
+Depois configure em application-local.properties ou no servidor:
+  app.manual.video-url=/videos/manual-amostra.mp4
+
+Ou use um link embed do YouTube:
+  app.manual.video-url=https://www.youtube.com/embed/ID_DO_VIDEO

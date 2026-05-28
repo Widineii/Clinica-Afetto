@@ -1,0 +1,45 @@
+AGENDA AFETTO - RODAR NO NOTEBOOK (USB OU PASTA COPIADA)
+========================================================
+
+REQUISITO: Java 17 ou superior instalado.
+Teste: abra o Prompt e digite:  java -version
+
+COMO SUBIR O SISTEMA
+--------------------
+1. Abra esta pasta no Explorer (ex.: E:\clinica-agenda-main)
+2. Clique na barra de endereco, digite cmd e Enter
+3. Execute:
+
+   mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
+
+4. Aguarde aparecer: "Started NameApplication"
+5. Abra no navegador:  http://localhost:8081
+
+LOGINS DE TESTE (local)
+-----------------------
+Polyana (dona):  polyana / 297b
+Julia:           julia / 297b
+Admin:           admin / (senha definida no application-local.properties)
+
+O QUE MOSTRAR NA REUNIAO
+------------------------
+- Agenda:        http://localhost:8081/agendamentos/dashboard
+- Meus pagamentos (julia): botao amarelo -> QR PIX (modo teste)
+- Manual:        botao Manual
+- Financeiro (polyana): Gestao financeira -> receita PIX do mes
+- Aviso comprovante para Polyana na tela de pagamento
+
+PIX REAL (InfinitePay)
+----------------------
+No PC local esta em MODO TESTE (simular pagamento).
+Para PIX real: precisa site na internet + tag InfinitePay (ver REUNIAO-POLYANA.txt).
+
+REUNIAO - DADOS DA POLYANA
+--------------------------
+Preencha o arquivo REUNIAO-POLYANA.txt nesta pasta.
+
+PROBLEMAS
+---------
+- Porta 8081 ocupada: feche outro terminal com a agenda rodando
+- Erro Java: instale JDK 17+ de https://adoptium.net
+- Pasta em USB lenta: copie para o disco C:\temp\clinica-agenda e rode de la

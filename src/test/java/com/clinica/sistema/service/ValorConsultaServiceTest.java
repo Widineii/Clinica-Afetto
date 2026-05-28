@@ -1,0 +1,96 @@
+package com.clinica.sistema.service;
+
+import com.clinica.sistema.dto.AgendamentoForm;
+import com.clinica.sistema.model.Sala;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ValorConsultaServiceTest {
+
+    private ValorConsultaService service;
+    private Sala sala1;
+    private Sala sala4;
+
+    @BeforeEach
+    void setUp() {
+        service = new ValorConsultaService();
+
+        sala1 = new Sala();
+        sala1.setId(1L);
+        sala1.setNome("Sala 1");
+
+        sala4 = new Sala();
+        sala4.setId(4L);
+        sala4.setNome("Sala 4");
+    }
+
+    @Test
+    void sala4DeveCobrarVinteECinco() {
+        assertEquals(new BigDecimal("25.00"), service.calcularTarifaClinicaPadrao(sala4, "AVULSO"));
+        assertEquals(new BigDecimal("25.00"), service.calcularTarifaClinicaPadrao(sala4, "SEMANAL"));
+    }
+
+    @Test
+    void fixoSemanalDeveCobrarTrintaEDois() {
+        assertEquals(new BigDecimal("32.00"), service.calcularTarifaClinicaPadrao(sala1, "SEMANAL"));
+    }
+
+    @Test
+    void avulsoEQuinzenalDevemCobrarTrintaECinco() {
+        assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "AVULSO"));
+        assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "QUINZENAL"));
+    }
+
+    @Test
+    void indicacaoDeveCobrarTrintaPorCento() {
+        assertEquals(new BigDecimal("60.00"), service.calcularTarifaClinicaIndicacao(new BigDecimal("200.00")));
+    }
+
+    @Test
+    void liquidoDeveSubtrairClinicaDoValorRecebido() {
+        assertEquals(new BigDecimal("115.00"), service.calcularLiquido(new BigDecimal("150.00"), new BigDecimal("35.00")));
+        assertEquals(new BigDecimal("140.00"), service.calcularLiquido(new BigDecimal("200.00"), new BigDecimal("60.00")));
+    }
+
+    @Test
+    void indicacaoDeveIgnorarTarifaManual() {
+        AgendamentoForm form = new AgendamentoForm();
+        form.setValorProfissionalRecebe(new BigDecimal("200.00"));
+        form.setValorClinicaCobra(new BigDecimal("35.00"));
+        form.setIndicacaoDona(true);
+
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+        service.aplicarValores(agendamento, form, sala1, "AVULSO");
+
+        assertEquals(new BigDecimal("200.00"), agendamento.getValorProfissionalRecebe());
+        assertEquals(new BigDecimal("60.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("140.00"), agendamento.getValorLiquidoProfissional());
+        assertTrue(agendamento.getIndicacaoDona());
+    }
+
+    @Test
+    void indicacaoNaSala4DeveUsarTrintaPorCento() {
+        AgendamentoForm form = new AgendamentoForm();
+        form.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        form.setValorClinicaCobra(new BigDecimal("25.00"));
+        form.setIndicacaoDona(true);
+
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+        service.aplicarValores(agendamento, form, sala4, "AVULSO");
+
+        assertEquals(new BigDecimal("45.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("105.00"), agendamento.getValorLiquidoProfissional());
+    }
+
+    @Test
+    void isSala4ReconheceNomeDaSala() {
+        assertTrue(service.isSala4(sala4));
+        assertFalse(service.isSala4(sala1));
+    }
+}

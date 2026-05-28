@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="aviso-comprovante-polyana"
+     class="alert comprovante-polyana-aviso border-2 border-warning mb-3 py-3 px-3 text-center"
+     role="status">
+    <p class="mb-1 fw-bold fs-6 text-dark">
+        Apos pagar, envie o comprovante do PIX para a <span class="text-primary">Polyana</span>.
+    </p>
+    <p class="mb-0 small text-muted">
+        E para a Polyana ter o controle de quem pagou. Obg!
+    </p>
+</div>
+
+<div th:fragment="status-badge (agendamento)">
+    <span th:if="${agendamento != null and agendamento.statusPagamento != null}"
+          class="badge rounded-pill ms-1"
+          th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.esperandoConfirmacaoPagamento ? ' text-bg-warning' : (agendamento.pagamentoPendente ? ' text-bg-secondary' : ' text-bg-light text-dark'))}"
+          th:text="${pagamentoService.rotuloStatusPagamento(agendamento)}">Esperando confirmacao</span>
+</div>
+
+<div th:fragment="acoes (agendamento)">
+    <div th:if="${agendamento != null}" class="pagamento-acoes mt-2 d-flex flex-wrap gap-2 align-items-center">
+        <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
+
+        <button type="button"
+                th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.pagamentoLink != null}"
+                class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
+                th:attr="data-pix-chave=${agendamento.pagamentoLink}">
+            Copiar chave PIX
+        </button>
+
+        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
+           th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
+           class="btn btn-sm btn-primary">
+            Voltar ao QR
+        </a>
+
+        <span th:if="${pagamentoService.vagaPreenchidaPorOutroProfissional(agendamento)}"
+              class="small text-danger fw-semibold">
+            Vaga preenchida por outro profissional
+        </span>
+
+        <form th:if="${pagamentoService.exibirBotaoPagar(agendamento) and !agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
+              th:action="@{/pagamentos/{id}/gerar-link(id=${agendamento.id})}"
+              method="post"
+              class="d-inline">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-sm btn-warning">Pagar</button>
+        </form>
+
+        <span th:if="${pagamentoService.podeRecuperarVagaComPagamento(agendamento)}"
+              class="small text-muted">
+            Vaga liberada na grade — pague antes de outro profissional reservar.
+        </span>
+
+        <a th:if="${agendamentoService != null and usuarioLogado != null and agendamentoService.podeRealocar(agendamento, usuarioLogado) and agendamento.id != null}"
+           th:href="@{/agendamentos/{id}/realocar(id=${agendamento.id})}"
+           class="btn btn-sm btn-outline-info">
+            Realocar
+        </a>
+
+        <form th:if="${agendamento.possuiQrPagamentoAtivo()}"
+              th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
+              method="post"
+              class="d-inline">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-sm btn-success">Simular pagamento (teste)</button>
+        </form>
+    </div>
+</div>
+
+<div th:fragment="painel-pendentes (pagamentos)">
+    <div class="card shell-card mt-4" id="pagamentos-pendentes"
+         th:if="${pagamentos != null and !#lists.isEmpty(pagamentos)}">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-2 d-flex align-items-center gap-2 flex-wrap">
+                Pagamentos pendentes
+                <span class="badge rounded-pill text-bg-warning">Voltar ao QR</span>
+            </h2>
+            <p class="small text-muted mb-3">
+                Consultas reservadas aguardando PIX. Tempo restante: 5 minutos — depois o horario e liberado automaticamente.
+            </p>
+            <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <strong th:text="${item.nomeCliente}">Cliente</strong>
+                        <span class="small text-muted d-block"
+                              th:text="${item.dataHoraInicio != null ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') + ' · ' + (item.sala != null ? item.sala.nome : '-') : '-'}">28/05 10:00</span>
+                        <span class="small text-muted d-block"
+                              th:text="${'Taxa da clinica (PIX): ' + pagamentoService.formatarValorTaxaPix(item)}">Taxa: R$ 32,00</span>
+                    </div>
+                    <span class="badge text-bg-warning pagamento-countdown"
+                          th:attr="data-expira-em=${item.pagamentoExpiraEm != null ? #temporals.format(item.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                          th:text="${item.tempoRestantePagamentoFormatado}">4:59</span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <a th:href="@{/pagamentos/{id}(id=${item.id})}">
+                        <img th:src="@{/pagamentos/{id}/qr.png(id=${item.id})}"
+                             alt="QR Code"
+                             width="88"
+                             height="88"
+                             class="rounded border">
+                    </a>
+                    <div class="d-grid gap-2 flex-grow-1" style="min-width: 180px;">
+                        <a th:href="@{/pagamentos/{id}(id=${item.id})}"
+                           class="btn btn-sm btn-primary">Voltar ao QR Code</a>
+                        <button type="button"
+                                th:if="${item.pagamentoLink != null}"
+                                class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
+                                th:attr="data-pix-chave=${item.pagamentoLink}">
+                            Copiar chave PIX
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="painel-pagar-agora (consultas)">
+    <div class="card shell-card mt-4" id="pagar-agora"
+         th:if="${consultas != null and !#lists.isEmpty(consultas)}">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-2">Pagar agora</h2>
+            <p class="small text-muted mb-3">
+                Gere o QR Code e pague antes do prazo de 1 dia, se quiser adiantar.
+            </p>
+            <div th:each="consulta : ${consultas}" class="pagamento-pendente-card mb-2 p-3 rounded border">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <strong th:text="${consulta.nomeCliente}">Cliente</strong>
+                        <span class="small text-muted d-block"
+                              th:text="${consulta.dataHoraInicio != null ? #temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy HH:mm') + ' · ' + (consulta.sala != null ? consulta.sala.nome : '-') : '-'}">04/06 10:00</span>
+                        <span class="small text-muted d-block"
+                              th:text="${'Taxa da clinica (PIX): ' + pagamentoService.formatarValorTaxaPix(consulta)}">Taxa: R$ 32,00</span>
+                    </div>
+                    <form th:action="@{/pagamentos/{id}/gerar-link(id=${consulta.id})}"
+                          method="post"
+                          class="d-inline">
+                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                        <button type="submit" class="btn btn-sm btn-warning text-nowrap">Pagar agora</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="modal-pos-agendamento (agendamento)">
+    <div th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}"
+         class="modal fade admin-modal"
+         id="pagamentoPosAgendamentoModal"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header px-4 py-3">
+                    <div>
+                        <h2 class="modal-title h5 mb-1">Esperando confirmacao do pagamento</h2>
+                        <p class="small text-muted mb-0">
+                            Horario reservado na agenda. Pague em
+                            <strong class="pagamento-countdown"
+                                    th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                                    th:text="${agendamento.tempoRestantePagamentoFormatado}">5:00</strong>
+                            ou o agendamento sera cancelado.
+                        </p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4 pb-4 text-center">
+                    <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
+                    <p class="small text-muted mb-3"
+                       th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026 10:00</p>
+                    <p class="mb-3">Taxa da clinica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
+
+                    <img th:if="${agendamento.pagamentoLink != null}"
+                         th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
+                         alt="QR Code PIX"
+                         class="img-fluid rounded border mb-3"
+                         width="240"
+                         height="240">
+
+                    <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
+
+                    <p class="small text-muted mb-3">Fechou sem querer? Use a aba <a href="#pagamentos-pendentes">Pagamentos pendentes</a>.</p>
+
+                    <div class="d-grid gap-2">
+                        <button type="button"
+                                th:if="${agendamento.pagamentoLink != null}"
+                                class="btn btn-primary copiar-chave-pix-btn"
+                                th:attr="data-pix-chave=${agendamento.pagamentoLink}">
+                            Copiar chave PIX
+                        </button>
+                        <form th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <button type="submit" class="btn btn-outline-success w-100">Simular pagamento (teste)</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:fragment="copiar-chave-script">
+    (function () {
+        if (window.__pixCopyBound) {
+            return;
+        }
+        window.__pixCopyBound = true;
+
+        function copiarTexto(texto) {
+            if (!texto) {
+                return Promise.reject(new Error('chave vazia'));
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(texto);
+            }
+            var auxiliar = document.createElement('textarea');
+            auxiliar.value = texto;
+            auxiliar.setAttribute('readonly', 'readonly');
+            auxiliar.style.position = 'fixed';
+            auxiliar.style.opacity = '0';
+            document.body.appendChild(auxiliar);
+            auxiliar.focus();
+            auxiliar.select();
+            try {
+                var sucesso = document.execCommand('copy');
+                document.body.removeChild(auxiliar);
+                return sucesso ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+            } catch (erro) {
+                document.body.removeChild(auxiliar);
+                return Promise.reject(erro);
+            }
+        }
+
+        document.addEventListener('click', function (evento) {
+            var botao = evento.target.closest('.copiar-chave-pix-btn');
+            if (!botao) {
+                return;
+            }
+            var chave = botao.getAttribute('data-pix-chave') || '';
+            copiarTexto(chave).then(function () {
+                botao.textContent = 'Chave PIX copiada';
+                window.setTimeout(function () {
+                    botao.textContent = 'Copiar chave PIX';
+                }, 2000);
+            }).catch(function () {
+                window.alert('Nao foi possivel copiar a chave PIX. Copie manualmente o link do pagamento.');
+            });
+        });
+    })();
+</script>
+
+</body>
+</html>

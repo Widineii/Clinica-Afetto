@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:fragment="css">
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <th:block th:replace="~{fragments/estilos-notificacao-relatorio :: css}"></th:block>
+        <style>
+            :root {
+                --fin-teal: #0f766e;
+                --fin-teal-dark: #164e63;
+                --fin-bg: #f0fdfa;
+                --fin-text: #0f172a;
+                --fin-muted: #64748b;
+                --fin-border: rgba(15, 118, 110, 0.12);
+            }
+
+            body.financeiro-page {
+                min-height: 100vh;
+                margin: 0;
+                font-family: 'Lato', sans-serif;
+                color: var(--fin-text);
+                background: linear-gradient(165deg, #ecfdf5 0%, #f8fafc 45%, #eff6ff 100%);
+                padding: 24px 16px 48px;
+            }
+
+            .financeiro-wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+            }
+
+            .financeiro-card {
+                background: #fff;
+                border: 1px solid var(--fin-border);
+                border-radius: 20px;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+            }
+
+            .financeiro-card .card-body {
+                padding: 1.5rem;
+            }
+
+            .financeiro-resumo-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 1rem;
+            }
+
+            .financeiro-resumo-card {
+                background: #fff;
+                border: 1px solid var(--fin-border);
+                border-radius: 18px;
+                padding: 1.25rem 1.35rem;
+                box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+            }
+
+            .financeiro-resumo-card--destaque {
+                background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+                border-color: rgba(15, 118, 110, 0.25);
+            }
+
+            .financeiro-resumo-label {
+                font-size: 0.85rem;
+                color: var(--fin-muted);
+                margin-bottom: 0.35rem;
+            }
+
+            .financeiro-resumo-valor {
+                font-family: 'Poppins', sans-serif;
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--fin-teal-dark);
+            }
+
+            .financeiro-resumo-card--destaque .financeiro-resumo-valor {
+                color: var(--fin-teal);
+            }
+
+            .financeiro-grid-principal {
+                display: grid;
+                grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
+                gap: 1.25rem;
+                align-items: start;
+            }
+
+            .financeiro-badge-tipo {
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                border-radius: 999px;
+                padding: 0.25rem 0.65rem;
+            }
+
+            .financeiro-badge-tipo--mensal {
+                background: #dbeafe;
+                color: #1d4ed8;
+            }
+
+            .financeiro-badge-tipo--unica {
+                background: #fef3c7;
+                color: #b45309;
+            }
+
+            .financeiro-table {
+                margin-bottom: 0;
+            }
+
+            .financeiro-table th {
+                font-size: 0.82rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--fin-muted);
+                font-weight: 700;
+                border-bottom-width: 1px;
+            }
+
+            .financeiro-table td {
+                vertical-align: middle;
+            }
+
+            .financeiro-hint {
+                font-size: 0.88rem;
+                color: var(--fin-muted);
+            }
+
+            .financeiro-filtro-resumo {
+                font-size: 0.95rem;
+                color: var(--fin-text);
+            }
+
+            .taxas-caderno-serie-linha,
+            .taxas-caderno-avulso-linha {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding: 12px 14px;
+                margin-top: 8px;
+                border-radius: 10px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                color: #0f172a;
+            }
+
+            .taxas-caderno-serie-linha__titulo,
+            .taxas-caderno-avulso-linha__texto {
+                font-weight: 600;
+                font-size: 0.9rem;
+            }
+
+            .taxas-caderno-serie-linha__datas {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .taxas-caderno-data-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 3rem;
+                padding: 4px 10px;
+                border-radius: 999px;
+                border: 1px solid #94a3b8;
+                background: #ffffff;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: #334155;
+            }
+
+            .financeiro-empty {
+                color: var(--fin-muted);
+                font-size: 0.95rem;
+                padding: 0.75rem 0;
+            }
+
+            .financeiro-bloqueios {
+                background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
+                border: 1px solid #fecaca;
+                border-radius: 16px;
+                padding: 1rem 1.15rem;
+                box-shadow: 0 6px 18px rgba(220, 38, 38, 0.08);
+            }
+
+            .financeiro-bloqueios__head {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+
+            .financeiro-bloqueios__icon {
+                flex-shrink: 0;
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #dc2626;
+                color: #fff;
+                font-weight: 800;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.1rem;
+            }
+
+            .financeiro-bloqueios__title {
+                font-family: 'Poppins', sans-serif;
+                font-weight: 700;
+                color: #991b1b;
+            }
+
+            .financeiro-bloqueios__subtitle {
+                font-size: 0.88rem;
+                color: #b45309;
+            }
+
+            .financeiro-bloqueios__lista {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .financeiro-bloqueios__item {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px 12px;
+                padding: 10px 12px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.85);
+                border: 1px solid #fecaca;
+            }
+
+            .financeiro-bloqueios__msg {
+                font-weight: 600;
+                color: #7f1d1d;
+                flex: 1 1 220px;
+            }
+
+            .financeiro-bloqueios__meta {
+                font-size: 0.78rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                color: #b45309;
+                background: #fef3c7;
+                padding: 3px 8px;
+                border-radius: 999px;
+            }
+
+            .financeiro-bloqueios__link {
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--fin-teal);
+                text-decoration: none;
+            }
+
+            .financeiro-bloqueios__link:hover {
+                text-decoration: underline;
+            }
+
+            .financeiro-bloqueio-destaque {
+                padding: 12px 14px;
+                border-radius: 12px;
+                background: #fef2f2;
+                border: 1px solid #f87171;
+                color: #991b1b;
+            }
+
+            @media (max-width: 991px) {
+                .financeiro-resumo-grid,
+                .financeiro-grid-principal {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </th:block>
+</head>
+<body></body>
+</html>

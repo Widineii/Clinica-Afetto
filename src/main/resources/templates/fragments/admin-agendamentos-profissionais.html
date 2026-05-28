@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="painel (resumosProfissionais, profissionaisEquipe)" class="card shell-card mt-4" id="agendamentos-profissionais">
+    <div class="card-body p-3">
+        <h2 class="h6 mb-2">Agendamentos por profissional</h2>
+        <p class="small text-muted mb-2">Clique no nome para ver avulso, fixo, quinzenal e valores de cada profissional.</p>
+
+        <p th:if="${#lists.isEmpty(resumosProfissionais) and #lists.isEmpty(profissionaisEquipe)}"
+           class="text-muted py-2 px-1 small mb-0">
+            Nenhum profissional cadastrado.
+        </p>
+
+        <div th:unless="${#lists.isEmpty(resumosProfissionais)}"
+             class="accordion-profissionais profissionais-lista">
+            <details th:each="resumo : ${resumosProfissionais}"
+                     name="equipe-profissionais"
+                     class="accordion-profissionais__item"
+                     th:id="|profissional-${resumo.profissionalId}|">
+                <summary class="accordion-profissionais__trigger">
+                    <span class="accordion-profissionais__nome" th:text="${resumo.profissionalNome}">Profissional</span>
+                    <span class="accordion-profissionais__meta">
+                        <span class="agenda-count" th:text="${resumo.totalGeral}">0</span>
+                        <span class="accordion-profissionais__chevron" aria-hidden="true"></span>
+                    </span>
+                </summary>
+                <div class="accordion-profissionais__panel">
+                    <div class="accordion-profissionais__filhos">
+                        <details class="accordion-profissionais__filho">
+                            <summary class="accordion-profissionais__filho-trigger">
+                                <span>Avulso</span>
+                                <span class="agenda-count" th:text="${resumo.totalAvulsos}">0</span>
+                            </summary>
+                            <div class="accordion-profissionais__filho-body"
+                                 th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${resumo.agendamentosAvulsos})}"></div>
+                        </details>
+
+                        <details class="accordion-profissionais__filho">
+                            <summary class="accordion-profissionais__filho-trigger">
+                                <span>Fixo</span>
+                                <span class="agenda-count" th:text="${resumo.totalFixos}">0</span>
+                            </summary>
+                            <div class="accordion-profissionais__filho-body"
+                                 th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${resumo.seriesFixas}, radioPrefix=|admin-${resumo.profissionalId}-fixo-|)}"></div>
+                        </details>
+
+                        <details class="accordion-profissionais__filho">
+                            <summary class="accordion-profissionais__filho-trigger">
+                                <span>Quinzenal</span>
+                                <span class="agenda-count" th:text="${resumo.totalQuinzenais}">0</span>
+                            </summary>
+                            <div class="accordion-profissionais__filho-body"
+                                 th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${resumo.seriesQuinzenais}, radioPrefix=|admin-${resumo.profissionalId}-quinz-|)}"></div>
+                        </details>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </div>
+</div>
+</body>
+</html>

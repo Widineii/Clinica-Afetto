@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="acoes">
+    <div class="top-actions d-flex flex-wrap align-items-center justify-content-end gap-2">
+        <div th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></div>
+
+        <a th:if="${mostrarConfiguracaoTaxas}"
+           th:href="@{/agendamentos/financeiro/configuracao-taxas}"
+           class="btn btn-outline-light btn-sm">
+            Conferencia de atendimentos
+        </a>
+
+        <a th:if="${mostrarGestaoFinanceira}"
+           th:href="@{/agendamentos/financeiro}"
+           class="btn btn-outline-light btn-sm">
+            Gestao financeira
+        </a>
+
+        <a th:href="@{/agendamentos/relatorio/mensal}" class="btn btn-light btn-sm">
+            Relatorio
+        </a>
+
+        <a th:href="@{/agendamentos/dashboard}" class="btn btn-warning btn-sm">
+            Sair
+        </a>
+    </div>
+</div>
+</body>
+</html>

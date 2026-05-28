@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Manual de uso - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+        }
+        .app-shell { width: min(960px, 100%); margin-inline: auto; padding: 24px 16px 48px; }
+        .hero-band {
+            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            color: #fff; border-radius: 24px; padding: clamp(16px, 3vw, 24px);
+        }
+        .shell-card {
+            border: 0; border-radius: 24px; background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+        .fact-card {
+            border-radius: 16px; background: #f0fdfa; border: 1px solid #99f6e4;
+            padding: 1rem; height: 100%; text-align: center;
+        }
+        .fact-card strong { display: block; color: #0f766e; font-size: 1.05rem; }
+        .video-wrap {
+            position: relative; border-radius: 16px; overflow: hidden;
+            background: #0f172a; aspect-ratio: 16 / 9;
+        }
+        .video-wrap iframe, .video-wrap video { width: 100%; height: 100%; border: 0; display: block; }
+        .video-amostra {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; color: #e2e8f0; text-align: center; padding: 1.5rem;
+        }
+        .video-amostra .play-ring {
+            width: 72px; height: 72px; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.5);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem; font-size: 1.75rem;
+        }
+        .passo-amostra {
+            display: flex; gap: 0.75rem; align-items: flex-start;
+            padding: 0.65rem 0; border-bottom: 1px dashed #e2e8f0;
+        }
+        .passo-amostra:last-child { border-bottom: 0; }
+        .passo-amostra .num {
+            width: 1.5rem; height: 1.5rem; border-radius: 50%;
+            background: #0f766e; color: #fff; font-size: 0.75rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .accordion-button:not(.collapsed) {
+            background: #f0fdfa; color: #0f766e; box-shadow: none;
+        }
+        .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(15, 118, 110, 0.25); }
+        .chip {
+            display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px;
+            background: #e0f2fe; color: #0369a1; font-size: 0.75rem; font-weight: 600;
+        }
+        .lista-curta { margin: 0; padding-left: 1.1rem; }
+        .lista-curta li { margin-bottom: 0.35rem; }
+        body { padding-bottom: 5.5rem; }
+        .whatsapp-suporte {
+            position: fixed;
+            right: max(16px, env(safe-area-inset-right));
+            bottom: max(16px, env(safe-area-inset-bottom));
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+            text-decoration: none;
+        }
+        .whatsapp-suporte__btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 0.85rem 0.65rem 0.65rem;
+            border-radius: 999px;
+            background: #25d366;
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .whatsapp-suporte__btn:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(37, 211, 102, 0.5);
+        }
+        .whatsapp-suporte__icon {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+        .whatsapp-suporte__texto {
+            font-size: 0.8rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-align: right;
+            max-width: 140px;
+        }
+        .whatsapp-suporte__nome {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            opacity: 0.95;
+        }
+        .whatsapp-suporte__rotulo {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 500;
+            opacity: 0.85;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div class="hero-band mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75">Agenda Afetto</p>
+                <h1 class="h2 mb-2">Manual de uso</h1>
+                <p class="mb-0 opacity-75 small">
+                    Guia rapido para <strong th:text="${usuarioLogado.nome}">Usuario</strong>
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light btn-sm">Agenda</a>
+                <a th:if="${ehProfissional}" th:href="@{/agendamentos/meus-pagamentos}" class="btn btn-warning btn-sm">Pagamentos</a>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit" class="btn btn-light btn-sm">Sair</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="fact-card">
+                <strong>Seg–Sáb</strong>
+                <span class="small text-muted">07h às 21h</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="fact-card">
+                <strong>Domingo</strong>
+                <span class="small text-muted">Fechado · PIX da próxima semana</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="fact-card">
+                <strong th:if="${ehProfissional}">Pagar na véspera</strong>
+                <strong th:unless="${ehProfissional}">Equipe na agenda</strong>
+                <span class="small text-muted" th:if="${ehProfissional}">Amanhã paga hoje</span>
+                <span class="small text-muted" th:unless="${ehProfissional}">Dona cancela na grade</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shell-card mb-4" id="video">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h2 class="h5 mb-0" th:text="${manualVideoTitulo}">Video de amostra</h2>
+                <span class="chip" th:if="${manualVideoModo == 'nenhum'}">Amostra</span>
+            </div>
+            <p class="text-muted small mb-3" th:text="${manualVideoDescricao}">Descricao do video.</p>
+
+            <div class="video-wrap mb-3">
+                <iframe th:if="${manualVideoModo == 'embed'}"
+                        th:src="${manualVideoUrl}"
+                        title="Video tutorial Agenda Afetto"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+                <video th:if="${manualVideoModo == 'arquivo'}"
+                       th:src="${manualVideoUrl}"
+                       controls
+                       preload="metadata"
+                       title="Video tutorial Agenda Afetto">
+                    Seu navegador nao suporta reproducao de video.
+                </video>
+                <div th:if="${manualVideoModo == 'nenhum'}" class="video-amostra">
+                    <div class="play-ring" aria-hidden="true">▶</div>
+                    <p class="mb-1 fw-semibold">Video de demonstracao (amostra)</p>
+                    <p class="small opacity-75 mb-0">
+                        Quando a clinica gravar o tutorial, o video aparece aqui automaticamente.
+                    </p>
+                </div>
+            </div>
+
+            <p class="small fw-semibold text-secondary mb-2">Enquanto isso, veja o fluxo em 4 passos:</p>
+            <div class="passo-amostra">
+                <span class="num">1</span>
+                <div><strong>Entrar</strong> — login e senha · trocar senha no primeiro acesso.</div>
+            </div>
+            <div class="passo-amostra" th:if="${ehProfissional}">
+                <span class="num">2</span>
+                <div><strong>Agendar</strong> — escolher sala, cliente, tipo (avulso / fixo / quinzenal).</div>
+            </div>
+            <div class="passo-amostra" th:unless="${ehProfissional}">
+                <span class="num">2</span>
+                <div><strong>Agendar</strong> — ver grade de todos ou cadastrar na Central dos profissionais.</div>
+            </div>
+            <div class="passo-amostra" th:if="${ehProfissional}">
+                <span class="num">3</span>
+                <div><strong>Pagar</strong> — Meus pagamentos → pendentes ou semana inteira (PIX).</div>
+            </div>
+            <div class="passo-amostra" th:unless="${ehProfissional}">
+                <span class="num">3</span>
+                <div><strong>Acompanhar</strong> — status na grade · sino do relatório mensal (dia 3).</div>
+            </div>
+            <div class="passo-amostra">
+                <span class="num">4</span>
+                <div><strong>Dúvida?</strong> — falar com a dona da clínica ou administração.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion shell-card mb-4" id="manualAccordion">
+        <div class="accordion-item border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#acc-func" aria-expanded="true">
+                    Horários da clínica
+                </button>
+            </h2>
+            <div id="acc-func" class="accordion-collapse collapse show" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <ul class="lista-curta">
+                        <li>Atendimento <strong>segunda a sábado</strong>, 07:00–21:00 (hora cheia).</li>
+                        <li><strong>Domingo fechado</strong> — não marca consulta.</li>
+                        <li>Domingo: profissional adianta PIX da <strong>próxima semana</strong> (seg–sáb).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-agenda">
+                    Agendamentos e taxas PIX
+                </button>
+            </h2>
+            <div id="acc-agenda" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <span class="chip">Avulso</span>
+                            <p class="small mb-0 mt-1">Uma data · taxa R$ 35</p>
+                        </div>
+                        <div class="col-sm-4">
+                            <span class="chip">Fixo</span>
+                            <p class="small mb-0 mt-1">12 semanas · taxa R$ 32</p>
+                        </div>
+                        <div class="col-sm-4">
+                            <span class="chip">Quinzenal</span>
+                            <p class="small mb-0 mt-1">6 vezes · taxa R$ 35</p>
+                        </div>
+                    </div>
+                    <ul class="lista-curta mt-3 mb-0">
+                        <li>Sala 4: taxa <strong>R$ 25</strong>.</li>
+                        <li>Indicação da dona: <strong>30%</strong> do valor da consulta.</li>
+                        <li>Horário pago = locação de sala (cancelar com dona/admin).</li>
+                        <li th:if="${podeGerenciarEquipe}"><strong>Dona/admin:</strong> dois cliques na grade para cancelar ou encerrar série.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:if="${ehProfissional}" id="pagamentos">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-pix">
+                    Meus pagamentos (profissional)
+                </button>
+            </h2>
+            <div id="acc-pix" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="small text-muted">Botão <strong>Meus pagamentos</strong> na agenda.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-3">
+                            <thead class="table-light">
+                            <tr><th>Aba</th><th>Quando usar</th></tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td><strong>Pendentes</strong></td>
+                                <td>Amanhã (pagar hoje) · hoje até o horário se esqueceu</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Semana toda</strong></td>
+                                <td>Adiantar seg–sáb · domingo = próxima semana</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <ul class="lista-curta mb-3">
+                        <li>PIX único para várias consultas ou uma por vez.</li>
+                        <li><strong>5 minutos</strong> para confirmar o PIX; senão a vaga libera.</li>
+                        <li>Pendência bloqueia novo agendamento até quitar.</li>
+                        <li>Pago pode <strong>realocar</strong> antes do horário.</li>
+                    </ul>
+                    <a th:href="@{/agendamentos/meus-pagamentos}" class="btn btn-primary btn-sm">Abrir Meus pagamentos</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:unless="${ehProfissional}" id="pagamentos-visao">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-pix-visao">
+                    Pagamentos (visão da gestão)
+                </button>
+            </h2>
+            <div id="acc-pix-visao" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <ul class="lista-curta mb-0">
+                        <li>Profissionais pagam em <strong>Meus pagamentos</strong>.</li>
+                        <li>Véspera até 23:59 · recuperação no dia até o horário.</li>
+                        <li>Bloqueio na agenda enquanto houver pendência.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:if="${podeGerenciarEquipe}" id="dona-admin">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-dona">
+                    Dona da clínica e administração
+                </button>
+            </h2>
+            <div id="acc-dona" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <ul class="lista-curta mb-3">
+                        <li><strong>Central dos profissionais</strong> — cadastro e senhas.</li>
+                        <li><strong>Relatório mensal</strong> — dia 3 fecha o mês; PDF até dia 10 (sino).</li>
+                        <li><strong>Cancelamentos</strong> — só dona/admin na grade.</li>
+                        <li th:if="${podeAcessarGestaoFinanceira}"><strong>Financeiro</strong> — receita PIX por mes e conferencia de atendimentos.</li>
+                        <li th:if="${isAdmin}"><strong>Uso do banco</strong> — espaço no servidor.</li>
+                    </ul>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a th:href="@{/agendamentos/central-profissionais}" class="btn btn-warning btn-sm">Central</a>
+                        <a th:if="${podeAcessarGestaoFinanceira}" th:href="@{/agendamentos/financeiro}" class="btn btn-outline-primary btn-sm">Financeiro</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-senha">
+                    Senha e ajuda rápida
+                </button>
+            </h2>
+            <div id="acc-senha" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body" id="duvidas">
+                    <ul class="lista-curta">
+                        <li>Primeiro acesso: troque a senha em <strong>Trocar senha</strong>.</li>
+                        <li>Não compartilhe login.</li>
+                    </ul>
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light"><tr><th>Se…</th><th>Faça…</th></tr></thead>
+                            <tbody>
+                            <tr><td>Quer marcar</td><td>Agenda → Novo agendamento</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Consulta amanhã</td><td>Meus pagamentos → Pendentes</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Bloqueado</td><td>Quitar PIX pendente</td></tr>
+                            <tr th:if="${podeGerenciarEquipe}"><td>Cancelar</td><td>Dois cliques na grade</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/ajuda-suporte :: rodape}"></th:block>
+</div>
+
+<a th:if="${manualWhatsappAtivo}"
+   class="whatsapp-suporte"
+   th:href="${manualWhatsappUrl}"
+   target="_blank"
+   rel="noopener noreferrer"
+   aria-label="Falar com suporte no WhatsApp"
+   title="Falar com suporte no WhatsApp">
+    <span class="whatsapp-suporte__texto text-end text-secondary">
+        <span class="whatsapp-suporte__rotulo">Suporte - WhatsApp</span>
+    </span>
+    <span class="whatsapp-suporte__btn">
+        <svg class="whatsapp-suporte__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+        <span class="fw-semibold small">WhatsApp</span>
+    </span>
+</a>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    (function () {
+        var hash = window.location.hash;
+        if (!hash) return;
+        var map = {
+            '#pagamentos': 'acc-pix',
+            '#pagamentos-visao': 'acc-pix-visao',
+            '#dona-admin': 'acc-dona',
+            '#funcionamento': 'acc-func',
+            '#agendamentos': 'acc-agenda',
+            '#senha': 'acc-senha',
+            '#duvidas': 'acc-senha',
+            '#video': null
+        };
+        if (hash === '#video') {
+            document.getElementById('video')?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+        var targetId = map[hash];
+        if (!targetId) return;
+        var el = document.getElementById(targetId);
+        if (el) {
+            bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).show();
+            el.closest('.accordion-item')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    })();
+</script>
+</body>
+</html>

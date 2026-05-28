@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="valores-linha (agendamento)">
+    <span th:if="${agendamento != null and agendamento.possuiValoresConsulta()}"
+          class="agendamento-valores small text-muted d-block mt-1"
+          th:text="${agendamento.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</span>
+</div>
+
+<div th:fragment="avulso-lista (agendamentos)">
+    <p th:if="${#lists.isEmpty(agendamentos)}" class="text-muted small mb-0 py-1">Nenhum agendamento avulso.</p>
+    <div th:each="agendamento : ${agendamentos}" class="meus-agendamentos-avulso-linha">
+        <div>
+            <span class="meus-agendamentos-avulso-linha__texto"
+                  th:text="${(agendamento.nomeCliente ?: '-') + ' - ' + (agendamento.sala?.nome ?: '-') + (agendamento.dataHoraInicio != null ? ' - ' + #temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm') : '')}">Cliente</span>
+            <div th:replace="~{fragments/caderno-agendamentos :: valores-linha(agendamento=${agendamento})}"></div>
+            <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
+        </div>
+        <div class="meus-agendamentos-avulso-linha__acoes" th:if="${isAdmin or isDonaClinica}">
+            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                    Cancelar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="series-lista (series, radioPrefix)">
+    <p th:if="${#lists.isEmpty(series)}" class="text-muted small mb-0 py-1">Nenhuma serie nesta categoria.</p>
+    <div th:each="serie : ${series}" class="meus-agendamentos-serie-linha">
+        <div class="meus-agendamentos-serie-linha__titulo" th:text="${serie.rotuloCabecalho}">Cliente - Sala</div>
+        <p th:if="${serie.valoresConsultaResumo != null}"
+           class="agendamento-valores small text-muted mb-2"
+           th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
+        <p class="meus-agendamentos-serie-linha__dica mb-2"
+           th:text="${isAdmin or isDonaClinica ? 'Selecione uma data e use Cancelar data, Pagar data ou Realocar data (se ja pago).' : 'Selecione uma data para pagar ou realocar (datas com ✓). Cancelamento so com a dona da clinica ou administracao.'}">
+            Selecione uma data para pagar.
+        </p>
+        <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
+            <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
+                   class="meus-agendamentos-data-badge meus-agendamentos-data-badge--selectable"
+                   th:classappend="${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}">
+                <input type="radio"
+                       class="meus-agendamentos-data-radio"
+                       th:name="${radioPrefix + serie.agendamentoReferenciaId}"
+                       th:value="${ocorrencia.agendamentoId}"
+                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar ? 'true' : 'false'},data-pode-realocar=${ocorrencia.podeRealocar ? 'true' : 'false'},data-aguardando-qr=${ocorrencia.statusPagamento != null and ocorrencia.statusPagamento.name() == 'ESPERANDO_CONFIRMACAO' ? 'true' : 'false'},data-pago=${ocorrencia.pagamentoPago ? 'true' : 'false'}">
+                <span th:text="${ocorrencia.dataRotulo}">25/05</span>
+                <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
+            </label>
+        </div>
+        <div class="meus-agendamentos-serie-linha__acoes">
+            <a href="#"
+               class="btn btn-sm btn-outline-info meus-agendamentos-realocar-data-btn disabled me-2"
+               aria-disabled="true">
+                Realocar data
+            </a>
+            <a href="#"
+               th:unless="${isDonaClinica}"
+               class="btn btn-sm btn-warning meus-agendamentos-pagar-data-btn disabled me-2"
+               aria-disabled="true">
+                Pagar data
+            </a>
+            <form th:if="${isAdmin or isDonaClinica}"
+                  class="meus-agendamentos-cancelar-data-form d-inline"
+                  method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit"
+                        class="btn btn-sm btn-outline-danger meus-agendamentos-cancelar-data-btn"
+                        disabled>
+                    Cancelar data
+                </button>
+            </form>
+            <form th:if="${isAdmin or isDonaClinica}"
+                  th:action="@{/agendamentos/{id}/encerrar-fixo(id=${serie.agendamentoReferenciaId})}"
+                  method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-sm btn-outline-primary"
+                        onclick="return confirm('Isso vai encerrar esta serie desta data em diante. Deseja continuar?');">
+                    Encerrar serie
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

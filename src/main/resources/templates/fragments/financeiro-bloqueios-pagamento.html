@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="painel (bloqueios, filtro)">
+    <div th:if="${bloqueios != null and !#lists.isEmpty(bloqueios)}"
+         class="financeiro-bloqueios mb-4"
+         role="alert">
+        <div class="financeiro-bloqueios__head">
+            <span class="financeiro-bloqueios__icon" aria-hidden="true">!</span>
+            <div>
+                <h2 class="financeiro-bloqueios__title h6 mb-1">Profissionais com agenda bloqueada</h2>
+                <p class="financeiro-bloqueios__subtitle mb-0">
+                    Pagamento da sala em atraso. O profissional nao agenda nem usa sala ate quitar.
+                </p>
+            </div>
+        </div>
+        <ul class="financeiro-bloqueios__lista mb-0">
+            <li th:each="bloqueio : ${bloqueios}" class="financeiro-bloqueios__item">
+                <span class="financeiro-bloqueios__msg" th:text="${bloqueio.mensagemBloqueio}">
+                    Sistema do usuario Julia foi bloqueado por nao pagar.
+                </span>
+                <span class="financeiro-bloqueios__meta"
+                      th:text="${bloqueio.pendencias + (bloqueio.pendencias == 1 ? ' pendencia' : ' pendencias')}">
+                    2 pendencias
+                </span>
+                <a th:if="${filtro != null}"
+                   class="financeiro-bloqueios__link"
+                   th:href="@{/agendamentos/financeiro/configuracao-taxas(mesAno=${filtro.mesAnoInput}, profissionalId=${bloqueio.profissionalId})}">
+                    Ver atendimentos
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>

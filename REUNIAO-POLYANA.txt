@@ -1,0 +1,21 @@
+REUNIAO POLYANA - ANOTACOES
+===========================
+
+Data: ___/___/2026
+
+InfiniteTag: $___________  → sistema (sem $): ___________
+
+Conta InfinitePay ativa com PIX/checkout online?  [ ] Sim  [ ] Nao
+(Nao confundir com Tap to Pay / cartao no celular)
+
+WhatsApp comprovantes: _________________________
+
+Conta so Tap to Pay? Perguntar suporte InfinitePay sobre link PIX online.
+
+Site producao (depois): https://_______________________
+
+Teste PIX real combinado: [ ] Sim  valor R$ ______
+
+Observacoes:
+_________________________________________________
+_________________________________________________

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${tituloLote}">Pagamento em lote</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        .comprovante-polyana-aviso {
+            background: linear-gradient(180deg, #fff9e6 0%, #fff3cd 100%);
+            box-shadow: 0 4px 14px rgba(245, 176, 0, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container py-5" style="max-width: 640px;">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h1 class="h4 mb-2 text-center" th:text="${tituloLote}">Pagamento em lote</h1>
+            <p class="text-muted small text-center mb-3">
+                <strong th:text="${rotuloPeriodo}">01/06/2026</strong>
+                — um unico PIX para todas as consultas abaixo.
+            </p>
+
+            <div th:if="${todasPagas}" class="alert alert-success">
+                Todas as consultas selecionadas foram pagas com sucesso.
+            </div>
+
+            <div th:if="${!todasPagas}">
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Horario</th>
+                            <th>Cliente</th>
+                            <th>Taxa</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="consulta : ${consultasLote}">
+                            <td th:text="${#temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy')}">29/05</td>
+                            <td th:text="${#temporals.format(consulta.dataHoraInicio, 'HH:mm')}">10:00</td>
+                            <td th:text="${consulta.nomeCliente}">Cliente</td>
+                            <td th:text="${pagamentoService.formatarValorTaxaPix(consulta)}">R$ 35,00</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="text-center mb-3">
+                    Total do PIX:
+                    <strong class="fs-4" th:text="${totalTaxaLote}">R$ 0,00</strong>
+                </p>
+
+                <div th:if="${agendamento.possuiQrPagamentoAtivo()}" class="text-center">
+                    <p class="small text-warning mb-2">
+                        Tempo restante:
+                        <strong class="pagamento-countdown"
+                                th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                                th:text="${agendamento.tempoRestantePagamentoFormatado}">4:59</strong>
+                    </p>
+                    <img th:src="${qrUrl}"
+                         alt="QR Code PIX"
+                         class="img-fluid rounded border mb-3"
+                         width="260"
+                         height="260">
+                    <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
+                    <div class="d-grid gap-2">
+                        <button type="button"
+                                th:if="${agendamento.pagamentoLink != null}"
+                                class="btn btn-primary copiar-chave-pix-btn"
+                                th:attr="data-pix-chave=${agendamento.pagamentoLink}">
+                            Copiar chave PIX
+                        </button>
+                        <small class="text-success fw-semibold pix-copiado-msg" hidden>Chave PIX copiada.</small>
+                    </div>
+                </div>
+
+                <div th:if="${!agendamento.possuiQrPagamentoAtivo()}" class="alert alert-warning mb-0">
+                    O QR Code expirou. Volte em Meus pagamentos e gere o PIX novamente.
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 mt-3">
+                <a th:href="${voltarUrl}" class="btn btn-outline-secondary">
+                    Voltar para Meus pagamentos
+                </a>
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-link">Ir para agenda</a>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        var btn = document.querySelector('.copiar-chave-pix-btn');
+        if (btn) {
+            btn.addEventListener('click', function () {
+                var chave = btn.getAttribute('data-pix-chave');
+                if (!chave) return;
+                navigator.clipboard.writeText(chave).then(function () {
+                    var msg = document.querySelector('.pix-copiado-msg');
+                    if (msg) msg.hidden = false;
+                });
+            });
+        }
+        var el = document.querySelector('.pagamento-countdown');
+        if (!el) return;
+        var expira = el.getAttribute('data-expira-em');
+        if (!expira) return;
+        var fim = new Date(expira);
+        function tick() {
+            var seg = Math.max(0, Math.floor((fim - new Date()) / 1000));
+            var m = Math.floor(seg / 60);
+            var s = seg % 60;
+            el.textContent = m + ':' + String(s).padStart(2, '0');
+            if (seg > 0) setTimeout(tick, 1000);
+        }
+        tick();
+    })();
+</script>
+</body>
+</html>

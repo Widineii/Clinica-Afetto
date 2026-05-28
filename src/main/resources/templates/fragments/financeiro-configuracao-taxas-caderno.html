@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="painel (atendimentosView, pagamentoService)">
+
+    <p th:if="${!atendimentosView.vazio}" class="financeiro-hint mb-3">
+        <span class="text-success fw-semibold">✓</span> pago
+        <span class="mx-2">|</span>
+        <span class="text-warning fw-semibold">$</span> pendente de pagamento
+    </p>
+
+    <div th:if="${!#lists.isEmpty(atendimentosView.avulsos)}" class="mb-4">
+        <h3 class="h6 text-uppercase text-muted mb-2">Avulso</h3>
+        <div th:each="avulso : ${atendimentosView.avulsos}" class="taxas-caderno-avulso-linha">
+            <div>
+                <span class="taxas-caderno-avulso-linha__texto"
+                      th:text="${(avulso.nomeCliente ?: '-') + ' - ' + (avulso.sala?.nome ?: '-') + (avulso.dataHoraInicio != null ? ' - ' + #temporals.format(avulso.dataHoraInicio, 'dd/MM HH:mm') : '')}">
+                    Cliente - Sala - 30/05 07:00
+                </span>
+                <span th:if="${avulso.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${pagamentoService.exibirBotaoPagar(avulso) and !avulso.pagamentoPago}"
+                      class="ms-1 text-warning"
+                      title="Pendente de pagamento">$</span>
+                <p th:if="${avulso.valoresConsultaResumo != null}"
+                   class="agendamento-valores small text-muted mb-0 mt-1"
+                   th:text="${avulso.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(atendimentosView.seriesFixas)}" class="mb-4">
+        <h3 class="h6 text-uppercase text-muted mb-2">Fixo</h3>
+        <div th:replace="~{fragments/financeiro-configuracao-taxas-caderno :: series-lista(series=${atendimentosView.seriesFixas})}"></div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(atendimentosView.seriesQuinzenais)}">
+        <h3 class="h6 text-uppercase text-muted mb-2">Quinzenal</h3>
+        <div th:replace="~{fragments/financeiro-configuracao-taxas-caderno :: series-lista(series=${atendimentosView.seriesQuinzenais})}"></div>
+    </div>
+</div>
+
+<div th:fragment="series-lista (series)">
+    <div th:each="serie : ${series}" class="taxas-caderno-serie-linha">
+        <div class="taxas-caderno-serie-linha__titulo" th:text="${serie.rotuloCabecalho}">Cliente - Sala - 07:00 Sabado</div>
+        <p th:if="${serie.valoresConsultaResumo != null}"
+           class="agendamento-valores small text-muted mb-2"
+           th:text="${serie.valoresConsultaResumo}">Prof. R$ 170,00 | Clin. R$ 32,00 | Liq. R$ 138,00</p>
+        <div class="taxas-caderno-serie-linha__datas">
+            <span th:each="ocorrencia : ${serie.proximasOcorrencias}"
+                  class="taxas-caderno-data-badge">
+                <span th:text="${ocorrencia.dataRotulo}">30/05</span>
+                <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}"
+                      class="ms-1 text-warning"
+                      title="Pendente de pagamento">$</span>
+            </span>
+        </div>
+    </div>
+</div>
+</body>
+</html>
