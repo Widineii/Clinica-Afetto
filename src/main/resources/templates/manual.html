@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Manual de uso - Agenda Afetto</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <th:block th:replace="~{fragments/afetto-paleta :: css}"></th:block>
     <style>
         body {
             min-height: 100vh;
             background:
-                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                radial-gradient(circle at top left, rgba(10, 135, 133, 0.12), transparent 28%),
                 linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
         }
         .app-shell { width: min(960px, 100%); margin-inline: auto; padding: 24px 16px 48px; }
         .hero-band {
-            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            background: var(--afetto-gradient-hero);
             color: #fff; border-radius: 24px; padding: clamp(16px, 3vw, 24px);
         }
         .shell-card {
@@ -22,10 +23,10 @@
             box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
         }
         .fact-card {
-            border-radius: 16px; background: #f0fdfa; border: 1px solid #99f6e4;
+            border-radius: 16px; background: var(--afetto-teal-soft); border: 1px solid var(--afetto-teal-soft-2);
             padding: 1rem; height: 100%; text-align: center;
         }
-        .fact-card strong { display: block; color: #0f766e; font-size: 1.05rem; }
+        .fact-card strong { display: block; color: var(--afetto-teal-dark); font-size: 1.05rem; }
         .video-wrap {
             position: relative; border-radius: 16px; overflow: hidden;
             background: #0f172a; aspect-ratio: 16 / 9;
@@ -48,19 +49,41 @@
         .passo-amostra:last-child { border-bottom: 0; }
         .passo-amostra .num {
             width: 1.5rem; height: 1.5rem; border-radius: 50%;
-            background: #0f766e; color: #fff; font-size: 0.75rem; font-weight: 700;
+            background: var(--afetto-teal-dark); color: #fff; font-size: 0.75rem; font-weight: 700;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .accordion-button:not(.collapsed) {
-            background: #f0fdfa; color: #0f766e; box-shadow: none;
+            background: #f0fdfa; color: var(--afetto-teal-dark); box-shadow: none;
         }
-        .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(15, 118, 110, 0.25); }
+        .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(10, 135, 133, 0.25); }
         .chip {
             display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px;
             background: #e0f2fe; color: #0369a1; font-size: 0.75rem; font-weight: 600;
         }
         .lista-curta { margin: 0; padding-left: 1.1rem; }
         .lista-curta li { margin-bottom: 0.35rem; }
+        .manual-lead {
+            color: #475569;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            margin-bottom: 0;
+        }
+        .manual-nota {
+            border-left: 3px solid var(--afetto-teal-dark);
+            background: #f0fdfa;
+            border-radius: 0 12px 12px 0;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            margin: 0.85rem 0 0;
+        }
+        .manual-subtitulo {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--afetto-teal-dark);
+            margin: 1rem 0 0.45rem;
+        }
         body { padding-bottom: 5.5rem; }
         .whatsapp-suporte {
             position: fixed;
@@ -123,7 +146,7 @@
                 <p class="text-uppercase small mb-2 opacity-75">Agenda Afetto</p>
                 <h1 class="h2 mb-2">Manual de uso</h1>
                 <p class="mb-0 opacity-75 small">
-                    Guia rapido para <strong th:text="${usuarioLogado.nome}">Usuario</strong>
+                    Guia completo para <strong th:text="${usuarioLogado.nome}">Usuario</strong> — como agendar, pagar e usar a agenda no dia a dia.
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -152,10 +175,10 @@
         </div>
         <div class="col-md-4">
             <div class="fact-card">
-                <strong th:if="${ehProfissional}">Pagar na véspera</strong>
+                <strong th:if="${ehProfissional}">Meus pagamentos</strong>
                 <strong th:unless="${ehProfissional}">Equipe na agenda</strong>
-                <span class="small text-muted" th:if="${ehProfissional}">Amanhã paga hoje</span>
-                <span class="small text-muted" th:unless="${ehProfissional}">Dona cancela na grade</span>
+                <span class="small text-muted" th:if="${ehProfissional}">PIX na agenda</span>
+                <span class="small text-muted" th:unless="${ehProfissional}">Polyana gerencia na Central</span>
             </div>
         </div>
     </div>
@@ -179,13 +202,13 @@
                        controls
                        preload="metadata"
                        title="Video tutorial Agenda Afetto">
-                    Seu navegador nao suporta reproducao de video.
+                    Seu navegador não suporta reprodução de vídeo.
                 </video>
                 <div th:if="${manualVideoModo == 'nenhum'}" class="video-amostra">
                     <div class="play-ring" aria-hidden="true">▶</div>
-                    <p class="mb-1 fw-semibold">Video de demonstracao (amostra)</p>
+                    <p class="mb-1 fw-semibold">Vídeo de demonstração (amostra)</p>
                     <p class="small opacity-75 mb-0">
-                        Quando a clinica gravar o tutorial, o video aparece aqui automaticamente.
+                        Quando a clínica gravar o tutorial, o vídeo aparece aqui automaticamente.
                     </p>
                 </div>
             </div>
@@ -199,13 +222,17 @@
                 <span class="num">2</span>
                 <div><strong>Agendar</strong> — escolher sala, cliente, tipo (avulso / fixo / quinzenal).</div>
             </div>
-            <div class="passo-amostra" th:unless="${ehProfissional}">
+            <div class="passo-amostra" th:if="${isDonaClinica}">
                 <span class="num">2</span>
                 <div><strong>Agendar</strong> — ver grade de todos ou cadastrar na Central dos profissionais.</div>
             </div>
+            <div class="passo-amostra" th:if="${isAdmin}">
+                <span class="num">2</span>
+                <div><strong>Agendar</strong> — ver grade de todos os profissionais.</div>
+            </div>
             <div class="passo-amostra" th:if="${ehProfissional}">
                 <span class="num">3</span>
-                <div><strong>Pagar</strong> — Meus pagamentos → pendentes ou semana inteira (PIX).</div>
+                <div><strong>Pagar</strong> — Meus pagamentos na agenda (PIX conforme o prazo da clínica).</div>
             </div>
             <div class="passo-amostra" th:unless="${ehProfissional}">
                 <span class="num">3</span>
@@ -213,7 +240,7 @@
             </div>
             <div class="passo-amostra">
                 <span class="num">4</span>
-                <div><strong>Dúvida?</strong> — falar com a dona da clínica ou administração.</div>
+                <div><strong>Dúvida ou cancelamento?</strong> — fale com a Polyana ou use este manual.</div>
             </div>
         </div>
     </div>
@@ -227,10 +254,69 @@
             </h2>
             <div id="acc-func" class="accordion-collapse collapse show" data-bs-parent="#manualAccordion">
                 <div class="accordion-body">
+                    <p class="manual-lead">
+                        A clínica funciona com consultas de <strong>1 hora</strong>, em horários cheios (07:00, 08:00, 09:00…).
+                        Cada sala aparece na grade semanal da agenda.
+                    </p>
+                    <ul class="lista-curta mt-3">
+                        <li>Atendimento <strong>segunda a sábado</strong>, das 07:00 às 21:00.</li>
+                        <li><strong>Domingo fechado</strong> — não é possível marcar consulta nesse dia.</li>
+                        <li th:if="${ehProfissional and pagamentoDiario}">
+                            No <strong>domingo</strong>, você pode adiantar o PIX da <strong>próxima semana</strong> (segunda a sábado).
+                        </li>
+                        <li th:if="${ehProfissional and pagamentoDiario}">
+                            Consultas de <strong>amanhã</strong> devem estar pagas até <strong>23:59 de hoje</strong> (regra D-1).
+                        </li>
+                        <li th:if="${ehProfissional and pagamentoSemanal}">
+                            Sua agenda fica liberada até <strong>domingo</strong>; o PIX da semana é no <strong>sábado ou domingo</strong>.
+                        </li>
+                        <li th:if="${ehProfissional and pagamentoMensal}">
+                            Você agenda o mês todo; o PIX do mês anterior fica disponível do <strong>dia 01 ao 10</strong>.
+                        </li>
+                        <li th:unless="${ehProfissional}">Cada profissional segue o prazo de pagamento definido pela Polyana na Central.</li>
+                    </ul>
+                    <div class="manual-nota mb-0" th:if="${ehProfissional and pagamentoDiario}">
+                        Esqueceu de pagar? Ainda dá para quitar no <strong>mesmo dia</strong> do atendimento, até o horário da consulta —
+                        depois disso a vaga pode ser liberada para outro profissional.
+                    </div>
+                    <div class="manual-nota mb-0" th:if="${ehProfissional and pagamentoSemanal}">
+                        Se passar de <strong>domingo</strong> sem pagar a semana, a agenda <strong>bloqueia na segunda-feira</strong> até quitar.
+                    </div>
+                    <div class="manual-nota mb-0" th:if="${ehProfissional and pagamentoMensal}">
+                        Se passar do <strong>dia 10</strong> sem pagar o mês anterior, a agenda <strong>bloqueia</strong> até quitar.
+                    </div>
+                    <div class="manual-nota mb-0" th:unless="${ehProfissional}">
+                        Profissionais com pagamento <strong>diário</strong> ainda podem recuperar no mesmo dia, até o horário da consulta.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-grade">
+                    Como usar a tela da agenda
+                </button>
+            </h2>
+            <div id="acc-grade" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        A agenda mostra a semana atual em formato de grade: <strong>linhas = horários</strong> e
+                        <strong>colunas = salas</strong>. Cada célula ocupada traz o nome do cliente e do profissional.
+                    </p>
+                    <p class="manual-subtitulo">Partes da tela</p>
                     <ul class="lista-curta">
-                        <li>Atendimento <strong>segunda a sábado</strong>, 07:00–21:00 (hora cheia).</li>
-                        <li><strong>Domingo fechado</strong> — não marca consulta.</li>
-                        <li>Domingo: profissional adianta PIX da <strong>próxima semana</strong> (seg–sáb).</li>
+                        <li><strong>Grade semanal</strong> — visão geral de quem está em cada sala e horário.</li>
+                        <li th:if="${ehProfissional}"><strong>Novo agendamento</strong> — formulário para marcar avulso, fixo ou quinzenal.</li>
+                        <li th:if="${ehProfissional}"><strong>Meus agendamentos</strong> — lista (caderno) dos seus horários, com opções de encerrar série ou realocar.</li>
+                        <li th:if="${podeGerenciarEquipe}"><strong>Central dos profissionais</strong> — cadastro da equipe (dona da clínica).</li>
+                        <li><strong>Manual</strong> — este guia, sempre acessível pelo botão no topo.</li>
+                    </ul>
+                    <p class="manual-subtitulo">Dois cliques na grade</p>
+                    <ul class="lista-curta mb-0">
+                        <li th:if="${podeGerenciarEquipe}">Polyana e a administração podem <strong>cancelar</strong> uma data ou <strong>encerrar</strong> série semanal/quinzenal.</li>
+                        <li th:unless="${podeGerenciarEquipe}">Profissionais podem <strong>encerrar</strong> as próprias séries semanal ou quinzenal (dois cliques no horário na grade).</li>
+                        <li th:unless="${podeGerenciarEquipe}">Para <strong>cancelar</strong> uma data já paga, fale com a <strong>Polyana</strong>.</li>
                     </ul>
                 </div>
             </div>
@@ -244,26 +330,46 @@
             </h2>
             <div id="acc-agenda" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                 <div class="accordion-body">
-                    <div class="row g-3">
+                    <p class="manual-lead">
+                        Ao marcar um horário, você paga a <strong>taxa de locação da sala</strong> (PIX).
+                        O valor depende do tipo de agendamento e da sala escolhida.
+                    </p>
+                    <div class="row g-3 mt-1">
                         <div class="col-sm-4">
                             <span class="chip">Avulso</span>
-                            <p class="small mb-0 mt-1">Uma data · taxa R$ 35</p>
+                            <p class="small mb-0 mt-1"><strong>1 data só.</strong> Taxa R$ 35 por consulta.</p>
                         </div>
                         <div class="col-sm-4">
-                            <span class="chip">Fixo</span>
-                            <p class="small mb-0 mt-1">12 semanas · taxa R$ 32</p>
+                            <span class="chip">Fixo semanal</span>
+                            <p class="small mb-0 mt-1"><strong>12 semanas</strong> no mesmo dia/hora. Taxa R$ 32 por consulta.</p>
                         </div>
                         <div class="col-sm-4">
                             <span class="chip">Quinzenal</span>
-                            <p class="small mb-0 mt-1">6 vezes · taxa R$ 35</p>
+                            <p class="small mb-0 mt-1"><strong>6 datas</strong> (a cada 2 semanas). Taxa R$ 35 por consulta.</p>
                         </div>
                     </div>
-                    <ul class="lista-curta mt-3 mb-0">
-                        <li>Sala 4: taxa <strong>R$ 25</strong>.</li>
-                        <li>Indicação da dona: <strong>30%</strong> do valor da consulta.</li>
-                        <li>Horário pago = locação de sala (cancelar com dona/admin).</li>
-                        <li th:if="${podeGerenciarEquipe}"><strong>Dona/admin:</strong> dois cliques na grade para cancelar ou encerrar série.</li>
+                    <p class="manual-subtitulo">Taxas especiais</p>
+                    <ul class="lista-curta">
+                        <li><strong>Sala 4:</strong> taxa reduzida de <strong>R$ 25</strong> por consulta.</li>
+                        <li><strong>Indicação da clínica:</strong> a taxa passa a ser <strong>30%</strong> do valor que o profissional recebe na consulta (marque o checkbox no formulário).</li>
                     </ul>
+                    <p class="manual-subtitulo" th:if="${ehProfissional}">Como criar um agendamento</p>
+                    <ol class="lista-curta" th:if="${ehProfissional}">
+                        <li>Na agenda, role até <strong>Novo agendamento</strong>.</li>
+                        <li>Escolha sala, data, horário, nome do cliente e tipo (avulso, fixo ou quinzenal).</li>
+                        <li>Se for indicação da clínica, marque a opção correspondente.</li>
+                        <li>Confirme — o sistema verifica conflito de horário e abre o pagamento quando necessário.</li>
+                    </ol>
+                    <p class="manual-subtitulo">Cancelar x encerrar série</p>
+                    <ul class="lista-curta">
+                        <li><strong>Encerrar série</strong> — remove <strong>todos</strong> os horários da recorrência (sem precisar escolher data).</li>
+                        <li><strong>Cancelar data</strong> — remove um horário específico; somente Polyana e a administração fazem isso na grade.</li>
+                        <li>Horário <strong>já pago</strong> = locação de sala, <strong>sem reembolso</strong>. Para cancelar, fale com a <strong>Polyana</strong>.</li>
+                    </ul>
+                    <div class="manual-nota mb-0">
+                        Séries fixas se renovam sozinhas: quando uma data passa, o sistema mantém até
+                        <strong>12 semanas</strong> (fixo) ou <strong>6 ocorrências</strong> (quinzenal) sempre à frente.
+                    </div>
                 </div>
             </div>
         </div>
@@ -271,34 +377,95 @@
         <div class="accordion-item border-0 border-top" th:if="${ehProfissional}" id="pagamentos">
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-pix">
-                    Meus pagamentos (profissional)
+                    Como funciona o seu pagamento
                 </button>
             </h2>
             <div id="acc-pix" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                 <div class="accordion-body">
-                    <p class="small text-muted">Botão <strong>Meus pagamentos</strong> na agenda.</p>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered mb-3">
-                            <thead class="table-light">
-                            <tr><th>Aba</th><th>Quando usar</th></tr>
-                            </thead>
-                            <tbody>
-                            <tr>
-                                <td><strong>Pendentes</strong></td>
-                                <td>Amanhã (pagar hoje) · hoje até o horário se esqueceu</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Semana toda</strong></td>
-                                <td>Adiantar seg–sáb · domingo = próxima semana</td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <p class="manual-lead mb-3">
+                        Você paga a locação da sala pelo menu <strong>Meus pagamentos</strong> na agenda.
+                        Sem pagamento em dia, novos agendamentos ficam bloqueados.
+                    </p>
+
+                    <div th:if="${pagamentoDiario}">
+                        <p class="manual-subtitulo">Quando pagar</p>
+                        <p class="manual-lead">
+                            Você paga a locação de <strong>cada consulta</strong>, normalmente <strong>1 dia antes</strong> (D-1),
+                            até <strong>23:59</strong>. Na primeira data de uma série fixa ou quinzenal, o pagamento pode ser na hora do agendamento.
+                        </p>
+                        <p class="manual-subtitulo">Onde pagar na agenda</p>
+                        <ul class="lista-curta">
+                            <li><strong>Meus pagamentos → Pagamentos pendentes</strong> — consultas de <strong>amanhã</strong> (pagar hoje) e consultas de <strong>hoje</strong> se você esqueceu (até o horário).</li>
+                            <li><strong>Meus pagamentos → Pagar a semana toda</strong> — opcional: adiantar todas as consultas de segunda a sábado com <strong>um PIX único</strong>.</li>
+                            <li>No <strong>domingo</strong> (clínica fechada), essa aba adianta a <strong>próxima semana</strong>.</li>
+                        </ul>
+                        <p class="manual-subtitulo">Passo a passo do dia a dia</p>
+                        <ol class="lista-curta">
+                            <li>Você marca a consulta na agenda (avulso, fixo ou quinzenal).</li>
+                            <li>No <strong>dia anterior</strong>, a consulta aparece em <strong>Pendentes</strong>.</li>
+                            <li>Gere o PIX (uma consulta ou selecione várias para PIX único).</li>
+                            <li>Confirme em até <strong>5 minutos</strong>; senão a vaga pode ser liberada.</li>
+                            <li>Se esquecer, ainda paga no <strong>mesmo dia</strong> até o horário — se a vaga continuar livre.</li>
+                        </ol>
+                        <div class="manual-nota">
+                            Com PIX pendente, o sistema <strong>bloqueia novos agendamentos</strong> até você quitar.
+                            Consulta já paga pode ser <strong>realocada</strong> antes do horário (sala/data livre).
+                        </div>
                     </div>
+
+                    <div th:if="${pagamentoSemanal}">
+                        <p class="manual-subtitulo">Quando pagar</p>
+                        <p class="manual-lead">
+                            O PIX das consultas de <strong>segunda a sábado</strong> é feito no
+                            <strong>sábado ou domingo</strong>, em um único pagamento.
+                        </p>
+                        <p class="manual-subtitulo">Regras da semana</p>
+                        <ul class="lista-curta">
+                            <li>Durante a semana, você pode <strong>agendar normalmente</strong>.</li>
+                            <li>O sistema fica <strong>liberado até domingo</strong>.</li>
+                            <li>O PIX da semana é feito no <strong>sábado ou domingo</strong>, em <strong>Meus pagamentos → Pagamento da semana</strong>.</li>
+                            <li>Um <strong>PIX único</strong> quita todas as consultas listadas daquela semana.</li>
+                            <li>Se passar de <strong>domingo</strong> sem pagar, a agenda <strong>bloqueia na segunda</strong> até quitar.</li>
+                        </ul>
+                        <p class="manual-subtitulo">Realocar consulta</p>
+                        <p class="manual-lead mb-2">
+                            Se mudar sala, data ou horário, a cobrança continua na <strong>semana em que você marcou</strong> —
+                            o pagamento não “pula” sozinho para outra semana.
+                        </p>
+                        <div class="manual-nota">
+                            Fora de sábado e domingo, a aba de pagamento semanal pode aparecer vazia ou informar que
+                            o PIX semanal só está disponível no <strong>fim de semana</strong>.
+                        </div>
+                    </div>
+
+                    <div th:if="${pagamentoMensal}">
+                        <p class="manual-subtitulo">Quando pagar</p>
+                        <p class="manual-lead">
+                            As locações do <strong>mês anterior</strong> aparecem para pagamento a partir do
+                            <strong>dia 01</strong>, com prazo até o <strong>dia 10</strong>.
+                        </p>
+                        <p class="manual-subtitulo">Calendário do pagamento</p>
+                        <ul class="lista-curta">
+                            <li>Durante o mês, a agenda fica <strong>liberada</strong> para marcar horários.</li>
+                            <li>A partir do <strong>dia 01</strong>, aparece em <strong>Meus pagamentos → Pagamento do mês</strong> o total do mês anterior.</li>
+                            <li>Prazo para pagar: do <strong>dia 01 ao dia 10</strong>.</li>
+                            <li>Depois do <strong>dia 10</strong> sem pagar, a agenda <strong>bloqueia</strong> até quitar.</li>
+                            <li>Você pode pagar tudo com <strong>um PIX único</strong> ou gerar QR por consulta.</li>
+                        </ul>
+                        <p class="manual-subtitulo">Realocar consulta</p>
+                        <p class="manual-lead mb-2">
+                            Exemplo: marcou em 29/06 e realocou para 07/07 — a cobrança continua na fatura de <strong>junho</strong>,
+                            porque foi quando você agendou originalmente.
+                        </p>
+                        <div class="manual-nota">
+                            Fora da janela do dia 01 ao 10, a aba mensal pode mostrar que não há cobrança pendente no momento.
+                        </div>
+                    </div>
+
+                    <p class="manual-subtitulo">Regras para todos</p>
                     <ul class="lista-curta mb-3">
-                        <li>PIX único para várias consultas ou uma por vez.</li>
-                        <li><strong>5 minutos</strong> para confirmar o PIX; senão a vaga libera.</li>
-                        <li>Pendência bloqueia novo agendamento até quitar.</li>
-                        <li>Pago pode <strong>realocar</strong> antes do horário.</li>
+                        <li>Horário pago = <strong>locação de sala</strong>, sem reembolso automático. Cancelamento: fale com a <strong>Polyana</strong>.</li>
+                        <li>Depois de gerar o PIX, há <strong>5 minutos</strong> para confirmar.</li>
                     </ul>
                     <a th:href="@{/agendamentos/meus-pagamentos}" class="btn btn-primary btn-sm">Abrir Meus pagamentos</a>
                 </div>
@@ -313,11 +480,27 @@
             </h2>
             <div id="acc-pix-visao" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                 <div class="accordion-body">
-                    <ul class="lista-curta mb-0">
-                        <li>Profissionais pagam em <strong>Meus pagamentos</strong>.</li>
-                        <li>Véspera até 23:59 · recuperação no dia até o horário.</li>
-                        <li>Bloqueio na agenda enquanto houver pendência.</li>
+                    <p class="manual-lead">
+                        Cada profissional (exceto a dona da clínica) paga a locação via <strong>Meus pagamentos</strong>.
+                        A Polyana define na <strong>Central dos profissionais</strong> se a pessoa paga
+                        <strong>por dia</strong>, <strong>por semana</strong> ou <strong>por mês</strong>.
+                    </p>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4" th:each="opt : ${periodicidadesPagamento}">
+                            <span class="chip" th:text="${opt.rotulo}">Diário</span>
+                            <p class="small mb-0 mt-2" th:text="${opt.descricao}">Descrição</p>
+                        </div>
+                    </div>
+                    <p class="manual-subtitulo">Resumo das três formas</p>
+                    <ul class="lista-curta">
+                        <li><strong>Diário:</strong> cobrança na véspera de cada consulta (D-1), até 23:59; recuperação no mesmo dia até o horário.</li>
+                        <li><strong>Semanal:</strong> semana liberada até domingo; PIX no sábado ou domingo; bloqueia na segunda se não pagar.</li>
+                        <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 10 paga o mês anterior; bloqueia após o dia 10.</li>
                     </ul>
+                    <div class="manual-nota mb-0">
+                        No manual, cada profissional vê <strong>só a explicação da forma de pagamento dele</strong>.
+                        No <strong>Financeiro</strong>, a Polyana confere receita PIX por mês.
+                    </div>
                 </div>
             </div>
         </div>
@@ -330,16 +513,27 @@
             </h2>
             <div id="acc-dona" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                 <div class="accordion-body">
+                    <p class="manual-lead" th:if="${isDonaClinica}">
+                        Como dona da clínica, você gerencia equipe, cancelamentos e visão financeira da Afetto.
+                    </p>
+                    <p class="manual-lead" th:if="${isAdmin and !isDonaClinica}">
+                        Como administração, você apoia a operação da agenda, cancelamentos e relatórios.
+                    </p>
                     <ul class="lista-curta mb-3">
-                        <li><strong>Central dos profissionais</strong> — cadastro e senhas.</li>
-                        <li><strong>Relatório mensal</strong> — dia 3 fecha o mês; PDF até dia 10 (sino).</li>
-                        <li><strong>Cancelamentos</strong> — só dona/admin na grade.</li>
-                        <li th:if="${podeAcessarGestaoFinanceira}"><strong>Financeiro</strong> — receita PIX por mes e conferencia de atendimentos.</li>
-                        <li th:if="${isAdmin}"><strong>Uso do banco</strong> — espaço no servidor.</li>
+                        <li th:if="${isDonaClinica}"><strong>Central dos profissionais</strong> — cadastrar profissional, resetar senha e escolher se paga <strong>por dia, semana ou mês</strong>.</li>
+                        <li><strong>Grade semanal</strong> — dois cliques em um horário para cancelar data ou encerrar série de qualquer profissional.</li>
+                        <li><strong>Relatório mensal</strong> — no <strong>dia 3</strong> o mês anterior é fechado; PDF disponível até o <strong>dia 10</strong> (ícone de sino).</li>
+                        <li th:if="${podeAcessarGestaoFinanceira}"><strong>Financeiro</strong> — receita PIX por mês, conferência de atendimentos e exportação.</li>
+                        <li th:if="${isAdmin}"><strong>Uso do banco</strong> — monitorar espaço usado no servidor.</li>
                     </ul>
+                    <div class="manual-nota mb-3">
+                        Horários pagos são locação de sala. Cancelamentos são tratados com a profissional;
+                        o sistema não estorna PIX automaticamente.
+                    </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <a th:href="@{/agendamentos/central-profissionais}" class="btn btn-warning btn-sm">Central</a>
+                        <a th:if="${isDonaClinica}" th:href="@{/agendamentos/central-profissionais}" class="btn btn-warning btn-sm">Central</a>
                         <a th:if="${podeAcessarGestaoFinanceira}" th:href="@{/agendamentos/financeiro}" class="btn btn-outline-primary btn-sm">Financeiro</a>
+                        <a th:href="@{/agendamentos/dashboard}" class="btn btn-outline-secondary btn-sm">Abrir agenda</a>
                     </div>
                 </div>
             </div>
@@ -353,18 +547,45 @@
             </h2>
             <div id="acc-senha" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                 <div class="accordion-body" id="duvidas">
+                    <p class="manual-lead">
+                        Cada profissional tem login individual. Não compartilhe senha — o histórico de agendamentos e pagamentos fica vinculado ao seu usuário.
+                    </p>
                     <ul class="lista-curta">
-                        <li>Primeiro acesso: troque a senha em <strong>Trocar senha</strong>.</li>
-                        <li>Não compartilhe login.</li>
+                        <li>No <strong>primeiro acesso</strong>, troque a senha em <strong>Trocar senha</strong> (menu da agenda).</li>
+                        <li>Esqueceu a senha? Peça reset na <strong>Central dos profissionais</strong> (Polyana).</li>
                     </ul>
-                    <div class="table-responsive mt-3">
+                    <p class="manual-subtitulo">Respostas rápidas</p>
+                    <div class="table-responsive mt-2">
                         <table class="table table-sm table-bordered mb-0">
                             <thead class="table-light"><tr><th>Se…</th><th>Faça…</th></tr></thead>
                             <tbody>
-                            <tr><td>Quer marcar</td><td>Agenda → Novo agendamento</td></tr>
-                            <tr th:if="${ehProfissional}"><td>Consulta amanhã</td><td>Meus pagamentos → Pendentes</td></tr>
-                            <tr th:if="${ehProfissional}"><td>Bloqueado</td><td>Quitar PIX pendente</td></tr>
-                            <tr th:if="${podeGerenciarEquipe}"><td>Cancelar</td><td>Dois cliques na grade</td></tr>
+                            <tr><td>Quer marcar consulta</td><td>Agenda → <strong>Novo agendamento</strong></td></tr>
+                            <tr th:if="${ehProfissional and pagamentoDiario}">
+                                <td>Consulta é amanhã</td><td><strong>Meus pagamentos</strong> → Pendentes (até 23:59 hoje)</td>
+                            </tr>
+                            <tr th:if="${ehProfissional and pagamentoDiario}">
+                                <td>Esqueceu o PIX hoje</td><td>Pendentes ainda no dia, até o horário da consulta</td>
+                            </tr>
+                            <tr th:if="${ehProfissional and pagamentoDiario}">
+                                <td>Quer adiantar a semana</td><td>Meus pagamentos → Pagar a semana toda</td>
+                            </tr>
+                            <tr th:if="${ehProfissional and pagamentoSemanal}">
+                                <td>PIX da semana</td><td>Meus pagamentos → Pagamento da semana (sábado ou domingo)</td>
+                            </tr>
+                            <tr th:if="${ehProfissional and pagamentoSemanal}">
+                                <td>Segunda bloqueada</td><td>Quitar a semana anterior que venceu no domingo</td>
+                            </tr>
+                            <tr th:if="${ehProfissional and pagamentoMensal}">
+                                <td>PIX do mês</td><td>Meus pagamentos → Pagamento do mês (do dia 01 ao 10)</td>
+                            </tr>
+                            <tr th:if="${ehProfissional and pagamentoMensal}">
+                                <td>Passou do dia 10</td><td>Quitar o mês anterior para liberar a agenda</td>
+                            </tr>
+                            <tr th:if="${ehProfissional}"><td>Agenda bloqueada</td><td>Quitar pendência em Meus pagamentos</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Quer mudar sala/data</td><td><strong>Meus agendamentos</strong> → Realocar (antes do horário)</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Cliente saiu da série fixa</td><td>Meus agendamentos ou grade → <strong>Encerrar série</strong></td></tr>
+                            <tr th:if="${podeGerenciarEquipe}"><td>Cancelar horário pago</td><td>Dois cliques na grade (Polyana/admin)</td></tr>
+                            <tr><td>Dúvida geral</td><td>Fale com a <strong>Polyana</strong> ou use o WhatsApp de suporte</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -404,6 +625,7 @@
             '#pagamentos-visao': 'acc-pix-visao',
             '#dona-admin': 'acc-dona',
             '#funcionamento': 'acc-func',
+            '#grade': 'acc-grade',
             '#agendamentos': 'acc-agenda',
             '#senha': 'acc-senha',
             '#duvidas': 'acc-senha',

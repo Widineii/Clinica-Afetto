@@ -460,8 +460,8 @@
         </nav>
 
         <div class="alert-box alert-warning" style="margin-bottom: 12px;">
-            Este e o <strong>relatorio semanal</strong>. Ele nao remove o ponto laranja do sino.
-            Para o sino sumir, baixe o <strong>PDF do relatorio mensal</strong> (mes passado).
+            Este é o <strong>relatório semanal</strong>. Ele não remove o ponto laranja do sino.
+            Para o sino sumir, baixe o <strong>PDF do relatório mensal</strong> (mês passado).
         </div>
 
         <div th:if="${sucesso}" class="alert-box alert-success" th:text="${sucesso}">Dados de teste criados.</div>
@@ -477,18 +477,18 @@
         </div>
 
         <div class="alert-box alert-info">
-            Semana atual (segunda a sabado). Conta somente os dias ja passados nesta semana.
-            Entram apenas consultas com <strong>mais de 24 horas</strong> desde o horario agendado
-            (mesma regra da agenda: depois desse prazo o profissional nao cancela mais).
+            Semana atual (segunda a sábado). Conta somente os dias já passados nesta semana.
+            Entram apenas consultas com <strong>mais de 24 horas</strong> desde o horário agendado
+            (mesma regra da agenda: depois desse prazo o profissional não cancela mais).
             Gerado em <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
-            Ao sair desta pagina os dados temporarios sao apagados (nao ficam no banco).
+            Ao sair desta página os dados temporários são apagados (não ficam no banco).
         </div>
 
         <div class="cards-container">
             <div class="card">
                 <div class="card-icon"><i class="fa-solid fa-calendar-days"></i></div>
                 <div class="card-info">
-                    <p>Total de Horarios Agendados na Semana</p>
+                    <p>Total de horários agendados na semana</p>
                     <h3 th:text="${relatorio.totalGeral}">0</h3>
                 </div>
             </div>
@@ -500,7 +500,7 @@
                 </div>
             </div>
         </div>
-        <p class="disclaimer">* Agendamentos cancelados nao entram neste relatorio</p>
+        <p class="disclaimer">* Agendamentos cancelados não entram neste relatório</p>
 
         <div class="table-container" th:if="${!#lists.isEmpty(linhas)}">
             <div class="table-scroll">

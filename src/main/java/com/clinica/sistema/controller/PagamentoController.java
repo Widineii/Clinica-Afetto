@@ -147,6 +147,24 @@ public class PagamentoController {
         return "redirect:/agendamentos/meus-pagamentos#pagamentos-semana";
     }
 
+    @PostMapping("/gerar-links-mes-anterior")
+    public String gerarLinksMesAnterior(RedirectAttributes redirectAttributes) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(usuarioLogado);
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    "PIX unico do mes anterior gerado. Pague uma vez para quitar todas as consultas listadas."
+            );
+            return "redirect:/pagamentos/mes?order=" + orderNsu;
+        } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+        }
+        return "redirect:/agendamentos/meus-pagamentos#pagamentos-mes";
+    }
+
     @GetMapping("/dia")
     public String paginaPagamentoDia(@RequestParam String order, Model model) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
@@ -200,6 +218,34 @@ public class PagamentoController {
 
     @GetMapping("/semana/qr.png")
     public ResponseEntity<byte[]> qrCodeSemana(@RequestParam String order) {
+        return qrCodeLote(order);
+    }
+
+    @GetMapping("/mes")
+    public String paginaPagamentoMes(@RequestParam String order, Model model) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!pagamentoConsultaService.isPedidoPagamentoMes(order)) {
+            throw new RuntimeException("Pedido de pagamento do mes invalido.");
+        }
+        List<Agendamento> consultas = pagamentoConsultaService.listarAgendamentosPorOrderNsu(order, usuarioLogado);
+        Agendamento referencia = consultas.get(0);
+        boolean todasPagas = consultas.stream().allMatch(Agendamento::isPagamentoPago);
+
+        model.addAttribute("consultasLote", consultas);
+        model.addAttribute("agendamento", referencia);
+        model.addAttribute("orderNsu", order);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
+        model.addAttribute("totalTaxaLote", pagamentoConsultaService.formatarTotalTaxaPix(consultas));
+        model.addAttribute("rotuloPeriodo", pagamentoConsultaService.rotuloMesPagamentoPendente());
+        model.addAttribute("tituloLote", "Pagamento do mes anterior");
+        model.addAttribute("qrUrl", "/pagamentos/mes/qr.png?order=" + order);
+        model.addAttribute("voltarUrl", "/agendamentos/meus-pagamentos#pagamentos-mes");
+        model.addAttribute("todasPagas", todasPagas);
+        return "pagamento-lote";
+    }
+
+    @GetMapping("/mes/qr.png")
+    public ResponseEntity<byte[]> qrCodeMes(@RequestParam String order) {
         return qrCodeLote(order);
     }
 

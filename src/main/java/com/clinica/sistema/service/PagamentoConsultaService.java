@@ -3,22 +3,26 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.config.InfinitePayProperties;
 import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.dto.LinkPagamentoGerado;
+import com.clinica.sistema.dto.PagamentoProfissionalNotificacaoView;
 import com.clinica.sistema.dto.ProfissionalBloqueioPagamentoView;
 import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
 import com.clinica.sistema.exception.PagamentoWebhookNaoAutorizadoException;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.ui.Model;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -35,6 +39,10 @@ public class PagamentoConsultaService {
             PagamentoStatus.AGUARDANDO_PAGAMENTO,
             PagamentoStatus.ESPERANDO_CONFIRMACAO
     );
+    private static final DateTimeFormatter FORMATO_DATA_COMPLETA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final String URL_MEUS_PAGAMENTOS_DIA = "/agendamentos/meus-pagamentos#pagamentos-pendentes";
+    private static final String URL_MEUS_PAGAMENTOS_SEMANA = "/agendamentos/meus-pagamentos#pagamentos-semana";
+    private static final String URL_MEUS_PAGAMENTOS_MES = "/agendamentos/meus-pagamentos#pagamentos-mes";
 
     private final AgendamentoRepository repository;
     private final UsuarioRepository usuarioRepository;
@@ -59,13 +67,37 @@ public class PagamentoConsultaService {
         this.infinitePayProperties = infinitePayProperties;
     }
 
-    public void configurarPagamentosAoSalvar(List<Agendamento> novosAgendamentos, Usuario profissional) {
+    public void configurarPagamentosAoSalvar(
+            List<Agendamento> novosAgendamentos,
+            Usuario profissional,
+            Usuario usuarioLogado
+    ) {
         if (novosAgendamentos == null || novosAgendamentos.isEmpty()) {
             return;
+        }
+        for (Agendamento agendamento : novosAgendamentos) {
+            definirReferenciasCobrancaSeNecessario(agendamento);
         }
         if (authService.profissionalIgnoraValoresEPagamento(profissional)) {
             for (Agendamento agendamento : novosAgendamentos) {
                 agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+            }
+            return;
+        }
+        if (isAgendadoPorGestorParaOutroProfissional(profissional, usuarioLogado)) {
+            for (int i = 0; i < novosAgendamentos.size(); i++) {
+                Agendamento agendamento = novosAgendamentos.get(i);
+                if (i == 0) {
+                    marcarComoPagoPorAcordoGestor(agendamento);
+                } else {
+                    aplicarStatusPagamentoSerie(agendamento, profissional);
+                }
+            }
+            return;
+        }
+        if (resolverPeriodicidade(profissional) != PeriodicidadePagamento.DIARIO) {
+            for (Agendamento agendamento : novosAgendamentos) {
+                agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
             }
             return;
         }
@@ -79,13 +111,51 @@ public class PagamentoConsultaService {
         }
     }
 
+    public boolean isAgendadoPorGestorParaOutroProfissional(Usuario profissional, Usuario usuarioLogado) {
+        if (profissional == null || usuarioLogado == null) {
+            return false;
+        }
+        if (profissional.getId() == null || usuarioLogado.getId() == null) {
+            return false;
+        }
+        if (profissional.getId().equals(usuarioLogado.getId())) {
+            return false;
+        }
+        return authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado);
+    }
+
+    private void marcarComoPagoPorAcordoGestor(Agendamento agendamento) {
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+        agendamento.setDataPagamento(LocalDateTime.now());
+        limparDadosPagamentoEmAberto(agendamento);
+        agendamento.setLiberadoEm(null);
+    }
+
+    private void aplicarStatusPagamentoSerie(Agendamento agendamento, Usuario profissional) {
+        if (authService.profissionalIgnoraValoresEPagamento(profissional)) {
+            agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+            return;
+        }
+        if (resolverPeriodicidade(profissional) != PeriodicidadePagamento.DIARIO) {
+            agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+            return;
+        }
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+    }
+
     public void configurarPagamentoNovaOcorrenciaSerie(Agendamento agendamento) {
         if (agendamento.getStatusPagamento() != null) {
             return;
         }
+        definirReferenciasCobrancaSeNecessario(agendamento);
         if (agendamento.getProfissional() != null
                 && authService.profissionalIgnoraValoresEPagamento(agendamento.getProfissional())) {
             agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+            return;
+        }
+        if (agendamento.getProfissional() != null
+                && resolverPeriodicidade(agendamento.getProfissional()) != PeriodicidadePagamento.DIARIO) {
+            agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
             return;
         }
         if (deveAbrirPagamentoAgora(agendamento)) {
@@ -111,6 +181,9 @@ public class PagamentoConsultaService {
         );
         int atualizados = 0;
         for (Agendamento agendamento : candidatos) {
+            if (!profissionalUsaPagamentoDiario(agendamento)) {
+                continue;
+            }
             if (!deveAbrirPagamentoAgora(agendamento)) {
                 continue;
             }
@@ -134,6 +207,9 @@ public class PagamentoConsultaService {
         );
         int liberados = 0;
         for (Agendamento agendamento : candidatos) {
+            if (!profissionalUsaPagamentoDiario(agendamento)) {
+                continue;
+            }
             if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
                 continue;
             }
@@ -176,14 +252,14 @@ public class PagamentoConsultaService {
     public Agendamento pagarAgora(Long agendamentoId, Usuario usuarioLogado) {
         Agendamento agendamento = buscarComPermissao(agendamentoId, usuarioLogado);
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
-            throw new RuntimeException("Esta consulta ja esta paga.");
+            throw new RuntimeException("Esta consulta já está paga.");
         }
         if (vagaPreenchidaPorOutroProfissional(agendamento)) {
             throw new HorarioJaReservadoPorOutroProfissionalException(formatarDetalheHorario(agendamento));
         }
         validarRecuperacaoPagamento(agendamento);
         if (!podePagarAgora(agendamento) && !agendamento.possuiQrPagamentoAtivo()) {
-            throw new RuntimeException("Esta consulta nao esta disponivel para pagamento.");
+            throw new RuntimeException("Esta consulta não está disponível para pagamento.");
         }
         if (agendamento.possuiQrPagamentoAtivo()) {
             return agendamento;
@@ -218,11 +294,11 @@ public class PagamentoConsultaService {
     @Transactional
     private Agendamento confirmarPagamentoPorOrderNsu(String orderNsu, boolean modoTeste) {
         if (orderNsu == null || orderNsu.isBlank()) {
-            throw new RuntimeException("Pedido de pagamento invalido.");
+            throw new RuntimeException("Pedido de pagamento inválido.");
         }
         List<Agendamento> agendamentos = repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu);
         if (agendamentos.isEmpty()) {
-            throw new RuntimeException("Pedido de pagamento nao encontrado.");
+            throw new RuntimeException("Pedido de pagamento não encontrado.");
         }
         Agendamento ultimoPago = null;
         for (Agendamento agendamento : agendamentos) {
@@ -292,11 +368,79 @@ public class PagamentoConsultaService {
                 .toList();
     }
 
+    public PeriodicidadePagamento resolverPeriodicidade(Usuario usuario) {
+        if (usuario == null || usuario.getPeriodicidadePagamento() == null) {
+            return PeriodicidadePagamento.DIARIO;
+        }
+        return usuario.getPeriodicidadePagamento();
+    }
+
+    @Transactional
+    public int migrarAgendamentosAoAlterarPeriodicidade(
+            Usuario profissional,
+            PeriodicidadePagamento periodicidadeAnterior,
+            PeriodicidadePagamento periodicidadeNova
+    ) {
+        if (profissional == null || profissional.getId() == null || periodicidadeNova == null) {
+            return 0;
+        }
+        if (periodicidadeNova == periodicidadeAnterior) {
+            return 0;
+        }
+        if (authService.profissionalIgnoraValoresEPagamento(profissional)) {
+            return 0;
+        }
+
+        LocalDateTime agora = LocalDateTime.now();
+        List<Agendamento> agendamentos = repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                profissional.getId(),
+                agora
+        );
+
+        int migrados = 0;
+        for (Agendamento agendamento : agendamentos) {
+            if (!deveMigrarAoAlterarPeriodicidade(agendamento)) {
+                continue;
+            }
+            sincronizarPeriodicidadeProfissionalNoAgendamento(agendamento, profissional, periodicidadeNova);
+            aplicarPeriodicidadeNoAgendamento(agendamento, periodicidadeNova);
+            repository.save(agendamento);
+            migrados++;
+        }
+        return migrados;
+    }
+
+    public String rotuloPeriodicidade(PeriodicidadePagamento periodicidade) {
+        if (periodicidade == null) {
+            return PeriodicidadePagamento.DIARIO.getRotulo();
+        }
+        return periodicidade.getRotulo();
+    }
+
+    public boolean estaEmJanelaPagamentoSemanal() {
+        DayOfWeek dia = LocalDate.now().getDayOfWeek();
+        return dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY;
+    }
+
     public List<Agendamento> listarConsultasAdiantamentoSemanaAtual(Usuario usuarioLogado) {
         if (usuarioLogado == null
                 || authService.isAdmin(usuarioLogado)
                 || authService.isDonaClinica(usuarioLogado)
                 || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)) {
+            return Collections.emptyList();
+        }
+
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        if (periodicidade == PeriodicidadePagamento.SEMANAL) {
+            if (!estaEmJanelaPagamentoSemanal()) {
+                return Collections.emptyList();
+            }
+            return listarConsultasNaoPagasNoPeriodo(
+                    usuarioLogado,
+                    resolverSemanaCorrenteParaCobranca(LocalDate.now())
+            );
+        }
+        if (periodicidade == PeriodicidadePagamento.MENSAL) {
             return Collections.emptyList();
         }
 
@@ -313,6 +457,35 @@ public class PagamentoConsultaService {
                 })
                 .filter(this::podeAdiantarPagamentoSemana)
                 .toList();
+    }
+
+    public List<Agendamento> listarConsultasPagamentoMensal(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)
+                || resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.MENSAL) {
+            return Collections.emptyList();
+        }
+        return listarConsultasNaoPagasNoMes(usuarioLogado, YearMonth.from(LocalDate.now()).minusMonths(1));
+    }
+
+    public String rotuloMesPagamentoPendente() {
+        YearMonth mesReferencia = YearMonth.from(LocalDate.now()).minusMonths(1);
+        return mesReferencia.format(DateTimeFormatter.ofPattern("MM/yyyy"));
+    }
+
+    public boolean exibePagamentoMensalAgora(Usuario usuarioLogado) {
+        return resolverPeriodicidade(usuarioLogado) == PeriodicidadePagamento.MENSAL;
+    }
+
+    public boolean estaEmJanelaPagamentoMensal() {
+        int dia = LocalDate.now().getDayOfMonth();
+        return dia >= 1 && dia <= 10;
+    }
+
+    public String rotuloJanelaPagamentoMensalAtual() {
+        return "01 ao 10/" + LocalDate.now().format(DateTimeFormatter.ofPattern("MM"));
     }
 
     public BigDecimal calcularTotalTaxaPix(List<Agendamento> agendamentos) {
@@ -358,9 +531,13 @@ public class PagamentoConsultaService {
 
     @Transactional
     public String gerarPagamentoUnicoSemanaAtual(Usuario usuarioLogado) {
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        if (periodicidade == PeriodicidadePagamento.SEMANAL && !estaEmJanelaPagamentoSemanal()) {
+            throw new RuntimeException("Pagamento semanal disponível apenas sábado e domingo.");
+        }
         List<Agendamento> consultas = listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
         if (consultas.isEmpty()) {
-            throw new RuntimeException("Nao ha consultas da semana disponiveis para adiantar pagamento.");
+            throw new RuntimeException("Não há consultas da semana disponíveis para pagamento.");
         }
         for (Agendamento consulta : consultas) {
             if (vagaPreenchidaPorOutroProfissional(consulta)) {
@@ -383,13 +560,43 @@ public class PagamentoConsultaService {
         return link.getOrderNsu();
     }
 
+    @Transactional
+    public String gerarPagamentoUnicoMesAnterior(Usuario usuarioLogado) {
+        if (resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.MENSAL) {
+            throw new RuntimeException("Pagamento mensal não se aplica a este profissional.");
+        }
+        List<Agendamento> consultas = listarConsultasPagamentoMensal(usuarioLogado);
+        if (consultas.isEmpty()) {
+            throw new RuntimeException("Não há consultas do mês anterior pendentes de pagamento.");
+        }
+        for (Agendamento consulta : consultas) {
+            if (vagaPreenchidaPorOutroProfissional(consulta)) {
+                throw new HorarioJaReservadoPorOutroProfissionalException(formatarDetalheHorario(consulta));
+            }
+        }
+        LinkPagamentoGerado link = infinitePayService.gerarLinkPagamentoMes(consultas);
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime expiraEm = agora.plusMinutes(pagamentoProperties.getPrazoConfirmacaoMinutos());
+        for (Agendamento consulta : consultas) {
+            aplicarValoresTaxaAntesPagamento(consulta);
+            consulta.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+            consulta.setPagamentoOrderNsu(link.getOrderNsu());
+            consulta.setPagamentoLink(link.getLinkPagamento());
+            consulta.setPagamentoSlug(link.getSlug());
+            consulta.setPagamentoIniciadoEm(agora);
+            consulta.setPagamentoExpiraEm(expiraEm);
+            repository.save(consulta);
+        }
+        return link.getOrderNsu();
+    }
+
     public List<Agendamento> listarAgendamentosPorOrderNsu(String orderNsu, Usuario usuarioLogado) {
         if (orderNsu == null || orderNsu.isBlank()) {
-            throw new RuntimeException("Pedido de pagamento invalido.");
+            throw new RuntimeException("Pedido de pagamento inválido.");
         }
         List<Agendamento> agendamentos = repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu);
         if (agendamentos.isEmpty()) {
-            throw new RuntimeException("Pedido de pagamento nao encontrado.");
+            throw new RuntimeException("Pedido de pagamento não encontrado.");
         }
         for (Agendamento agendamento : agendamentos) {
             validarAcessoPagamento(agendamento, usuarioLogado);
@@ -405,8 +612,14 @@ public class PagamentoConsultaService {
         return orderNsu != null && orderNsu.startsWith("dia-");
     }
 
+    public boolean isPedidoPagamentoMes(String orderNsu) {
+        return orderNsu != null && orderNsu.startsWith("mes-");
+    }
+
     public boolean isPedidoPagamentoLote(String orderNsu) {
-        return isPedidoPagamentoSemana(orderNsu) || isPedidoPagamentoDia(orderNsu);
+        return isPedidoPagamentoSemana(orderNsu)
+                || isPedidoPagamentoDia(orderNsu)
+                || isPedidoPagamentoMes(orderNsu);
     }
 
     public LocalDate dataProximoDiaPagamentoPendente() {
@@ -418,9 +631,12 @@ public class PagamentoConsultaService {
     }
 
     public List<Agendamento> listarPagamentosPendentesProximoDia(Usuario usuarioLogado) {
+        if (resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.DIARIO) {
+            return Collections.emptyList();
+        }
         LocalDate hoje = LocalDate.now();
         LocalDate amanha = dataProximoDiaPagamentoPendente();
-        return listarPendenciasObrigatoriasParaBloqueio(usuarioLogado).stream()
+        return listarPendenciasDiariasParaBloqueio(usuarioLogado).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> exibirNaListaPagamentosPendentes(agendamento, hoje, amanha))
                 .sorted(java.util.Comparator.comparing(Agendamento::getDataHoraInicio))
@@ -462,11 +678,11 @@ public class PagamentoConsultaService {
         List<Agendamento> selecionadas = new java.util.ArrayList<>();
         for (Long agendamentoId : agendamentoIds) {
             if (agendamentoId == null || !idsPermitidos.contains(agendamentoId)) {
-                throw new RuntimeException("Consulta invalida ou nao disponivel para pagamento do proximo dia.");
+                throw new RuntimeException("Consulta inválida ou não disponível para pagamento do próximo dia.");
             }
             Agendamento consulta = buscarComPermissao(agendamentoId, usuarioLogado);
             if (consultaJaFoiPaga(consulta)) {
-                throw new RuntimeException("Uma das consultas selecionadas ja esta paga.");
+                throw new RuntimeException("Uma das consultas selecionadas já está paga.");
             }
             selecionadas.add(consulta);
         }
@@ -501,17 +717,50 @@ public class PagamentoConsultaService {
             return Collections.emptyList();
         }
 
+        if (temQrPagamentoAtivo(usuarioLogado)) {
+            return listarConsultasComQrAtivo(usuarioLogado);
+        }
+
+        return switch (resolverPeriodicidade(usuarioLogado)) {
+            case DIARIO -> listarPendenciasDiariasParaBloqueio(usuarioLogado);
+            case SEMANAL -> listarPendenciasSemanaisParaBloqueio(usuarioLogado);
+            case MENSAL -> listarPendenciasMensaisParaBloqueio(usuarioLogado);
+        };
+    }
+
+    private List<Agendamento> listarPendenciasDiariasParaBloqueio(Usuario usuarioLogado) {
         return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !consultaJaFoiPaga(agendamento))
-                .filter(this::aindaExigeBloqueioPorPagamento)
+                .filter(this::aindaExigeBloqueioPorPagamentoDiario)
                 .toList();
+    }
+
+    private List<Agendamento> listarPendenciasSemanaisParaBloqueio(Usuario usuarioLogado) {
+        if (!bloqueadoPorPagamentoSemanal(usuarioLogado)) {
+            return Collections.emptyList();
+        }
+        PeriodoSemanaPagamento semanaAnterior = resolverSemanaAnteriorEncerrada(LocalDate.now());
+        if (semanaAnterior == null) {
+            return Collections.emptyList();
+        }
+        return listarConsultasNaoPagasNoPeriodo(usuarioLogado, semanaAnterior);
+    }
+
+    private List<Agendamento> listarPendenciasMensaisParaBloqueio(Usuario usuarioLogado) {
+        if (!bloqueadoPorPagamentoMensal(usuarioLogado)) {
+            return Collections.emptyList();
+        }
+        return listarConsultasNaoPagasNoMes(
+                usuarioLogado,
+                YearMonth.from(LocalDate.now()).minusMonths(1)
+        );
     }
 
     /**
      * Bloqueio alinhado com o que ainda pode ser quitado (mesma regra da aba Pagamentos pendentes + PIX ativo).
      */
-    private boolean aindaExigeBloqueioPorPagamento(Agendamento agendamento) {
+    private boolean aindaExigeBloqueioPorPagamentoDiario(Agendamento agendamento) {
         if (consultaJaFoiPaga(agendamento)) {
             return false;
         }
@@ -528,19 +777,172 @@ public class PagamentoConsultaService {
     }
 
     public String mensagemBloqueioPagamento(Usuario usuarioLogado) {
-        List<Agendamento> pendencias = listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
+        if (temQrPagamentoAtivo(usuarioLogado)) {
+            return "Você tem um PIX aguardando confirmação. Quite o pagamento para voltar a usar a sala.";
+        }
+
+        return switch (resolverPeriodicidade(usuarioLogado)) {
+            case SEMANAL -> "Você precisa quitar a semana anterior (pagamento sábado ou domingo) "
+                    + "para voltar a usar a sala e fazer novo agendamento.";
+            case MENSAL -> "Você passou do dia 10 sem pagar o mês anterior. "
+                    + "Quite o pagamento para voltar a usar a sala e fazer novo agendamento.";
+            case DIARIO -> mensagemBloqueioPagamentoDiario(usuarioLogado);
+        };
+    }
+
+    private String mensagemBloqueioPagamentoDiario(Usuario usuarioLogado) {
+        List<Agendamento> pendencias = listarPendenciasDiariasParaBloqueio(usuarioLogado);
         if (pendencias.isEmpty()) {
-            return "Voce tem pagamento pendente. Quite o pagamento para voltar a usar a sala e marcar novos agendamentos.";
+            return "Você tem pagamento pendente. Quite o pagamento para voltar a usar a sala e marcar novos agendamentos.";
         }
         Agendamento proximaPendencia = pendencias.get(0);
         String data = proximaPendencia.getDataHoraInicio() != null
                 ? proximaPendencia.getDataHoraInicio().toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM"))
                 : null;
         if (data == null) {
-            return "Voce tem pagamento pendente. Quite o pagamento para voltar a usar a sala e marcar novos agendamentos.";
+            return "Você tem pagamento pendente. Quite o pagamento para voltar a usar a sala e marcar novos agendamentos.";
         }
-        return "Voce precisa pagar o agendamento do dia " + data
-                + " (no dia anterior) para voltar a usar sala e fazer novo agendamento.";
+        return "Você precisa pagar o agendamento do dia " + data
+                + " (no dia anterior) para voltar a usar a sala e fazer novo agendamento.";
+    }
+
+    public Optional<PagamentoProfissionalNotificacaoView> avaliarNotificacaoPagamentoProfissional(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)) {
+            return Optional.empty();
+        }
+
+        if (temQrPagamentoAtivo(usuarioLogado)) {
+            return Optional.of(new PagamentoProfissionalNotificacaoView(
+                    "PIX aguardando confirmação",
+                    "Você tem pagamento PIX em aberto. Quite para evitar bloqueio da agenda.",
+                    LocalDate.now().format(FORMATO_DATA_COMPLETA),
+                    URL_MEUS_PAGAMENTOS_DIA
+            ));
+        }
+
+        Optional<PagamentoProfissionalNotificacaoView> lembrete = switch (resolverPeriodicidade(usuarioLogado)) {
+            case DIARIO -> montarNotificacaoPagamentoDiario(usuarioLogado);
+            case SEMANAL -> montarNotificacaoPagamentoSemanal(usuarioLogado);
+            case MENSAL -> montarNotificacaoPagamentoMensal(usuarioLogado);
+        };
+        if (lembrete.isPresent()) {
+            return lembrete;
+        }
+
+        if (profissionalBloqueadoPorPendenciaPagamento(usuarioLogado)) {
+            return montarNotificacaoPagamentoBloqueado(usuarioLogado);
+        }
+
+        return Optional.empty();
+    }
+
+    public void adicionarNotificacaoPagamentoAoModelSeAplicavel(Model model, Usuario usuarioLogado) {
+        Optional<PagamentoProfissionalNotificacaoView> notificacao =
+                avaliarNotificacaoPagamentoProfissional(usuarioLogado);
+        boolean exibirBolinha = notificacao.isPresent();
+        model.addAttribute("notificacaoPagamentoProfissional", exibirBolinha ? notificacao.orElse(null) : null);
+        model.addAttribute("exibirBolinhaNotificacaoPagamento", exibirBolinha);
+    }
+
+    private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoDiario(Usuario usuarioLogado) {
+        List<Agendamento> pendentes = listarPagamentosPendentesProximoDia(usuarioLogado);
+        if (pendentes.isEmpty()) {
+            return Optional.empty();
+        }
+        Agendamento referencia = pendentes.get(0);
+        String data = formatarDataConsulta(referencia, rotuloProximoDiaPagamentoPendente());
+        return Optional.of(new PagamentoProfissionalNotificacaoView(
+                "Pagamento do agendamento",
+                "Não esqueça de pagar seu agendamento do dia " + data + " para evitar bloqueio.",
+                data,
+                URL_MEUS_PAGAMENTOS_DIA
+        ));
+    }
+
+    private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoSemanal(Usuario usuarioLogado) {
+        if (!estaEmJanelaPagamentoSemanal()) {
+            return Optional.empty();
+        }
+        List<Agendamento> consultas = listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
+        if (consultas.isEmpty()) {
+            return Optional.empty();
+        }
+        String periodo = rotuloPeriodoSemanaAtual();
+        return Optional.of(new PagamentoProfissionalNotificacaoView(
+                "Pagamento da semana",
+                "Não esqueça de pagar a semana " + periodo + " (sábado ou domingo) para evitar bloqueio na segunda.",
+                periodo,
+                URL_MEUS_PAGAMENTOS_SEMANA
+        ));
+    }
+
+    private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoMensal(Usuario usuarioLogado) {
+        if (!estaEmJanelaPagamentoMensal()) {
+            return Optional.empty();
+        }
+        List<Agendamento> consultas = listarConsultasPagamentoMensal(usuarioLogado);
+        if (consultas.isEmpty()) {
+            return Optional.empty();
+        }
+        String mesReferencia = rotuloMesPagamentoPendente();
+        return Optional.of(new PagamentoProfissionalNotificacaoView(
+                "Pagamento mensal",
+                "Não esqueça de pagar o mês " + mesReferencia + " até o dia 10 para evitar bloqueio.",
+                mesReferencia,
+                URL_MEUS_PAGAMENTOS_MES
+        ));
+    }
+
+    private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoBloqueado(Usuario usuarioLogado) {
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        List<Agendamento> pendencias = listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
+        String rotuloData = resolverRotuloDataNotificacaoPagamento(periodicidade, pendencias);
+        return Optional.of(new PagamentoProfissionalNotificacaoView(
+                "Agenda bloqueada por pagamento",
+                mensagemBloqueioPagamento(usuarioLogado),
+                rotuloData,
+                urlMeusPagamentosPorPeriodicidade(periodicidade)
+        ));
+    }
+
+    private String resolverRotuloDataNotificacaoPagamento(
+            PeriodicidadePagamento periodicidade,
+            List<Agendamento> pendencias
+    ) {
+        return switch (periodicidade) {
+            case DIARIO -> pendencias.stream()
+                    .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                    .findFirst()
+                    .map(agendamento -> agendamento.getDataHoraInicio().toLocalDate().format(FORMATO_DATA_COMPLETA))
+                    .orElse(rotuloProximoDiaPagamentoPendente());
+            case SEMANAL -> {
+                PeriodoSemanaPagamento semanaAnterior = resolverSemanaAnteriorEncerrada(LocalDate.now());
+                if (semanaAnterior != null) {
+                    DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM");
+                    yield semanaAnterior.inicio().format(formato) + " a " + semanaAnterior.fim().format(formato);
+                }
+                yield rotuloPeriodoSemanaAtual();
+            }
+            case MENSAL -> rotuloMesPagamentoPendente();
+        };
+    }
+
+    private String urlMeusPagamentosPorPeriodicidade(PeriodicidadePagamento periodicidade) {
+        return switch (periodicidade) {
+            case DIARIO -> URL_MEUS_PAGAMENTOS_DIA;
+            case SEMANAL -> URL_MEUS_PAGAMENTOS_SEMANA;
+            case MENSAL -> URL_MEUS_PAGAMENTOS_MES;
+        };
+    }
+
+    private String formatarDataConsulta(Agendamento agendamento, String fallback) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return fallback;
+        }
+        return agendamento.getDataHoraInicio().toLocalDate().format(FORMATO_DATA_COMPLETA);
     }
 
     public List<ProfissionalBloqueioPagamentoView> listarProfissionaisBloqueadosPorPagamento() {
@@ -572,6 +974,9 @@ public class PagamentoConsultaService {
         }
         if (agendamento.getProfissional() != null
                 && authService.profissionalIgnoraValoresEPagamento(agendamento.getProfissional())) {
+            return false;
+        }
+        if (profissionalUsaPagamentoSemanal(agendamento) || profissionalUsaPagamentoMensal(agendamento)) {
             return false;
         }
         if (agendamento.possuiQrPagamentoAtivo()) {
@@ -661,6 +1066,21 @@ public class PagamentoConsultaService {
     }
 
     public String rotuloStatusPagamento(Agendamento agendamento) {
+        return rotuloStatusPagamento(agendamento, null);
+    }
+
+    public String rotuloStatusPagamento(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null) {
+            return "Sem pagamento";
+        }
+        if (usuarioLogado != null && gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
+            if (agendamento.isPagamentoPago()) {
+                return "Confirmado — acerto com a profissional";
+            }
+            if (agendamento.isReservaPendenteNaGrade()) {
+                return rotuloEsperandoNaGradeParaGestor(agendamento);
+            }
+        }
         PagamentoStatus status = agendamento.getStatusPagamento();
         if (status == null) {
             return "Sem pagamento";
@@ -668,15 +1088,15 @@ public class PagamentoConsultaService {
         return switch (status) {
             case PAGO -> "Pago";
             case ESPERANDO_CONFIRMACAO -> agendamento.possuiQrPagamentoAtivo()
-                    ? "Esperando confirmacao (" + agendamento.getTempoRestantePagamentoFormatado() + ")"
-                    : "Confirmacao expirada";
+                    ? "Esperando confirmação (" + agendamento.getTempoRestantePagamentoFormatado() + ")"
+                    : "Confirmação expirada";
             case AGUARDANDO_PAGAMENTO -> bloqueadoPorPagamento(agendamento)
-                    ? "Nao pago - sala bloqueada"
+                    ? "Não pago — sala bloqueada"
                     : "Aguardando pagamento";
-            case PAGAMENTO_FUTURO -> "Pagamento em " + formatarDiaPagamento(agendamento);
+            case PAGAMENTO_FUTURO -> rotuloPagamentoFuturo(agendamento);
             case LIBERADO_FALTA_PAGAMENTO -> vagaPreenchidaPorOutroProfissional(agendamento)
                     ? "Vaga preenchida por outro profissional"
-                    : "Vaga liberada — voce ainda pode pagar para recuperar";
+                    : "Vaga liberada — você ainda pode pagar para recuperar";
         };
     }
 
@@ -685,17 +1105,129 @@ public class PagamentoConsultaService {
     }
 
     public String rotuloEsperandoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
-        if (agendamento == null) {
+        if (agendamento == null || !agendamento.isReservaPendenteNaGrade()) {
             return "";
         }
-        return agendamento.rotuloPendenteNaGrade(podeVerPagamento(agendamento, usuarioLogado));
+        if (gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
+            return rotuloEsperandoNaGradeParaGestor(agendamento);
+        }
+        if (!podeVerPagamento(agendamento, usuarioLogado)) {
+            if (reservaConfirmadaParaVisaoPublica(agendamento)) {
+                return "Sala confirmada";
+            }
+            return "Aguardando confirmações";
+        }
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        if (status == PagamentoStatus.ESPERANDO_CONFIRMACAO) {
+            return "Esperando pagamento";
+        }
+        if (status == PagamentoStatus.AGUARDANDO_PAGAMENTO) {
+            return "Aguardando pagamento";
+        }
+        if (status == PagamentoStatus.PAGAMENTO_FUTURO) {
+            return rotuloPagamentoFuturo(agendamento);
+        }
+        if (status == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO) {
+            return "Vaga liberada — pague para recuperar";
+        }
+        return "";
+    }
+
+    public boolean exibirSalaConfirmadaNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || agendamento.isPagamentoPago()) {
+            return false;
+        }
+        if (podeVerPagamento(agendamento, usuarioLogado)) {
+            return false;
+        }
+        return reservaConfirmadaParaVisaoPublica(agendamento);
+    }
+
+    public boolean exibirEstiloAguardandoPagamentoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
+        return agendamento != null
+                && agendamento.isReservaPendenteNaGrade()
+                && !exibirSalaConfirmadaNaGrade(agendamento, usuarioLogado);
+    }
+
+    private boolean reservaConfirmadaParaVisaoPublica(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getProfissional() == null) {
+            return false;
+        }
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(agendamento.getProfissional());
+        if (periodicidade != PeriodicidadePagamento.SEMANAL
+                && periodicidade != PeriodicidadePagamento.MENSAL) {
+            return false;
+        }
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        if (PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status)) {
+            return false;
+        }
+        return PagamentoStatus.PAGAMENTO_FUTURO.equals(status)
+                || PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(status);
     }
 
     public String rotuloPagoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
         if (agendamento == null) {
             return "";
         }
+        if (gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
+            return "Confirmado — acerto com a profissional";
+        }
         return agendamento.rotuloPagoNaGrade(podeVerPagamento(agendamento, usuarioLogado));
+    }
+
+    private boolean gestorVisualizandoAgendamentoDeOutro(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || usuarioLogado == null) {
+            return false;
+        }
+        if (!authService.isAdmin(usuarioLogado) && !authService.isDonaClinica(usuarioLogado)) {
+            return false;
+        }
+        if (agendamento.getProfissional() == null || agendamento.getProfissional().getId() == null) {
+            return false;
+        }
+        return !agendamento.getProfissional().getId().equals(usuarioLogado.getId());
+    }
+
+    private String rotuloEsperandoNaGradeParaGestor(Agendamento agendamento) {
+        String nomeProfissional = resolverNomeProfissionalAgendamento(agendamento);
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        if (status == PagamentoStatus.PAGAMENTO_FUTURO) {
+            if (profissionalUsaPagamentoMensal(agendamento)) {
+                if (cobrancaMensalVencendoNaData(agendamento, LocalDate.now())) {
+                    return nomeProfissional + ": pagamento do dia 01 ao 10";
+                }
+                YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
+                if (mesReferencia != null) {
+                    YearMonth mesPagamento = mesReferencia.plusMonths(1);
+                    return nomeProfissional + ": pagamento do dia 01 ao 10/"
+                            + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+                }
+            }
+            if (profissionalUsaPagamentoSemanal(agendamento)) {
+                return nomeProfissional + ": pagamento no dia " + formatarDiaPagamentoSemanal(agendamento);
+            }
+            return nomeProfissional + ": pagamento na véspera";
+        }
+        if (status == PagamentoStatus.ESPERANDO_CONFIRMACAO
+                || status == PagamentoStatus.AGUARDANDO_PAGAMENTO) {
+            return nomeProfissional + ": aguardando pagamento";
+        }
+        if (status == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO) {
+            return nomeProfissional + ": vaga liberada";
+        }
+        return "";
+    }
+
+    private String resolverNomeProfissionalAgendamento(Agendamento agendamento) {
+        if (agendamento.getProfissional() == null) {
+            return "Profissional";
+        }
+        String nome = agendamento.getProfissional().getNome();
+        if (nome == null || nome.isBlank()) {
+            return "Profissional";
+        }
+        return nome.trim();
     }
 
     private boolean ePendenciaObrigatoriaParaDesbloqueio(Agendamento agendamento) {
@@ -745,12 +1277,232 @@ public class PagamentoConsultaService {
                 || PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento());
     }
 
-    private String formatarDiaPagamento(Agendamento agendamento) {
+    private void definirReferenciasCobrancaSeNecessario(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return;
+        }
+        LocalDate dataAgendamento = agendamento.getDataHoraInicio().toLocalDate();
+        if (agendamento.getDataReferenciaSemanaPagamento() == null) {
+            agendamento.setDataReferenciaSemanaPagamento(dataAgendamento);
+        }
+        if (agendamento.getDataReferenciaMesPagamento() == null) {
+            agendamento.setDataReferenciaMesPagamento(dataAgendamento.withDayOfMonth(1));
+        }
+    }
+
+    private boolean deveMigrarAoAlterarPeriodicidade(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return false;
+        }
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        if (status == null) {
+            return true;
+        }
+        return status != PagamentoStatus.PAGO
+                && status != PagamentoStatus.LIBERADO_FALTA_PAGAMENTO;
+    }
+
+    private void sincronizarPeriodicidadeProfissionalNoAgendamento(
+            Agendamento agendamento,
+            Usuario profissional,
+            PeriodicidadePagamento periodicidadeNova
+    ) {
+        if (agendamento.getProfissional() != null) {
+            agendamento.getProfissional().setPeriodicidadePagamento(periodicidadeNova);
+            return;
+        }
+        agendamento.setProfissional(profissional);
+    }
+
+    private void aplicarPeriodicidadeNoAgendamento(
+            Agendamento agendamento,
+            PeriodicidadePagamento periodicidadeNova
+    ) {
+        limparDadosPagamentoEmAberto(agendamento);
+        agendamento.setLiberadoEm(null);
+        recalcularReferenciasCobranca(agendamento, periodicidadeNova);
+
+        if (periodicidadeNova == PeriodicidadePagamento.DIARIO) {
+            if (deveAbrirPagamentoAgora(agendamento)) {
+                agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+            } else {
+                agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+            }
+            return;
+        }
+
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+    }
+
+    private void recalcularReferenciasCobranca(
+            Agendamento agendamento,
+            PeriodicidadePagamento periodicidade
+    ) {
+        if (agendamento.getDataHoraInicio() == null) {
+            return;
+        }
+        LocalDate dataAgendamento = agendamento.getDataHoraInicio().toLocalDate();
+        if (periodicidade == PeriodicidadePagamento.MENSAL) {
+            agendamento.setDataReferenciaMesPagamento(dataAgendamento.withDayOfMonth(1));
+            agendamento.setDataReferenciaSemanaPagamento(null);
+            return;
+        }
+        if (periodicidade == PeriodicidadePagamento.SEMANAL) {
+            agendamento.setDataReferenciaSemanaPagamento(dataAgendamento);
+            agendamento.setDataReferenciaMesPagamento(null);
+            return;
+        }
+        agendamento.setDataReferenciaSemanaPagamento(null);
+        agendamento.setDataReferenciaMesPagamento(null);
+    }
+
+    private LocalDate resolverDataReferenciaMesCobranca(Agendamento agendamento) {
+        if (agendamento.getDataReferenciaMesPagamento() != null) {
+            return agendamento.getDataReferenciaMesPagamento();
+        }
+        if (agendamento.getDataHoraInicio() != null) {
+            return agendamento.getDataHoraInicio().toLocalDate().withDayOfMonth(1);
+        }
+        return null;
+    }
+
+    YearMonth resolverMesReferenciaCobranca(Agendamento agendamento) {
+        LocalDate referencia = resolverDataReferenciaMesCobranca(agendamento);
+        return referencia != null ? YearMonth.from(referencia) : null;
+    }
+
+    private String rotuloPagamentoFuturo(Agendamento agendamento) {
+        if (profissionalUsaPagamentoMensal(agendamento)) {
+            return rotuloPagamentoFuturoMensal(agendamento, LocalDate.now());
+        }
+        if (profissionalUsaPagamentoSemanal(agendamento)) {
+            return "Você vai pagar no dia " + formatarDiaPagamentoSemanal(agendamento);
+        }
+        return "Pagamento em " + formatarDiaPagamentoDiario(agendamento);
+    }
+
+    String rotuloPagamentoFuturoMensal(Agendamento agendamento, LocalDate hoje) {
+        if (cobrancaMensalVencendoNaData(agendamento, hoje)) {
+            return "Você tem do dia 01 ao 10 para pagar";
+        }
+        YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
+        if (mesReferencia == null) {
+            return "—";
+        }
+        YearMonth mesPagamento = mesReferencia.plusMonths(1);
+        return "Você vai pagar do dia 01 ao 10/"
+                + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+    }
+
+    private boolean cobrancaMensalVencendoNaData(Agendamento agendamento, LocalDate hoje) {
+        if (!profissionalUsaPagamentoMensal(agendamento)) {
+            return false;
+        }
+        int dia = hoje.getDayOfMonth();
+        if (dia < 1 || dia > 10) {
+            return false;
+        }
+        YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
+        if (mesReferencia == null) {
+            return false;
+        }
+        return mesReferencia.equals(YearMonth.from(hoje).minusMonths(1));
+    }
+
+    private LocalDate resolverDataReferenciaCobranca(Agendamento agendamento) {
+        if (agendamento.getDataReferenciaSemanaPagamento() != null) {
+            return agendamento.getDataReferenciaSemanaPagamento();
+        }
+        if (agendamento.getDataHoraInicio() != null) {
+            return agendamento.getDataHoraInicio().toLocalDate();
+        }
+        return null;
+    }
+
+    PeriodoSemanaPagamento resolverSemanaPorDataReferencia(LocalDate dataReferencia) {
+        if (dataReferencia == null) {
+            return null;
+        }
+        if (dataReferencia.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return new PeriodoSemanaPagamento(dataReferencia.minusDays(6), dataReferencia);
+        }
+        LocalDate inicio = dataReferencia.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        return new PeriodoSemanaPagamento(inicio, inicio.plusDays(6));
+    }
+
+    private LocalDate resolverDomingoPagamentoSemanal(Agendamento agendamento) {
+        LocalDate referencia = resolverDataReferenciaCobranca(agendamento);
+        PeriodoSemanaPagamento semana = resolverSemanaPorDataReferencia(referencia);
+        if (semana == null) {
+            return null;
+        }
+        return semana.fim();
+    }
+
+    private String formatarDiaPagamentoDiario(Agendamento agendamento) {
         if (agendamento.getDataHoraInicio() == null) {
             return "—";
         }
         return agendamento.getDataHoraInicio().toLocalDate().minusDays(1)
-                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"));
+                .format(DateTimeFormatter.ofPattern("dd/MM"));
+    }
+
+    public String rotuloDiaPagamentoSemanalNaGrade(Agendamento agendamento) {
+        return formatarDiaPagamentoSemanal(agendamento);
+    }
+
+    public String rotuloDiaPagamentoMensalNaGrade(Agendamento agendamento) {
+        return formatarJanelaPagamentoMensal(agendamento);
+    }
+
+    public String formatarJanelaPagamentoMensal(Agendamento agendamento) {
+        YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
+        if (mesReferencia == null) {
+            return "—";
+        }
+        YearMonth mesPagamento = mesReferencia.plusMonths(1);
+        return "01 ao 10/" + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+    }
+
+    public String rotuloMesCobranca(Agendamento agendamento) {
+        YearMonth mes = resolverMesReferenciaCobranca(agendamento);
+        if (mes == null) {
+            return null;
+        }
+        return mes.format(DateTimeFormatter.ofPattern("MM/yyyy"));
+    }
+
+    public String rotuloIntervaloSemanaCobranca(Agendamento agendamento) {
+        if (!profissionalUsaPagamentoSemanal(agendamento)) {
+            return null;
+        }
+        LocalDate referencia = resolverDataReferenciaCobranca(agendamento);
+        PeriodoSemanaPagamento semana = resolverSemanaPorDataReferencia(referencia);
+        if (semana == null) {
+            return null;
+        }
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM");
+        return semana.inicio().format(formato) + " a " + semana.fim().format(formato);
+    }
+
+    public boolean realocacaoSemanalComCobrancaPendente(Agendamento agendamento) {
+        return agendamento != null
+                && PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento())
+                && profissionalUsaPagamentoSemanal(agendamento);
+    }
+
+    public boolean realocacaoMensalComCobrancaPendente(Agendamento agendamento) {
+        return agendamento != null
+                && PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento())
+                && profissionalUsaPagamentoMensal(agendamento);
+    }
+
+    private String formatarDiaPagamentoSemanal(Agendamento agendamento) {
+        LocalDate domingo = resolverDomingoPagamentoSemanal(agendamento);
+        if (domingo == null) {
+            return "—";
+        }
+        return domingo.format(DateTimeFormatter.ofPattern("dd/MM"));
     }
 
     private Agendamento marcarComoPago(Agendamento agendamento) {
@@ -767,7 +1519,7 @@ public class PagamentoConsultaService {
             return;
         }
         if (!dentroJanelaRecuperacao(agendamento)) {
-            throw new RuntimeException("Prazo final para pagar este horario foi encerrado.");
+            throw new RuntimeException("Prazo final para pagar este horário foi encerrado.");
         }
         if (outroProfissionalOcupouVaga(agendamento)) {
             String detalhe = formatarDetalheHorario(agendamento);
@@ -846,7 +1598,7 @@ public class PagamentoConsultaService {
     private void validarAntesConfirmarPagamento(Agendamento agendamento, String orderNsu, boolean modoTeste) {
         if (agendamento.getPagamentoOrderNsu() == null
                 || !agendamento.getPagamentoOrderNsu().equals(orderNsu)) {
-            throw new RuntimeException("Pedido de pagamento nao confere com a consulta.");
+            throw new RuntimeException("Pedido de pagamento não confere com a consulta.");
         }
         if (modoTeste) {
             if (vagaPreenchidaPorOutroProfissional(agendamento)) {
@@ -855,10 +1607,10 @@ public class PagamentoConsultaService {
             return;
         }
         if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
-            throw new RuntimeException("Pagamento nao esta aguardando confirmacao.");
+            throw new RuntimeException("Pagamento não está aguardando confirmação.");
         }
         if (!agendamento.possuiQrPagamentoAtivo()) {
-            throw new RuntimeException("Pagamento expirado ou invalido.");
+            throw new RuntimeException("Pagamento expirado ou inválido.");
         }
     }
 
@@ -896,7 +1648,7 @@ public class PagamentoConsultaService {
     private void aplicarValoresTaxaAntesPagamento(Agendamento agendamento) {
         BigDecimal taxaPix = infinitePayService.resolverValorTaxaClinica(agendamento);
         if (taxaPix == null || taxaPix.signum() <= 0) {
-            throw new RuntimeException("Valor da taxa da clinica invalido para pagamento.");
+            throw new RuntimeException("Valor da taxa da clínica inválido para pagamento.");
         }
         if (agendamento.getValorClinicaCobra() == null || agendamento.getValorClinicaCobra().signum() <= 0) {
             agendamento.setValorClinicaCobra(taxaPix);
@@ -976,8 +1728,106 @@ public class PagamentoConsultaService {
         }
         if (agendamento.getProfissional() == null
                 || !agendamento.getProfissional().getId().equals(usuarioLogado.getId())) {
-            throw new RuntimeException("Voce so pode pagar os seus proprios agendamentos.");
+            throw new RuntimeException("Você só pode pagar os seus próprios agendamentos.");
         }
         return agendamento;
+    }
+
+    private boolean profissionalUsaPagamentoDiario(Agendamento agendamento) {
+        Usuario profissional = agendamento.getProfissional();
+        return profissional != null
+                && resolverPeriodicidade(profissional) == PeriodicidadePagamento.DIARIO;
+    }
+
+    private boolean profissionalUsaPagamentoSemanal(Agendamento agendamento) {
+        Usuario profissional = agendamento.getProfissional();
+        return profissional != null
+                && resolverPeriodicidade(profissional) == PeriodicidadePagamento.SEMANAL;
+    }
+
+    private boolean profissionalUsaPagamentoMensal(Agendamento agendamento) {
+        Usuario profissional = agendamento.getProfissional();
+        return profissional != null
+                && resolverPeriodicidade(profissional) == PeriodicidadePagamento.MENSAL;
+    }
+
+    private boolean temQrPagamentoAtivo(Usuario profissional) {
+        return !listarConsultasComQrAtivo(profissional).isEmpty();
+    }
+
+    private List<Agendamento> listarConsultasComQrAtivo(Usuario profissional) {
+        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()).stream()
+                .filter(Agendamento::possuiQrPagamentoAtivo)
+                .toList();
+    }
+
+    private boolean bloqueadoPorPagamentoSemanal(Usuario profissional) {
+        LocalDate hoje = LocalDate.now();
+        if (hoje.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return false;
+        }
+        PeriodoSemanaPagamento semanaAnterior = resolverSemanaAnteriorEncerrada(hoje);
+        if (semanaAnterior == null) {
+            return false;
+        }
+        List<Agendamento> consultas = listarConsultasNaoPagasNoPeriodo(profissional, semanaAnterior);
+        return !consultas.isEmpty();
+    }
+
+    private boolean bloqueadoPorPagamentoMensal(Usuario profissional) {
+        LocalDate hoje = LocalDate.now();
+        if (hoje.getDayOfMonth() <= 10) {
+            return false;
+        }
+        YearMonth mesAnterior = YearMonth.from(hoje).minusMonths(1);
+        return !listarConsultasNaoPagasNoMes(profissional, mesAnterior).isEmpty();
+    }
+
+    private PeriodoSemanaPagamento resolverSemanaAnteriorEncerrada(LocalDate referencia) {
+        if (referencia.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return null;
+        }
+        LocalDate ultimoDomingo = referencia.with(TemporalAdjusters.previous(DayOfWeek.SUNDAY));
+        return new PeriodoSemanaPagamento(ultimoDomingo.minusDays(6), ultimoDomingo);
+    }
+
+    private PeriodoSemanaPagamento resolverSemanaCorrenteParaCobranca(LocalDate referencia) {
+        if (referencia.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return new PeriodoSemanaPagamento(referencia.minusDays(6), referencia);
+        }
+        return resolverPeriodoSemanaPagamento(referencia);
+    }
+
+    private List<Agendamento> listarConsultasNaoPagasNoPeriodo(Usuario profissional, PeriodoSemanaPagamento periodo) {
+        boolean usaReferenciaSemanal = resolverPeriodicidade(profissional) == PeriodicidadePagamento.SEMANAL;
+        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()).stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> !consultaJaFoiPaga(agendamento))
+                .filter(agendamento -> {
+                    LocalDate dataCobranca = usaReferenciaSemanal
+                            ? resolverDataReferenciaCobranca(agendamento)
+                            : agendamento.getDataHoraInicio().toLocalDate();
+                    if (dataCobranca == null) {
+                        return false;
+                    }
+                    return !dataCobranca.isBefore(periodo.inicio()) && !dataCobranca.isAfter(periodo.fim());
+                })
+                .toList();
+    }
+
+    private List<Agendamento> listarConsultasNaoPagasNoMes(Usuario profissional, YearMonth mesReferencia) {
+        boolean usaReferenciaMensal = resolverPeriodicidade(profissional) == PeriodicidadePagamento.MENSAL;
+        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()).stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> !consultaJaFoiPaga(agendamento))
+                .filter(agendamento -> {
+                    YearMonth mesCobranca = usaReferenciaMensal
+                            ? resolverMesReferenciaCobranca(agendamento)
+                            : (agendamento.getDataHoraInicio() != null
+                            ? YearMonth.from(agendamento.getDataHoraInicio())
+                            : null);
+                    return mesReferencia.equals(mesCobranca);
+                })
+                .toList();
     }
 }

@@ -1,8 +1,10 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
@@ -18,17 +20,20 @@ public class UsuarioService {
     private final AgendamentoRepository agendamentoRepository;
     private final AuthService authService;
     private final PasswordEncoder passwordEncoder;
+    private final PagamentoConsultaService pagamentoConsultaService;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
             AgendamentoRepository agendamentoRepository,
             AuthService authService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            PagamentoConsultaService pagamentoConsultaService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
         this.authService = authService;
         this.passwordEncoder = passwordEncoder;
+        this.pagamentoConsultaService = pagamentoConsultaService;
     }
 
     public List<Usuario> listarProfissionaisDaEquipe() {
@@ -70,7 +75,39 @@ public class UsuarioService {
         usuario.setSenha(passwordEncoder.encode(senha));
         usuario.setCargo("ROLE_PROFISSIONAL");
         usuario.setDonaClinica(false);
+        usuario.setPeriodicidadePagamento(
+                form.getPeriodicidade() != null ? form.getPeriodicidade() : PeriodicidadePagamento.DIARIO
+        );
         return usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public int atualizarPeriodicidadePagamento(AtualizarPeriodicidadeForm form, Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+
+        if (form.getUsuarioId() == null) {
+            throw new RuntimeException("Selecione o profissional.");
+        }
+        if (form.getPeriodicidade() == null) {
+            throw new RuntimeException("Selecione a periodicidade de pagamento.");
+        }
+
+        Usuario alvo = usuarioRepository.findById(form.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
+
+        if (!"ROLE_PROFISSIONAL".equals(alvo.getCargo())) {
+            throw new RuntimeException("Somente profissionais podem ter periodicidade de pagamento.");
+        }
+        if (Boolean.TRUE.equals(alvo.getDonaClinica())) {
+            throw new RuntimeException("A dona da clínica não usa cobrança por periodicidade.");
+        }
+
+        PeriodicidadePagamento anterior = pagamentoConsultaService.resolverPeriodicidade(alvo);
+        PeriodicidadePagamento nova = form.getPeriodicidade();
+        alvo.setPeriodicidadePagamento(nova);
+        usuarioRepository.save(alvo);
+
+        return pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(alvo, anterior, nova);
     }
 
     @Transactional
@@ -117,14 +154,14 @@ public class UsuarioService {
             throw new RuntimeException("Selecione o usuario para excluir.");
         }
         if (usuarioId.equals(usuarioLogado.getId())) {
-            throw new RuntimeException("Voce nao pode excluir o seu proprio usuario.");
+            throw new RuntimeException("Você não pode excluir o seu próprio usuário.");
         }
 
         Usuario alvo = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
 
         if (authService.isAdmin(alvo)) {
-            throw new RuntimeException("Nao e permitido excluir o usuario administrador.");
+            throw new RuntimeException("Não é permitido excluir o usuário administrador.");
         }
         if (!"ROLE_PROFISSIONAL".equals(alvo.getCargo())) {
             throw new RuntimeException("Somente profissionais podem ser excluidos por aqui.");
@@ -154,7 +191,7 @@ public class UsuarioService {
             throw new RuntimeException("A nova senha precisa ter pelo menos 4 caracteres.");
         }
         if (!novaSenha.equals(confirmarSenha)) {
-            throw new RuntimeException("A confirmacao da senha nao confere.");
+            throw new RuntimeException("A confirmação da senha não confere.");
         }
         if (exigirDiferenteDaAtual && novaSenha.equals(senhaAtual)) {
             throw new RuntimeException("A nova senha precisa ser diferente da senha atual.");
@@ -164,8 +201,8 @@ public class UsuarioService {
     }
 
     private void validarGerenciamentoEquipe(Usuario usuarioLogado) {
-        if (!authService.podeGerenciarEquipe(usuarioLogado)) {
-            throw new RuntimeException("Somente administracao ou dona da clinica podem gerenciar a equipe.");
+        if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
+            throw new RuntimeException("Somente a dona da clínica pode acessar a central dos profissionais.");
         }
     }
 

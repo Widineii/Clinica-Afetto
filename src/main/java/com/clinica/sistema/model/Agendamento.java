@@ -6,6 +6,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -81,6 +82,20 @@ public class Agendamento {
 
     @Column(name = "liberado_em")
     private LocalDateTime liberadoEm;
+
+    /** Semana de cobranca (modo semanal): nao muda ao realocar o atendimento. */
+    @Column(name = "data_referencia_semana_pagamento")
+    private LocalDate dataReferenciaSemanaPagamento;
+
+    /** Mes de cobranca (modo mensal, dia 1): nao muda ao realocar o atendimento. */
+    @Column(name = "data_referencia_mes_pagamento")
+    private LocalDate dataReferenciaMesPagamento;
+
+    @Column(name = "motivo_encerramento_serie", length = 500)
+    private String motivoEncerramentoSerie;
+
+    @Column(name = "serie_encerrada_em")
+    private LocalDateTime serieEncerradaEm;
 
     @Transient
     private String recorrencia;

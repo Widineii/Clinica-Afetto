@@ -1,6 +1,7 @@
 package com.clinica.sistema;
 
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
@@ -61,7 +62,9 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
 
     @Test
     void montarCenarioMeusPagamentos() {
-        Usuario julia = usuarioRepository.findByLogin("julia").orElseThrow();
+        Usuario carol = usuarioRepository.findByLogin("carol").orElseThrow();
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+        usuarioRepository.save(carol);
         Sala sala = salaRepository.findAll().stream()
                 .filter(s -> "Sala 1".equals(s.getNome()))
                 .findFirst()
@@ -73,39 +76,27 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
                 ? LocalTime.of(19, 0)
                 : LocalTime.of(21, 0);
 
-        salvar(julia, sala, amanha, LocalTime.of(10, 0), PREFIXO + "Amanha (pagar hoje)",
+        salvar(carol, sala, amanha, LocalTime.of(10, 0), PREFIXO + "Amanha (pagar hoje)",
                 PagamentoStatus.PAGAMENTO_FUTURO);
-        salvar(julia, sala, hoje, horarioHoje, PREFIXO + "Hoje (esqueceu de pagar)",
+        salvar(carol, sala, hoje, horarioHoje, PREFIXO + "Hoje (esqueceu de pagar)",
                 PagamentoStatus.LIBERADO_FALTA_PAGAMENTO);
 
-        LocalDate inicioSemana = hoje.getDayOfWeek() == DayOfWeek.SUNDAY
-                ? hoje.plusDays(1)
-                : hoje.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate sabadoSemana = inicioSemana.plusDays(5);
-        LocalDate diaSemana = sabadoSemana;
-        if (diaSemana.equals(hoje) || diaSemana.equals(amanha) || !diaSemana.isAfter(hoje)) {
-            diaSemana = amanha.plusDays(2);
-            if (diaSemana.getDayOfWeek() == DayOfWeek.SUNDAY) {
-                diaSemana = diaSemana.plusDays(1);
-            }
-        }
-        if (diaSemana.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            diaSemana = diaSemana.minusDays(1);
-        }
+        LocalDate diaSemana = resolverDiaAdiantamentoSemana(hoje, amanha);
 
-        salvar(julia, sala, diaSemana, LocalTime.of(14, 0), PREFIXO + "Semana (adiantar)",
+        salvar(carol, sala, diaSemana, LocalTime.of(14, 0), PREFIXO + "Semana (adiantar)",
                 PagamentoStatus.PAGAMENTO_FUTURO);
         LocalDate diaSemanaB = diaSemana.minusDays(1);
         if (!diaSemanaB.equals(hoje)
                 && !diaSemanaB.equals(amanha)
                 && !diaSemanaB.isBefore(hoje)
-                && diaSemanaB.getDayOfWeek() != DayOfWeek.SUNDAY) {
-            salvar(julia, sala, diaSemanaB, LocalTime.of(15, 0), PREFIXO + "Semana B (adiantar)",
+                && diaSemanaB.getDayOfWeek() != DayOfWeek.SUNDAY
+                && !deveAbrirPagamentoAgora(diaSemanaB)) {
+            salvar(carol, sala, diaSemanaB, LocalTime.of(15, 0), PREFIXO + "Semana B (adiantar)",
                     PagamentoStatus.PAGAMENTO_FUTURO);
         }
 
-        List<Agendamento> pendentes = pagamentoConsultaService.listarPagamentosPendentesProximoDia(julia);
-        List<Agendamento> semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
+        List<Agendamento> pendentes = pagamentoConsultaService.listarPagamentosPendentesProximoDia(carol);
+        List<Agendamento> semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(carol);
 
         assertFalse(pendentes.isEmpty(), "Deveria haver pendencias (amanha e/ou hoje)");
         assertFalse(semana.isEmpty(), "Deveria haver consultas na aba da semana");
@@ -114,6 +105,29 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
                 pagamentoConsultaService.formatarTotalTaxaPix(pendentes),
                 pagamentoConsultaService.formatarTotalTaxaPix(semana),
                 amanha, hoje, horarioHoje, diaSemana);
+    }
+
+    private LocalDate resolverDiaAdiantamentoSemana(LocalDate hoje, LocalDate amanha) {
+        LocalDate inicioSemana = hoje.getDayOfWeek() == DayOfWeek.SUNDAY
+                ? hoje.plusDays(1)
+                : hoje.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate fimSemana = inicioSemana.plusDays(6);
+        LocalDate candidato = hoje.plusDays(2);
+        while (!candidato.isAfter(fimSemana)) {
+            if (!candidato.equals(hoje)
+                    && !candidato.equals(amanha)
+                    && candidato.isAfter(hoje)
+                    && !deveAbrirPagamentoAgora(candidato)) {
+                return candidato;
+            }
+            candidato = candidato.plusDays(1);
+        }
+        return hoje.plusDays(2);
+    }
+
+    private boolean deveAbrirPagamentoAgora(LocalDate dataConsulta) {
+        LocalDate diaLimitePagamento = dataConsulta.minusDays(1);
+        return !LocalDate.now().isBefore(diaLimitePagamento);
     }
 
     private Agendamento salvar(
@@ -169,7 +183,7 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
         System.out.println();
         System.out.println("========== TESTE MEUS PAGAMENTOS ==========");
         System.out.println("App: http://localhost:8081/agendamentos/meus-pagamentos");
-        System.out.println("Login: julia / senha: 297b");
+        System.out.println("Login: carol / senha: 297b");
         System.out.println();
         System.out.println("Aba Pagamentos pendentes: " + qtdPendentes + " consulta(s) | total selecionar todas: " + totalPendentes);
         System.out.println("  - " + PREFIXO + "Amanha (pagar hoje) -> " + amanha + " 10:00");

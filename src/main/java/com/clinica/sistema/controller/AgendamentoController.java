@@ -4,12 +4,15 @@ import com.clinica.sistema.config.ManualProperties;
 import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
+import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
@@ -42,6 +45,7 @@ public class AgendamentoController {
     private final UsuarioService usuarioService;
     private final RelatorioSemanalService relatorioSemanalService;
     private final RelatorioMensalService relatorioMensalService;
+    private final EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService;
     private final PagamentoConsultaService pagamentoConsultaService;
     private final FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService;
     private final ManualProperties manualProperties;
@@ -53,6 +57,7 @@ public class AgendamentoController {
             UsuarioService usuarioService,
             RelatorioSemanalService relatorioSemanalService,
             RelatorioMensalService relatorioMensalService,
+            EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService,
             PagamentoConsultaService pagamentoConsultaService,
             FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService,
             ManualProperties manualProperties
@@ -63,6 +68,7 @@ public class AgendamentoController {
         this.usuarioService = usuarioService;
         this.relatorioSemanalService = relatorioSemanalService;
         this.relatorioMensalService = relatorioMensalService;
+        this.encerramentoSerieNotificacaoService = encerramentoSerieNotificacaoService;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
         this.manualProperties = manualProperties;
@@ -89,10 +95,28 @@ public class AgendamentoController {
                         model.addAttribute("notificacaoRelatorioMensal", null);
                         model.addAttribute("exibirBolinhaNotificacaoRelatorio", false);
                     }
+                    if (authService.podeAcessarCentralProfissionais(usuario)) {
+                        encerramentoSerieNotificacaoService.adicionarNotificacaoAoModelSeAplicavel(model, session);
+                    } else {
+                        model.addAttribute("notificacaoEncerramentoSerie", null);
+                        model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
+                    }
+                    if (!authService.isAdmin(usuario)
+                            && !authService.isDonaClinica(usuario)
+                            && !authService.profissionalIgnoraValoresEPagamento(usuario)) {
+                        pagamentoConsultaService.adicionarNotificacaoPagamentoAoModelSeAplicavel(model, usuario);
+                    } else {
+                        model.addAttribute("notificacaoPagamentoProfissional", null);
+                        model.addAttribute("exibirBolinhaNotificacaoPagamento", false);
+                    }
                 },
                 () -> {
                     model.addAttribute("notificacaoRelatorioMensal", null);
                     model.addAttribute("exibirBolinhaNotificacaoRelatorio", false);
+                    model.addAttribute("notificacaoEncerramentoSerie", null);
+                    model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
+                    model.addAttribute("notificacaoPagamentoProfissional", null);
+                    model.addAttribute("exibirBolinhaNotificacaoPagamento", false);
                 }
         );
     }
@@ -106,10 +130,10 @@ public class AgendamentoController {
             HttpSession session
     ) {
         relatorioSemanalService.limparSessao(session);
-        Usuario usuarioLogado = authService.buscarUsuarioLogado().orElse(null);
-        if (usuarioLogado == null) {
+        if (authService.buscarUsuarioLogado().isEmpty()) {
             return "redirect:/login";
         }
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
 
         service.renovarSeriesRecorrentesAtivas();
         pagamentoConsultaService.processarPagamentosPendentes();
@@ -155,7 +179,7 @@ public class AgendamentoController {
         model.addAttribute("podeVerValoresDeTodos", podeGerenciarEquipe);
         model.addAttribute(
                 "exibirPainelValoresConsulta",
-                !authService.profissionalIgnoraValoresEPagamento(usuarioLogado)
+                !authService.profissionalIgnoraValoresEPagamento(usuarioLogado) || podeGerenciarEquipe
         );
         model.addAttribute("agendamentos", agendamentos);
         model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
@@ -230,6 +254,7 @@ public class AgendamentoController {
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("agendamentoService", service);
+        model.addAttribute("periodicidadePagamento", pagamentoConsultaService.resolverPeriodicidade(usuarioLogado));
         var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
         model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
         model.addAttribute(
@@ -276,9 +301,15 @@ public class AgendamentoController {
     }
 
     @GetMapping("/central-profissionais")
-    public String abrirCentralProfissionais(Model model) {
+    public String abrirCentralProfissionais(
+            @RequestParam(name = "aba", required = false, defaultValue = "equipe") String aba,
+            @RequestParam(name = "viaNotificacaoEncerramento", required = false, defaultValue = "false")
+            boolean viaNotificacaoEncerramento,
+            Model model,
+            HttpSession session
+    ) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-        if (!authService.podeGerenciarEquipe(usuarioLogado)) {
+        if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
             return "redirect:/agendamentos/dashboard";
         }
 
@@ -294,6 +325,19 @@ public class AgendamentoController {
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         model.addAttribute("profissionais", usuarioService.listarProfissionaisDaEquipe());
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
+        model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
+        String abaAtiva = switch (aba != null ? aba.toLowerCase() : "equipe") {
+            case "configuracao" -> "configuracao";
+            case "encerramentos" -> "encerramentos";
+            default -> "equipe";
+        };
+        model.addAttribute("abaAtiva", abaAtiva);
+        model.addAttribute("encerramentosSerie", service.listarEncerramentosSerieRecentes());
+        if ("encerramentos".equals(abaAtiva) || viaNotificacaoEncerramento) {
+            encerramentoSerieNotificacaoService.marcarComoVisto(session);
+            model.addAttribute("notificacaoEncerramentoSerie", null);
+            model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
+        }
         return "central-profissionais";
     }
 
@@ -308,10 +352,14 @@ public class AgendamentoController {
                 "podeAcessarGestaoFinanceira",
                 financeiroPolyanaAcessoService.podeAcessarGestaoFinanceira(usuarioLogado)
         );
-        model.addAttribute(
-                "ehProfissional",
-                !authService.isAdmin(usuarioLogado) && !authService.isDonaClinica(usuarioLogado)
-        );
+        boolean ehProfissional = !authService.isAdmin(usuarioLogado) && !authService.isDonaClinica(usuarioLogado);
+        PeriodicidadePagamento periodicidadePagamento = pagamentoConsultaService.resolverPeriodicidade(usuarioLogado);
+        model.addAttribute("ehProfissional", ehProfissional);
+        model.addAttribute("periodicidadePagamento", periodicidadePagamento);
+        model.addAttribute("pagamentoDiario", periodicidadePagamento == PeriodicidadePagamento.DIARIO);
+        model.addAttribute("pagamentoSemanal", periodicidadePagamento == PeriodicidadePagamento.SEMANAL);
+        model.addAttribute("pagamentoMensal", periodicidadePagamento == PeriodicidadePagamento.MENSAL);
+        model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         model.addAttribute("manualVideoUrl", manualProperties.getVideoUrl());
         model.addAttribute("manualVideoTitulo", manualProperties.getVideoTitulo());
         model.addAttribute("manualVideoDescricao", manualProperties.getVideoDescricao());
@@ -331,9 +379,13 @@ public class AgendamentoController {
                 pagamentoConsultaService.listarPagamentosPendentesProximoDia(usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> consultasSemana =
                 pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
+        List<com.clinica.sistema.model.Agendamento> consultasMes =
+                pagamentoConsultaService.listarConsultasPagamentoMensal(usuarioLogado);
+        PeriodicidadePagamento periodicidade = pagamentoConsultaService.resolverPeriodicidade(usuarioLogado);
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", false);
         model.addAttribute("isDonaClinica", false);
+        model.addAttribute("periodicidadePagamento", periodicidade);
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
         model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
@@ -344,6 +396,10 @@ public class AgendamentoController {
         model.addAttribute("totalConsultasPagamentoSemana", consultasSemana.size());
         model.addAttribute("rotuloSemanaAtual", pagamentoConsultaService.rotuloPeriodoSemanaAtual());
         model.addAttribute("totalTaxaSemana", pagamentoConsultaService.formatarTotalTaxaPix(consultasSemana));
+        model.addAttribute("consultasPagamentoMes", consultasMes);
+        model.addAttribute("totalConsultasPagamentoMes", consultasMes.size());
+        model.addAttribute("rotuloMesPagamento", pagamentoConsultaService.rotuloMesPagamentoPendente());
+        model.addAttribute("totalTaxaMes", pagamentoConsultaService.formatarTotalTaxaPix(consultasMes));
         return "meus-pagamentos";
     }
 
@@ -389,7 +445,31 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             usuarioService.excluirUsuario(usuarioId, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Usuario excluido com sucesso.");
+            redirectAttributes.addFlashAttribute("sucesso", "Usuário excluído com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/periodicidade")
+    public String atualizarPeriodicidadeCentral(
+            @ModelAttribute AtualizarPeriodicidadeForm form,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            int agendamentosMigrados = usuarioService.atualizarPeriodicidadePagamento(form, usuarioLogado);
+            if (agendamentosMigrados > 0) {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Periodicidade atualizada. "
+                                + agendamentosMigrados
+                                + " agendamento(s) futuro(s) ajustado(s) para a nova regra."
+                );
+            } else {
+                redirectAttributes.addFlashAttribute("sucesso", "Periodicidade de pagamento atualizada.");
+            }
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
@@ -407,17 +487,29 @@ public class AgendamentoController {
             if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(criado.getStatusPagamento())) {
                 redirectAttributes.addFlashAttribute(
                         "sucesso",
-                        "Agendamento reservado na agenda. Esperando confirmacao do pagamento (5 min). "
+                        "Agendamento reservado na agenda. Esperando confirmação do pagamento (5 min). "
                                 + "Se fechar o QR, use a aba Pagamentos pendentes para voltar."
                 );
                 redirectAttributes.addFlashAttribute("pagamentoAgendamentoId", criado.getId());
+            } else if (pagamentoConsultaService.isAgendadoPorGestorParaOutroProfissional(
+                    criado.getProfissional(),
+                    usuarioLogado
+            )) {
+                String nomeProfissional = criado.getProfissional() != null && criado.getProfissional().getNome() != null
+                        ? criado.getProfissional().getNome()
+                        : "o profissional";
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Agendamento cadastrado para " + nomeProfissional + ". "
+                                + "A 1ª consulta já fica confirmada; as próximas seguem a regra de pagamento dela."
+                );
             } else {
                 redirectAttributes.addFlashAttribute(
                         "sucesso",
                         "QUINZENAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
-                                ? "Agendamento quinzenal cadastrado. A serie continua automaticamente ate encerrar."
+                                ? "Agendamento quinzenal cadastrado. A série continua automaticamente até encerrar."
                                 : "SEMANAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
-                                        ? "Agendamento fixo cadastrado. A serie continua automaticamente ate encerrar."
+                                        ? "Agendamento fixo cadastrado. A série continua automaticamente até encerrar."
                                         : "Agendamento cadastrado com sucesso."
                 );
             }
@@ -439,13 +531,14 @@ public class AgendamentoController {
 
         com.clinica.sistema.model.Agendamento agendamento = service.buscarPorId(id).orElse(null);
         if (agendamento == null) {
-            redirectAttributes.addFlashAttribute("erro", "Agendamento nao encontrado.");
+            redirectAttributes.addFlashAttribute("erro", "Agendamento não encontrado.");
             return "redirect:/agendamentos/dashboard";
         }
         if (!service.podeRealocar(agendamento, usuarioLogado)) {
             redirectAttributes.addFlashAttribute(
                     "erro",
-                    "Realocacao permitida somente para agendamentos ja pagos e antes do horario do atendimento."
+                    "Realocação permitida somente antes do horário do atendimento, com pagamento confirmado "
+                            + "ou cobrança semanal/mensal ainda pendente."
             );
             return "redirect:/agendamentos/dashboard";
         }
@@ -464,6 +557,7 @@ public class AgendamentoController {
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         model.addAttribute("usuarioLogado", usuarioLogado);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("realocacaoAvulsa", service.isRealocacaoAvulsa(agendamento));
         model.addAttribute("datasPermitidasRealocacao", service.listarDatasPermitidasRealocacao(agendamento));
         return "agendamento-realocar";
@@ -478,17 +572,27 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             com.clinica.sistema.model.Agendamento atualizado = service.realocar(id, relocacaoForm, usuarioLogado);
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    "Agendamento realocado para "
-                            + (atualizado.getSala() != null ? atualizado.getSala().getNome() : "sala")
-                            + " em "
-                            + (atualizado.getDataHoraInicio() != null
-                            ? atualizado.getDataHoraInicio().format(
-                                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                            : "-")
-                            + ". O pagamento ja realizado foi mantido."
-            );
+            String mensagemSucesso = "Agendamento realocado para "
+                    + (atualizado.getSala() != null ? atualizado.getSala().getNome() : "sala")
+                    + " em "
+                    + (atualizado.getDataHoraInicio() != null
+                    ? atualizado.getDataHoraInicio().format(
+                            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    : "-");
+            if (pagamentoConsultaService.realocacaoMensalComCobrancaPendente(atualizado)) {
+                mensagemSucesso += ". A cobranca mensal continua no mes "
+                        + pagamentoConsultaService.rotuloMesCobranca(atualizado)
+                        + " (pagamento do dia 01 ao "
+                        + pagamentoConsultaService.formatarJanelaPagamentoMensal(atualizado)
+                        + ").";
+            } else if (pagamentoConsultaService.realocacaoSemanalComCobrancaPendente(atualizado)) {
+                mensagemSucesso += ". A cobranca semanal continua na semana "
+                        + pagamentoConsultaService.rotuloIntervaloSemanaCobranca(atualizado)
+                        + " (pagamento sabado ou domingo).";
+            } else {
+                mensagemSucesso += ". O pagamento ja realizado foi mantido.";
+            }
+            redirectAttributes.addFlashAttribute("sucesso", mensagemSucesso);
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
@@ -514,12 +618,16 @@ public class AgendamentoController {
     @PostMapping("/{id}/encerrar-fixo")
     public String encerrarFixo(
             @PathVariable Long id,
+            @RequestParam("motivoEncerramento") String motivoEncerramento,
             RedirectAttributes redirectAttributes
     ) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            service.encerrarSerieFixa(id, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Horario fixo encerrado com sucesso para as proximas ocorrencias.");
+            service.encerrarSerieFixa(id, motivoEncerramento, usuarioLogado);
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    "Série encerrada. Todos os horários foram removidos e o motivo ficou registrado em Central dos profissionais > Encerramentos."
+            );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
@@ -534,7 +642,7 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             if (!authService.isAdmin(usuarioLogado)) {
-                throw new RuntimeException("Somente a administracao pode carregar a agenda fixa.");
+                throw new RuntimeException("Somente a administração pode carregar a agenda fixa.");
             }
 
             startupDataInitializer.sincronizarCargaInicialClinica();
@@ -553,11 +661,11 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             if (!authService.isAdmin(usuarioLogado)) {
-                throw new RuntimeException("Somente a administracao pode restaurar a demonstracao.");
+                throw new RuntimeException("Somente a administração pode restaurar a demonstração.");
             }
 
             startupDataInitializer.resetarBaseDemonstracao(usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Demonstracao restaurada com sucesso.");
+            redirectAttributes.addFlashAttribute("sucesso", "Demonstração restaurada com sucesso.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("erroContexto", "agendamento");

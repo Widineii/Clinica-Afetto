@@ -25,7 +25,7 @@
             <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
             <p class="small text-muted"
                th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026</p>
-            <p class="mb-2">Taxa da clinica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
+            <p class="mb-2">Taxa da clínica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
             <p class="small mb-4">
                 Status:
                 <span class="badge text-bg-secondary" th:text="${rotuloStatus}">Aguardando pagamento</span>
@@ -60,18 +60,18 @@
             </div>
 
             <div th:if="${agendamento.pagamentoPago}" class="alert alert-success mb-0">
-                Pagamento confirmado. A sala esta liberada para esta consulta.
+                Pagamento confirmado. A sala está liberada para esta consulta.
             </div>
 
             <div th:if="${vagaPreenchida}" class="alert alert-danger mb-0">
-                A vaga foi preenchida por outro profissional neste horario.
-                O pagamento nao pode ser concluido aqui. Escolha outro horario ou sala na agenda.
+                A vaga foi preenchida por outro profissional neste horário.
+                O pagamento não pode ser concluído aqui. Escolha outro horário ou sala na agenda.
             </div>
 
             <div th:if="${podeRecuperarVaga and !agendamento.possuiQrPagamentoAtivo() and !agendamento.pagamentoPago}"
                  class="alert alert-warning mb-3">
-                Apos a meia-noite do dia da consulta esta vaga ficou liberada na grade para outros profissionais,
-                mas voce ainda pode pagar e recuperar o horario enquanto ninguem reservar.
+                Após a meia-noite do dia da consulta esta vaga ficou liberada na grade para outros profissionais,
+                mas você ainda pode pagar e recuperar o horário enquanto ninguém reservar.
                 <form th:action="@{/pagamentos/{id}/gerar-link(id=${agendamento.id})}"
                       method="post"
                       class="d-grid mt-2">
@@ -81,7 +81,7 @@
             </div>
 
             <div th:if="${bloqueado and !vagaPreenchida}" class="alert alert-danger mt-3 mb-0">
-                Consulta bloqueada: pagamento nao confirmado para usar a sala hoje.
+                Consulta bloqueada: pagamento não confirmado para usar a sala hoje.
             </div>
 
             <a th:href="@{/agendamentos/dashboard}" class="btn btn-link mt-3">Voltar para agenda</a>
@@ -127,7 +127,7 @@
                         }, 2500);
                     }
                 }).catch(function () {
-                    window.alert('Nao foi possivel copiar a chave PIX. Copie manualmente o link do pagamento.');
+                    window.alert('Não foi possível copiar a chave PIX. Copie manualmente o link do pagamento.');
                 });
             });
         });

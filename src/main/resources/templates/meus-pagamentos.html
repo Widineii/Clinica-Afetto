@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meus pagamentos - Agenda Afetto</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <th:block th:replace="~{fragments/afetto-paleta :: css}"></th:block>
     <style>
         body {
             min-height: 100vh;
             background:
-                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                radial-gradient(circle at top left, rgba(10, 135, 133, 0.12), transparent 28%),
                 linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
         }
         .app-shell {
@@ -18,7 +19,7 @@
             padding: 24px 16px 40px;
         }
         .hero-band {
-            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            background: var(--afetto-gradient-hero);
             color: #fff;
             border-radius: 24px;
             padding: clamp(16px, 3vw, 24px);
@@ -47,11 +48,11 @@
             transition: color 0.15s, border-color 0.15s;
         }
         .pagamentos-tabs .tab-btn:hover {
-            color: #0f766e;
+            color: var(--afetto-teal-dark);
         }
         .pagamentos-tabs .tab-btn.active {
-            color: #0f766e;
-            border-bottom-color: #0f766e;
+            color: var(--afetto-teal-dark);
+            border-bottom-color: var(--afetto-teal-dark);
         }
         .pagamentos-tabs .tab-sep {
             align-self: center;
@@ -70,10 +71,10 @@
     <div class="hero-band mb-4">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
-                <p class="text-uppercase small mb-2 opacity-75">Sistema de agenda da clinica</p>
+                <p class="text-uppercase small mb-2 opacity-75">Sistema de agenda da clínica</p>
                 <h1 class="h2 mb-2">Meus pagamentos</h1>
                 <p class="mb-0 opacity-75">
-                    Usuario: <strong th:text="${usuarioLogado.nome}">Nome</strong>
+                    Usuário: <strong th:text="${usuarioLogado.nome}">Nome</strong>
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -93,6 +94,7 @@
         <div class="card-body p-4">
             <nav class="pagamentos-tabs" role="tablist" aria-label="Tipo de pagamento">
                 <button type="button"
+                        th:if="${periodicidadePagamento.name() == 'DIARIO'}"
                         class="tab-btn active"
                         id="tab-pendentes"
                         role="tab"
@@ -103,29 +105,43 @@
                     <span class="badge text-bg-warning ms-1"
                           th:text="${totalMeusPagamentosPendentes}">0</span>
                 </button>
-                <span class="tab-sep" aria-hidden="true">|</span>
+                <span th:if="${periodicidadePagamento.name() == 'DIARIO'}" class="tab-sep" aria-hidden="true">|</span>
                 <button type="button"
-                        class="tab-btn"
+                        th:if="${periodicidadePagamento.name() == 'DIARIO' or periodicidadePagamento.name() == 'SEMANAL'}"
+                        th:class="${periodicidadePagamento.name() == 'SEMANAL' ? 'tab-btn active' : 'tab-btn'}"
                         id="tab-semana"
                         role="tab"
-                        aria-selected="false"
+                        th:attr="aria-selected=${periodicidadePagamento.name() == 'SEMANAL'}"
                         aria-controls="panel-semana"
                         data-tab="semana">
-                    Pagar a semana toda
+                    <span th:text="${periodicidadePagamento.name() == 'SEMANAL' ? 'Pagamento da semana' : 'Pagar a semana toda'}">Pagamento da semana</span>
                     <span class="badge text-bg-primary ms-1"
                           th:text="${totalConsultasPagamentoSemana}">0</span>
+                </button>
+                <button type="button"
+                        th:if="${periodicidadePagamento.name() == 'MENSAL'}"
+                        class="tab-btn active"
+                        id="tab-mes"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="panel-mes"
+                        data-tab="mes">
+                    Pagamento do mês
+                    <span class="badge text-bg-primary ms-1"
+                          th:text="${totalConsultasPagamentoMes}">0</span>
                 </button>
             </nav>
 
             <div id="panel-pendentes"
                  class="tab-panel"
                  role="tabpanel"
-                 aria-labelledby="tab-pendentes">
+                 aria-labelledby="tab-pendentes"
+                 th:if="${periodicidadePagamento.name() == 'DIARIO'}">
                 <p class="small text-muted mb-3">
-                    Consultas de <strong>amanha</strong>
+                    Consultas de <strong>amanhã</strong>
                     (<span th:text="${rotuloProximoDiaPendentes}">01/06/2026</span>)
-                    para pagar hoje (D-1), e consultas de <strong>hoje</strong> que voce esqueceu de pagar:
-                    continuam aqui ate o horario da consulta, se a vaga ainda estiver livre.
+                    para pagar hoje (D-1), e consultas de <strong>hoje</strong> que você esqueceu de pagar:
+                    continuam aqui até o horário da consulta, se a vaga ainda estiver livre.
                 </p>
 
                 <div th:if="${#lists.isEmpty(meusPagamentosPendentes)}" class="alert alert-success mb-0">
@@ -149,7 +165,7 @@
                                     id="btnPagarPendentesSelecionados"
                                     class="btn btn-warning"
                                     disabled>
-                                Pagar selecionadas (PIX unico)
+                                Pagar selecionadas (PIX único)
                             </button>
                         </form>
                     </div>
@@ -165,12 +181,12 @@
                                            title="Selecionar todas">
                                 </th>
                                 <th>Data</th>
-                                <th>Horario</th>
+                                <th>Horário</th>
                                 <th>Sala</th>
                                 <th>Cliente</th>
                                 <th>Taxa</th>
                                 <th>Status</th>
-                                <th>Acao</th>
+                                <th>Ação</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -189,7 +205,7 @@
                                 <td class="pendencia-taxa" th:text="${pagamentoService.formatarValorTaxaPix(pendencia)}">R$ 35,00</td>
                                 <td>
                                     <span th:if="${pendencia.possuiQrPagamentoAtivo()}"
-                                          class="badge text-bg-info">Aguardando confirmacao</span>
+                                          class="badge text-bg-info">Aguardando confirmação</span>
                                     <span th:if="${!pendencia.possuiQrPagamentoAtivo() and pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
                                           class="badge text-bg-secondary">Recuperar vaga</span>
                                     <span th:if="${!pendencia.possuiQrPagamentoAtivo() and !pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
@@ -215,23 +231,33 @@
                  class="tab-panel"
                  role="tabpanel"
                  aria-labelledby="tab-semana"
-                 hidden>
+                 th:attr="hidden=${periodicidadePagamento.name() == 'DIARIO' ? 'hidden' : null}">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <p class="small text-muted mb-0"
-                       th:if="${!pagamentoService.adiantamentoSemanaEhProxima()}">
-                        Adiante as consultas desta semana (segunda a sabado, 07:00 as 21:00) com um unico PIX somando todas as taxas.
+                       th:if="${periodicidadePagamento.name() == 'SEMANAL'}">
+                        Sua cobrança é semanal. O sistema fica liberado até domingo; pague no sábado ou domingo.
+                        Se passar de domingo sem pagar, a agenda bloqueia na segunda-feira.
                     </p>
                     <p class="small text-muted mb-0"
-                       th:if="${pagamentoService.adiantamentoSemanaEhProxima()}">
-                        Hoje e domingo: a clinica nao atende, mas voce pode adiantar o PIX da <strong>proxima semana</strong>
-                        (segunda a sabado) de uma vez.
+                       th:if="${periodicidadePagamento.name() == 'DIARIO' and !pagamentoService.adiantamentoSemanaEhProxima()}">
+                        Adiante as consultas desta semana (segunda a sábado, 07:00 às 21:00) com um único PIX somando todas as taxas.
+                    </p>
+                    <p class="small text-muted mb-0"
+                       th:if="${periodicidadePagamento.name() == 'DIARIO' and pagamentoService.adiantamentoSemanaEhProxima()}">
+                        Hoje é domingo: a clínica não atende, mas você pode adiantar o PIX da <strong>próxima semana</strong>
+                        (segunda a sábado) de uma vez.
                     </p>
                     <span class="badge text-bg-primary"
                           th:text="${rotuloSemanaAtual}">28/05 a 03/06</span>
                 </div>
 
                 <div th:if="${#lists.isEmpty(consultasPagamentoSemana)}" class="alert alert-light border mb-0">
-                    Nenhuma consulta da semana disponivel para adiantar pagamento no momento.
+                    <span th:if="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal()}">
+                        Pagamento semanal disponível apenas sábado e domingo.
+                    </span>
+                    <span th:unless="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal()}">
+                        Nenhuma consulta da semana disponível para pagamento no momento.
+                    </span>
                 </div>
 
                 <div th:if="${!#lists.isEmpty(consultasPagamentoSemana)}">
@@ -246,8 +272,8 @@
                             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                             <button type="submit"
                                     class="btn btn-primary"
-                                    onclick="return confirm('Gerar um unico PIX com o total da semana? Todas as consultas listadas serao quitadas de uma vez.');">
-                                Pagar semana inteira (PIX unico)
+                                    onclick="return confirm('Gerar um único PIX com o total da semana? Todas as consultas listadas serão quitadas de uma vez.');">
+                                Pagar semana inteira (PIX único)
                             </button>
                         </form>
                     </div>
@@ -257,7 +283,7 @@
                             <thead>
                             <tr>
                                 <th>Data</th>
-                                <th>Horario</th>
+                                <th>Horário</th>
                                 <th>Sala</th>
                                 <th>Cliente</th>
                                 <th>Taxa</th>
@@ -285,6 +311,72 @@
                     </div>
                 </div>
             </div>
+
+            <div id="panel-mes"
+                 class="tab-panel"
+                 role="tabpanel"
+                 aria-labelledby="tab-mes"
+                 th:if="${periodicidadePagamento.name() == 'MENSAL'}">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <p class="small text-muted mb-0">
+                        Sua cobrança é mensal: agenda liberada o mês todo. A partir do dia 1 aparece o pagamento
+                        do mês anterior — você tem do dia <strong>01 ao 10</strong> para pagar.
+                        Depois do dia 10 sem pagar, a agenda bloqueia.
+                    </p>
+                    <span class="badge text-bg-primary" th:text="${pagamentoService.estaEmJanelaPagamentoMensal() ? pagamentoService.rotuloJanelaPagamentoMensalAtual() : rotuloMesPagamento}">abril/2026</span>
+                </div>
+
+                <div th:if="${#lists.isEmpty(consultasPagamentoMes)}" class="alert alert-light border mb-0">
+                    <span th:if="${pagamentoService.estaEmJanelaPagamentoMensal()}">
+                        Nenhuma consulta do mês anterior pendente. Prazo de pagamento: dia 01 ao 10.
+                    </span>
+                    <span th:unless="${pagamentoService.estaEmJanelaPagamentoMensal()}">
+                        Nenhuma consulta do mês anterior pendente de pagamento no momento.
+                    </span>
+                </div>
+
+                <div th:if="${!#lists.isEmpty(consultasPagamentoMes)}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 p-3 rounded border bg-light">
+                        <div>
+                            <span class="small text-muted d-block">Total do mês anterior</span>
+                            <strong class="fs-5" th:text="${totalTaxaMes}">R$ 0,00</strong>
+                            <span class="small text-muted ms-1"
+                                  th:text="'(' + ${totalConsultasPagamentoMes} + ' consulta(s))'">(0 consulta(s))</span>
+                        </div>
+                        <form th:action="@{/pagamentos/gerar-links-mes-anterior}" method="post" class="d-inline">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    onclick="return confirm('Gerar um único PIX com o total do mês anterior?');">
+                                Pagar mês anterior (PIX único)
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Horário</th>
+                                <th>Sala</th>
+                                <th>Cliente</th>
+                                <th>Taxa</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="consulta : ${consultasPagamentoMes}">
+                                <td th:text="${#temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy')}">01/04/2026</td>
+                                <td th:text="${#temporals.format(consulta.dataHoraInicio, 'HH:mm')}">10:00</td>
+                                <td th:text="${consulta.sala != null ? consulta.sala.nome : '-'}">Sala 1</td>
+                                <td th:text="${consulta.nomeCliente}">Cliente</td>
+                                <td th:text="${pagamentoService.formatarValorTaxaPix(consulta)}">R$ 35,00</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -294,25 +386,47 @@
     (function () {
         var tabPendentes = document.getElementById('tab-pendentes');
         var tabSemana = document.getElementById('tab-semana');
+        var tabMes = document.getElementById('tab-mes');
         var panelPendentes = document.getElementById('panel-pendentes');
         var panelSemana = document.getElementById('panel-semana');
+        var panelMes = document.getElementById('panel-mes');
 
         function ativarAba(aba) {
             var semana = aba === 'semana';
-            tabPendentes.classList.toggle('active', !semana);
-            tabSemana.classList.toggle('active', semana);
-            tabPendentes.setAttribute('aria-selected', !semana);
-            tabSemana.setAttribute('aria-selected', semana);
-            panelPendentes.hidden = semana;
-            panelSemana.hidden = !semana;
-            history.replaceState(null, '', semana ? '#pagamentos-semana' : '#pagamentos-pendentes');
+            var mes = aba === 'mes';
+            if (tabPendentes) {
+                tabPendentes.classList.toggle('active', aba === 'pendentes');
+                tabPendentes.setAttribute('aria-selected', aba === 'pendentes');
+            }
+            if (tabSemana) {
+                tabSemana.classList.toggle('active', semana);
+                tabSemana.setAttribute('aria-selected', semana);
+            }
+            if (tabMes) {
+                tabMes.classList.toggle('active', mes);
+                tabMes.setAttribute('aria-selected', mes);
+            }
+            if (panelPendentes) panelPendentes.hidden = aba !== 'pendentes';
+            if (panelSemana) panelSemana.hidden = !semana;
+            if (panelMes) panelMes.hidden = !mes;
+            var hash = '#pagamentos-pendentes';
+            if (semana) hash = '#pagamentos-semana';
+            if (mes) hash = '#pagamentos-mes';
+            history.replaceState(null, '', hash);
         }
 
-        tabPendentes.addEventListener('click', function () { ativarAba('pendentes'); });
-        tabSemana.addEventListener('click', function () { ativarAba('semana'); });
+        if (tabPendentes) tabPendentes.addEventListener('click', function () { ativarAba('pendentes'); });
+        if (tabSemana) tabSemana.addEventListener('click', function () { ativarAba('semana'); });
+        if (tabMes) tabMes.addEventListener('click', function () { ativarAba('mes'); });
 
         if (window.location.hash === '#pagamentos-semana') {
             ativarAba('semana');
+        } else if (window.location.hash === '#pagamentos-mes') {
+            ativarAba('mes');
+        } else if (tabSemana && tabSemana.classList.contains('active')) {
+            ativarAba('semana');
+        } else if (tabMes && tabMes.classList.contains('active')) {
+            ativarAba('mes');
         }
 
         var checks = document.querySelectorAll('.pendencia-check');
@@ -377,7 +491,7 @@
                 e.preventDefault();
                 return;
             }
-            if (!confirm('Gerar um unico PIX para ' + qtd + ' consulta(s) do proximo dia?')) {
+            if (!confirm('Gerar um único PIX para ' + qtd + ' consulta(s) do próximo dia?')) {
                 e.preventDefault();
             }
         });

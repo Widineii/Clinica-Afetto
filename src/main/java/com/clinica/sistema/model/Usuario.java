@@ -17,4 +17,8 @@ public class Usuario {
 
     @Column(name = "dona_clinica")
     private Boolean donaClinica = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "periodicidade_pagamento", length = 20)
+    private PeriodicidadePagamento periodicidadePagamento = PeriodicidadePagamento.DIARIO;
 }

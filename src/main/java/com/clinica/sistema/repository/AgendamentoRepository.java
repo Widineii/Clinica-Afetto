@@ -76,6 +76,8 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataHoraInicio
     );
 
+    List<Agendamento> findBySerieFixaIdOrderByDataHoraInicioAsc(String serieFixaId);
+
     @EntityGraph(attributePaths = {"profissional", "sala"})
     Optional<Agendamento> findFirstBySerieFixaIdOrderByDataHoraInicioDesc(String serieFixaId);
 
@@ -85,6 +87,14 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     boolean existsBySerieFixaIdAndDataHoraInicio(String serieFixaId, LocalDateTime dataHoraInicio);
 
     long countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(String serieFixaId, LocalDateTime dataHoraInicio);
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    Optional<Agendamento> findFirstBySerieFixaIdAndDataHoraInicioLessThanOrderByDataHoraInicioDesc(
+            String serieFixaId,
+            LocalDateTime dataHoraInicio
+    );
+
+    boolean existsBySerieFixaIdAndSerieEncerradaEmIsNotNull(String serieFixaId);
 
     @Query("""
             SELECT DISTINCT a.serieFixaId

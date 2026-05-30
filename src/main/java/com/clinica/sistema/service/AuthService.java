@@ -1,6 +1,7 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.security.ClinicaUserPrincipal;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -11,6 +12,12 @@ import java.util.Optional;
 
 @Service
 public class AuthService {
+
+    private final UsuarioRepository usuarioRepository;
+
+    public AuthService(UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
 
     public Optional<Usuario> buscarUsuarioLogado() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -29,8 +36,10 @@ public class AuthService {
     }
 
     public Usuario buscarUsuarioLogadoObrigatorio() {
-        return buscarUsuarioLogado()
+        Usuario usuarioSessao = buscarUsuarioLogado()
                 .orElseThrow(() -> new RuntimeException("Sessao expirada. Faca login novamente."));
+        return usuarioRepository.findById(usuarioSessao.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
     }
 
     public boolean isAdmin(Usuario usuario) {
@@ -47,6 +56,11 @@ public class AuthService {
 
     public boolean podeGerenciarEquipe(Usuario usuario) {
         return isAdmin(usuario) || isDonaClinica(usuario);
+    }
+
+    /** Cadastro, senhas e periodicidade de pagamento — exclusivo da dona da clinica (Polyana). */
+    public boolean podeAcessarCentralProfissionais(Usuario usuario) {
+        return isDonaClinica(usuario);
     }
 
     /** Layout caderno (Avulso / Fixo / Quinzenal) para profissionais e dona da clinica; admin mantem a grade completa. */

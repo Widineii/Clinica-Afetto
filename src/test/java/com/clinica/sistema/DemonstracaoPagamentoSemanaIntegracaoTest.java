@@ -1,6 +1,7 @@
 package com.clinica.sistema;
 
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
@@ -61,7 +62,9 @@ class DemonstracaoPagamentoSemanaIntegracaoTest {
 
     @Test
     void montarCenarioPagamentoSemanaUnico() {
-        Usuario carol = usuarioRepository.findByLogin("julia").orElseThrow();
+        Usuario julia = usuarioRepository.findByLogin("julia").orElseThrow();
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+        usuarioRepository.save(julia);
         Sala sala1 = salaRepository.findAll().stream()
                 .filter(s -> "Sala 1".equals(s.getNome()))
                 .findFirst()
@@ -75,28 +78,57 @@ class DemonstracaoPagamentoSemanaIntegracaoTest {
                 .findFirst()
                 .orElse(sala1);
 
-        LocalDate dia1 = inicioSemana.plusDays(4);
-        LocalDate dia2 = inicioSemana.plusDays(5);
-        if (dia2.isAfter(fimSemana)) {
-            dia1 = fimSemana.minusDays(2);
-            dia2 = fimSemana.minusDays(1);
+        LocalDate dia1 = resolverDiaAdiantamentoSemana(inicioSemana, fimSemana);
+        LocalDate dia2 = dia1.plusDays(1);
+        if (dia2.isAfter(fimSemana) || deveAbrirPagamentoAgora(dia2)) {
+            dia2 = dia1;
         }
 
-        salvarConsultaFutura(carol, sala2, dia1, LocalTime.of(15, 0), PREFIXO + "Consulta A");
-        salvarConsultaFutura(carol, sala2, dia2, LocalTime.of(16, 0), PREFIXO + "Consulta B");
+        salvarConsultaFutura(julia, sala2, dia1, horarioFuturo(dia1), PREFIXO + "Consulta A");
+        if (!dia2.equals(dia1)) {
+            salvarConsultaFutura(julia, sala2, dia2, horarioFuturo(dia2), PREFIXO + "Consulta B");
+        }
 
-        List<Agendamento> semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(carol);
+        List<Agendamento> semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
         assertFalse(semana.isEmpty(), "Deveria haver consultas da semana para adiantar");
 
         if (semana.size() < 2) {
-            LocalDate diaExtra = fimSemana.minusDays(1);
-            salvarConsultaFutura(carol, sala2, diaExtra, LocalTime.of(18, 0), PREFIXO + "Consulta C");
-            semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(carol);
+            LocalDate diaExtra = resolverDiaAdiantamentoSemana(inicioSemana, fimSemana);
+            if (semana.stream().noneMatch(a -> a.getDataHoraInicio().toLocalDate().equals(diaExtra))) {
+                salvarConsultaFutura(julia, sala2, diaExtra, horarioFuturo(diaExtra), PREFIXO + "Consulta C");
+            }
+            semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
         }
 
         String total = pagamentoConsultaService.formatarTotalTaxaPix(semana);
 
         imprimirRoteiro(total, dia1, dia2, semana.size());
+    }
+
+    private LocalDate resolverDiaAdiantamentoSemana(LocalDate inicioSemana, LocalDate fimSemana) {
+        LocalDate hoje = LocalDate.now();
+        LocalDate candidato = hoje.plusDays(2);
+        while (!candidato.isAfter(fimSemana)) {
+            if (candidato.isAfter(hoje) && !deveAbrirPagamentoAgora(candidato)) {
+                return candidato;
+            }
+            candidato = candidato.plusDays(1);
+        }
+        return fimSemana;
+    }
+
+    private boolean deveAbrirPagamentoAgora(LocalDate dataConsulta) {
+        LocalDate diaLimitePagamento = dataConsulta.minusDays(1);
+        return !LocalDate.now().isBefore(diaLimitePagamento);
+    }
+
+    private LocalTime horarioFuturo(LocalDate data) {
+        if (!data.equals(LocalDate.now())) {
+            return LocalTime.of(15, 0);
+        }
+        return LocalTime.now().isBefore(LocalTime.of(20, 0))
+                ? LocalTime.of(20, 0)
+                : LocalTime.of(21, 0);
     }
 
     private Agendamento salvarConsultaFutura(

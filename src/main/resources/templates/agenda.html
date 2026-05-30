@@ -8,6 +8,7 @@
     <th:block th:replace="~{fragments/estilos-notificacao-relatorio :: css}"></th:block>
     <style>
         html {
+            width: 100%;
             -webkit-text-size-adjust: 100%;
             scroll-behavior: smooth;
         }
@@ -17,18 +18,39 @@
         }
 
         body {
+            width: 100%;
             min-height: 100vh;
+            margin: 0;
             overflow-x: hidden;
             background:
-                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+                radial-gradient(circle at top left, rgba(10, 135, 133, 0.12), transparent 28%),
                 linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
         }
 
         .app-shell {
-            width: min(1440px, 100%);
-            margin-inline: auto;
-            padding-inline: max(12px, env(safe-area-inset-left));
-            padding-inline-end: max(12px, env(safe-area-inset-right));
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1rem max(12px, env(safe-area-inset-right)) 2rem max(12px, env(safe-area-inset-left));
+        }
+
+        @media (min-width: 768px) {
+            .app-shell {
+                padding-top: 1.5rem;
+                padding-bottom: 2.5rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .app-shell {
+                padding-top: 2rem;
+                padding-bottom: 3rem;
+            }
+        }
+
+        .agenda-main > [class*="col-"] {
+            min-width: 0;
         }
 
         .shell-card {
@@ -43,10 +65,41 @@
         }
 
         .hero-band {
-            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
+            background: var(--afetto-gradient-hero);
             color: #fff;
             border-radius: 24px;
             padding: clamp(16px, 3vw, 24px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-band__brand {
+            display: flex;
+            align-items: center;
+            gap: clamp(12px, 2.5vw, 20px);
+            max-width: min(100%, 40rem);
+        }
+
+        .hero-band__logo {
+            display: block;
+            flex-shrink: 0;
+            width: clamp(100px, 18vw, 140px);
+            height: auto;
+            pointer-events: none;
+            user-select: none;
+            filter: brightness(0) invert(1);
+            opacity: 0.95;
+        }
+
+        .hero-band__copy {
+            position: relative;
+            z-index: 1;
+            min-width: 0;
+        }
+
+        .hero-band__copy .hero-band__kicker,
+        .hero-band__copy .hero-band__user {
+            text-shadow: 0 1px 8px rgba(8, 96, 94, 0.55);
         }
 
         .hero-band h1 {
@@ -54,17 +107,22 @@
             line-height: 1.2;
         }
 
+        .hero-band-headline__title {
+            margin-bottom: 0;
+            text-shadow: 0 2px 14px rgba(8, 96, 94, 0.65);
+        }
+
         .room-pill {
             border-radius: 999px;
             padding: 10px 18px;
             text-decoration: none;
-            color: #164e63;
-            background: #dff3f1;
+            color: var(--afetto-teal-dark);
+            background: var(--afetto-teal-soft);
             font-weight: 600;
         }
 
         .room-pill.active {
-            background: #164e63;
+            background: var(--afetto-teal-dark);
             color: #fff;
         }
 
@@ -174,9 +232,9 @@
             padding: 4px 5px;
             border-radius: 8px;
             background: #fff;
-            border: 1px solid rgba(15, 118, 110, 0.14);
+            border: 1px solid rgba(10, 135, 133, 0.14);
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
-            border-left: 2px solid #0f766e;
+            border-left: 2px solid var(--afetto-teal-dark);
             transition: box-shadow 0.2s ease;
         }
 
@@ -208,8 +266,8 @@
             flex-shrink: 0;
             font-size: 0.58rem;
             font-weight: 600;
-            color: #0f766e;
-            background: rgba(15, 118, 110, 0.1);
+            color: var(--afetto-teal-dark);
+            background: rgba(10, 135, 133, 0.1);
             padding: 1px 5px;
             border-radius: 999px;
             white-space: nowrap;
@@ -266,7 +324,7 @@
         }
 
         .slot-card__valor-linha--liquido .slot-card__valor-num {
-            color: #0f766e;
+            color: var(--afetto-teal-dark);
         }
 
         .slot-booked.fixed-slot .slot-card__valor-linha--liquido .slot-card__valor-num {
@@ -662,12 +720,12 @@
         }
 
         .slot-card--aguardando-pagamento {
-            border: 2px dashed #f5b000 !important;
-            background: linear-gradient(180deg, rgba(245, 176, 0, 0.12), rgba(255, 255, 255, 0.95)) !important;
+            border: 2px dashed var(--afetto-teal) !important;
+            background: linear-gradient(180deg, rgba(18, 198, 189, 0.12), rgba(255, 255, 255, 0.95)) !important;
         }
 
         .slot-waiting-payment {
-            box-shadow: inset 0 0 0 2px rgba(245, 176, 0, 0.45);
+            box-shadow: inset 0 0 0 2px rgba(18, 198, 189, 0.45);
         }
 
         .slot-aguardando-pill {
@@ -675,14 +733,14 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            background: #f5b000;
+            background: var(--afetto-teal);
             color: #102027;
             border-radius: 999px;
             padding: 0.15rem 0.45rem;
         }
 
         .pagamento-pendente-card {
-            background: rgba(245, 176, 0, 0.08);
+            background: rgba(18, 198, 189, 0.08);
         }
 
         .slot-pagar-agora-link {
@@ -728,7 +786,7 @@
         }
 
         #valorLiquidoProfissional {
-            color: #0f766e;
+            color: var(--afetto-teal-dark);
             font-weight: 600;
         }
 
@@ -811,7 +869,7 @@
         }
 
         .slot-own-actionable:hover .slot-card {
-            box-shadow: 0 4px 14px rgba(15, 118, 110, 0.12);
+            box-shadow: 0 4px 14px rgba(10, 135, 133, 0.12);
         }
 
         .grade-action-stack {
@@ -881,6 +939,10 @@
 
             .hero-band {
                 border-radius: 18px;
+            }
+
+            .hero-band__logo {
+                width: clamp(88px, 26vw, 118px);
             }
 
             .top-actions {
@@ -1012,31 +1074,35 @@
     </style>
 </head>
 <body>
-<div class="container-fluid app-shell py-3 py-md-4 py-lg-5">
+<div class="app-shell">
     <div class="hero-band mb-4">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-            <div>
-                <p class="text-uppercase small mb-2 opacity-75">Sistema de agenda da clinica</p>
-                <h1 class="h2 mb-2">Controle por profissional, sala e cliente</h1>
-                <p class="mb-0 opacity-75">
-                    Usuario: <strong th:text="${usuarioLogado.nome}">Nome</strong>
-                </p>
+            <div class="hero-band__brand">
+                <img class="hero-band__logo"
+                     th:src="@{/images/afetto-logo.png}"
+                     alt="Afetto Psicologia e Saúde">
+                <div class="hero-band__copy">
+                    <p class="text-uppercase small mb-2 opacity-75 hero-band__kicker">Sistema de agenda da clínica</p>
+                    <h1 class="h2 hero-band-headline__title mb-2">Acompanhe a sua agenda da clínica.</h1>
+                    <p class="mb-0 opacity-75 hero-band__user">
+                        Usuário: <strong th:text="${usuarioLogado.nome}">Nome</strong>
+                    </p>
+                </div>
             </div>
             <div class="top-actions">
-                <th:block th:if="${isAdmin or isDonaClinica}"
-                          th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
+                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
                    class="btn btn-warning">Uso do banco</a>
-                <a th:if="${isAdmin or isDonaClinica}"
+                <a th:if="${isDonaClinica}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>
                 <a th:href="@{/agendamentos/manual}"
                    class="btn btn-light"
-                   title="Manual de uso e regras da clinica">Manual</a>
+                   title="Manual de uso e regras da clínica">Manual</a>
                 <a th:if="${podeAcessarGestaoFinanceira}"
                    th:href="@{/agendamentos/financeiro}"
-                   class="btn btn-light">Gestao financeira</a>
+                   class="btn btn-light">Gestão financeira</a>
                 <button th:unless="${isAdmin or isDonaClinica}" type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
                     Trocar senha
                 </button>
@@ -1055,8 +1121,8 @@
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${pagamentoBloqueioAtivo}" class="alert alert-warning shell-card">
-        <strong>Voce tem pagamento pendente.</strong>
-        <span th:text="${pagamentoBloqueioMensagem}">Sem quitar, nao pode usar sala nem fazer novo agendamento.</span>
+        <strong>Você tem pagamento pendente.</strong>
+        <span th:text="${pagamentoBloqueioMensagem}">Sem quitar, não pode usar sala nem fazer novo agendamento.</span>
         <form th:if="${pagamentoBloqueioAgendamentoId != null}"
               th:action="@{/pagamentos/{id}/gerar-link(id=${pagamentoBloqueioAgendamentoId})}"
               method="post"
@@ -1079,7 +1145,7 @@
     </nav>
 
     <div class="row g-4 align-items-start agenda-main">
-        <div class="col-12 col-xl-4 order-2 order-xl-1 agenda-sidebar">
+        <div class="col-12 col-lg-4 order-2 order-lg-1 agenda-sidebar">
             <div class="card shell-card" id="novo-agendamento">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1099,12 +1165,12 @@
                                             th:text="${profissional.nome}"
                                             th:attr="data-sem-valores=${profissional.donaClinica == true}">Profissional</option>
                                 </select>
-                                <div class="form-text">A administracao pode escolher qual profissional sera vinculado ao agendamento.</div>
+                                <div class="form-text">A administração ou a dona da clínica podem escolher qual profissional será vinculado ao agendamento.</div>
                             </div>
                             <div th:unless="${isAdmin or isDonaClinica}">
                                 <input type="text" class="form-control" th:value="${usuarioLogado.nome}" readonly>
                                 <input type="hidden" th:field="*{profissionalId}">
-                                <div class="form-text">Agendamento vinculado automaticamente ao usuario conectado.</div>
+                                <div class="form-text">Agendamento vinculado automaticamente ao usuário conectado.</div>
                             </div>
                         </div>
 
@@ -1130,26 +1196,40 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Horario</label>
+                            <label class="form-label">Horário</label>
                             <select th:field="*{horarioAtendimento}" class="form-select" required>
                                 <option value="">Selecione</option>
                                 <option th:each="horario : ${horariosDisponiveis}"
                                         th:value="${horario}"
                                         th:text="${#temporals.format(horario, 'HH:mm')}">07:00</option>
                             </select>
-                            <div class="form-text">Atendimentos de segunda a sabado, com horarios fixos de 07:00 ate 21:00.</div>
+                            <div class="form-text">Atendimentos de segunda a sábado, com horários fixos de 07:00 até 21:00.</div>
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Recorrencia</label>
+                            <label class="form-label">Recorrência</label>
                             <select th:field="*{recorrencia}" class="form-select">
                                 <option value="AVULSO">Avulso</option>
                                 <option value="SEMANAL">Fixo semanal</option>
                                 <option value="QUINZENAL">Quinzenal</option>
                             </select>
-                            <div class="form-text">Fixo semanal renova com 12 datas; quinzenal com 6. Ao passar ou cancelar um dia, entra o proximo.</div>
+                            <div class="form-text">Fixo semanal renova com 12 datas; quinzenal com 6. Ao passar ou cancelar um dia, entra o próximo.</div>
+                            <div class="form-text mt-1" id="pagamentoRecorrenciaHintSemanal"
+                                 th:unless="${isDonaClinica}"
+                                 th:if="${periodicidadePagamento != null and periodicidadePagamento.name() == 'SEMANAL'}">
+                                Pagamento semanal: sábado ou domingo. Ao realocar, a fatura continua na semana em que você agendou.
+                            </div>
+                            <div class="form-text mt-1" id="pagamentoRecorrenciaHintMensal"
+                                 th:unless="${isDonaClinica}"
+                                 th:if="${periodicidadePagamento != null and periodicidadePagamento.name() == 'MENSAL'}">
+                                Pagamento mensal: agenda liberada no mês; do dia 01 ao 10 paga o mês anterior.
+                                Ao realocar, a fatura continua no mês em que você agendou (ex.: marcou em 29/06
+                                e realocou para 07/07 — continua na fatura de junho).
+                            </div>
                             <div class="form-text mt-1" id="pagamentoRecorrenciaHint"
-                                 th:unless="${isDonaClinica}">Pagamento da taxa da clinica: 1 dia antes da consulta (1a data da serie paga na hora).</div>
+                                 th:unless="${isDonaClinica or (periodicidadePagamento != null and (periodicidadePagamento.name() == 'SEMANAL' or periodicidadePagamento.name() == 'MENSAL'))}">
+                                Pagamento da taxa da clínica: 1 dia antes da consulta (1ª data da série paga na hora).
+                            </div>
                         </div>
 
                         <div class="col-12 valores-consulta-panel" id="valoresConsultaPanel"
@@ -1159,7 +1239,7 @@
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" th:field="*{indicacaoDona}" id="indicacaoDona">
                                 <label class="form-check-label" for="indicacaoDona">
-                                    Indicacao da dona (30% do valor da consulta)
+                                    Indicação da clínica (30% do valor da consulta)
                                 </label>
                             </div>
 
@@ -1179,7 +1259,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="valores-consulta-campo">
-                                        <label class="form-label" for="valorClinicaCobra">Clinica cobra nesta sessao (R$)</label>
+                                        <label class="form-label" for="valorClinicaCobra">Clínica cobra nesta sessão (R$)</label>
                                         <input th:field="*{valorClinicaCobra}"
                                                type="text"
                                                inputmode="numeric"
@@ -1193,7 +1273,7 @@
                             </div>
 
                             <p class="small mb-0 mt-3">
-                                <strong>Liquido do profissional:</strong>
+                                <strong>Líquido do profissional:</strong>
                                 <span id="valorLiquidoProfissional">—</span>
                             </p>
                             <p class="form-text mt-2 mb-0" id="valoresConsultaHint">
@@ -1214,7 +1294,7 @@
                     </form>
 
                     <div th:if="${isAdmin != true and isDonaClinica != true}" class="alert alert-info mt-4 mb-0">
-                        Horarios pagos sao locacao de sala (sem reembolso). Para cancelar, fale com a dona da clinica ou a administracao.
+                        Horários pagos são locação de sala (sem reembolso). Para cancelar, fale com a Polyana.
                     </div>
                 </div>
             </div>
@@ -1229,7 +1309,7 @@
                         Meus agendamentos
                         <span class="badge rounded-pill text-bg-success">Layout caderno</span>
                     </h2>
-                    <p class="small text-muted mb-3">Somente os agendamentos do usuario logado. Fixo mostra 12 datas; quinzenal mostra 6.</p>
+                    <p class="small text-muted mb-3">Somente os agendamentos do usuário logado. Fixo mostra 12 datas; quinzenal mostra 6.</p>
 
                         <details class="agenda-section">
                             <summary class="agenda-toggle">
@@ -1262,7 +1342,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-xl-8 order-1 order-xl-2" id="grade-semanal">
+        <div class="col-12 col-lg-8 order-1 order-lg-2" id="grade-semanal">
             <div class="card shell-card">
                 <div class="card-body p-4">
                     <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
@@ -1283,19 +1363,20 @@
                             </a>
                             <a class="btn btn-outline-secondary"
                                th:href="@{/agendamentos/dashboard(salaId=${agendaSala.sala.id}, semana=${agendaSala.inicioSemana.plusWeeks(1)})}">
-                                Proxima semana
+                                Próxima semana
                             </a>
                         </div>
                     </div>
 
                     <p class="small text-muted mb-3" th:if="${isAdmin}">
-                        De dois cliques em um horario na grade para cancelar ou encerrar serie de qualquer profissional.
+                        De dois cliques em um horário na grade para cancelar ou encerrar série de qualquer profissional.
                     </p>
                     <p class="small text-muted mb-3" th:if="${!isAdmin and isDonaClinica}">
-                        De dois cliques em qualquer horario na grade para cancelar ou encerrar serie (perfil dona da clinica).
+                        De dois cliques em qualquer horário na grade para cancelar ou encerrar série (perfil dona da clínica).
                     </p>
                     <p class="small text-muted mb-3" th:if="${!isAdmin and !isDonaClinica}">
-                        Profissionais nao cancelam locacoes pela agenda. Pagamento confirmado = sala reservada sem reembolso.
+                        Dê dois cliques nos seus horários semanal ou quinzenal na grade para encerrar a série.
+                        Cancelamento de data avulsa só com dona da clínica ou administração.
                     </p>
 
                     <div th:if="${avisoAgendamentoOutraSala}" class="alert alert-warning py-2 small mb-3" th:text="${avisoAgendamentoOutraSala}">
@@ -1314,12 +1395,12 @@
                         </a>
                     </div>
 
-                    <p class="grade-scroll-hint small text-muted">Deslize a grade para o lado para ver todos os dias da semana (segunda a sabado).</p>
+                    <p class="grade-scroll-hint small text-muted">Deslize a grade para o lado para ver todos os dias da semana (segunda a sábado).</p>
                     <div class="table-responsive rounded-4 overflow-hidden border grade-scroll-wrap">
                         <table class="table agenda-grid mb-0">
                             <thead>
                             <tr>
-                                <th class="time-col">Horario</th>
+                                <th class="time-col">Horário</th>
                                 <th th:each="dia : ${agendaSala.diasSemana}">
                                     <div class="fw-bold text-uppercase small" th:text="${#temporals.format(dia, 'EEE')}">SEG</div>
                                     <div th:text="${#temporals.format(dia, 'dd/MM')}">20/04</div>
@@ -1331,7 +1412,7 @@
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
                                 <td th:each="item : ${linha.agendamentos}"
                                     th:with="tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null}, podeAgir=${tipoAcao != null}"
-                                    th:class="${(item != null ? ((item.reservaPendenteNaGrade ? 'slot-booked slot-waiting-payment' : (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked'))) : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
+                                    th:class="${(item != null ? ((pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado) ? 'slot-booked slot-waiting-payment' : (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked'))) : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
                                     th:data-agendamento-id="${podeAgir ? item.id : null}"
                                     th:data-tipo="${tipoAcao}"
                                     th:data-cliente="${podeAgir ? item.nomeCliente : null}"
@@ -1339,7 +1420,7 @@
                                     th:data-sala="${podeAgir and item.sala != null ? item.sala.nome : null}"
                                     th:data-valores="${podeAgir and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id)) ? 'Prof. ' + item.valorProfissionalRecebeFormatado + ' | Clin. ' + item.valorClinicaCobraFormatado + ' | Liq. ' + item.valorLiquidoProfissionalFormatado : null}"
                                     th:data-pode-pagar="${item != null and pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}">
-                                    <div th:if="${item != null}" class="slot-card" th:classappend="${item.reservaPendenteNaGrade ? ' slot-card--aguardando-pagamento' : ''}">
+                                    <div th:if="${item != null}" class="slot-card" th:classappend="${pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado) ? ' slot-card--aguardando-pagamento' : ''}">
                                         <div class="slot-card__head">
                                             <span class="slot-card__prof"
                                                   th:text="${item.profissional != null ? item.profissional.nome : 'Profissional'}">Profissional</span>
@@ -1363,17 +1444,19 @@
                                             </div>
                                         </div>
                                         <div class="slot-card__footer">
-                                            <span th:if="${item.reservaPendenteNaGrade}"
+                                            <span th:if="${pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado)}"
                                                   class="slot-aguardando-pill"
-                                                  th:text="${item.rotuloPendenteNaGrade(pagamentoService.podeVerPagamento(item, usuarioLogado))}">Aguardando confirmacoes</span>
+                                                  th:text="${pagamentoService.rotuloEsperandoNaGrade(item, usuarioLogado)}">Aguardando confirmacoes</span>
+                                            <span th:if="${pagamentoService.exibirSalaConfirmadaNaGrade(item, usuarioLogado)}"
+                                                  class="badge rounded-pill text-bg-success">Sala confirmada</span>
                                             <span th:if="${item.fixo == true and !item.reservaPendenteNaGrade}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
                                             <span th:if="${item.indicacaoDona == true and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}"
                                                   class="slot-indicacao-pill">Ind. 30%</span>
                                             <span th:if="${item.statusPagamento != null and pagamentoService.bloqueadoPorPagamento(item)}"
-                                                  class="badge rounded-pill text-bg-danger">Nao pago</span>
+                                                  class="badge rounded-pill text-bg-danger">Não pago</span>
                                             <span th:if="${item.pagamentoPago}"
                                                   class="badge rounded-pill text-bg-success"
-                                                  th:text="${item.rotuloPagoNaGrade(pagamentoService.podeVerPagamento(item, usuarioLogado))}">Sala confirmada</span>
+                                                  th:text="${pagamentoService.rotuloPagoNaGrade(item, usuarioLogado)}">Sala confirmada</span>
                                             <form th:if="${pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}"
                                                   th:action="@{/pagamentos/{id}/gerar-link(id=${item.id})}"
                                                   method="post"
@@ -1385,7 +1468,7 @@
                                             </form>
                                         </div>
                                     </div>
-                                    <div th:if="${item == null}" class="slot-empty-label">Disponivel</div>
+                                    <div th:if="${item == null}" class="slot-empty-label">Disponível</div>
                                 </td>
                             </tr>
                             </tbody>
@@ -1407,7 +1490,7 @@
                             </p>
                         </div>
                         <span class="text-muted small" th:if="${podeGerenciarEquipe}">Todos os profissionais e salas</span>
-                        <span class="text-muted small" th:unless="${podeGerenciarEquipe}">Seus horarios de hoje em todas as salas</span>
+                        <span class="text-muted small" th:unless="${podeGerenciarEquipe}">Seus horários de hoje em todas as salas.</span>
                     </div>
 
                     <div class="table-responsive history-panel">
@@ -1415,7 +1498,7 @@
                             <thead>
                             <tr>
                                 <th>Data</th>
-                                <th>Horario</th>
+                                <th>Horário</th>
                                 <th>Sala</th>
                                 <th th:if="${podeGerenciarEquipe}">Profissional</th>
                                 <th>Cliente</th>
@@ -1426,7 +1509,7 @@
                             <tbody>
                             <tr th:if="${#lists.isEmpty(agendamentosDoDia)}">
                                 <td th:colspan="${podeGerenciarEquipe ? 7 : 6}" class="text-center text-muted py-4"
-                                    th:text="${podeGerenciarEquipe ? 'Nenhum agendamento cadastrado para hoje.' : 'Voce nao tem atendimentos hoje.'}">
+                                    th:text="${podeGerenciarEquipe ? 'Nenhum agendamento cadastrado para hoje.' : 'Você não tem atendimentos hoje.'}">
                                     Nenhum atendimento hoje.
                                 </td>
                             </tr>
@@ -1500,8 +1583,8 @@
     <div class="agendamento-erro-aviso__painel">
         <div class="agendamento-erro-aviso__cabecalho d-flex justify-content-between align-items-start gap-3">
             <div>
-                <h2 class="h5 mb-1 text-danger" id="agendamentoErroTitulo">Horario indisponivel</h2>
-                <p class="text-muted small mb-0" id="agendamentoErroSubtitulo">Nao foi possivel salvar este agendamento.</p>
+                <h2 class="h5 mb-1 text-danger" id="agendamentoErroTitulo">Horário indisponível</h2>
+                <p class="text-muted small mb-0" id="agendamentoErroSubtitulo">Não foi possível salvar este agendamento.</p>
             </div>
             <button type="button" class="btn-close" id="agendamentoErroFechar" aria-label="Fechar"></button>
         </div>
@@ -1528,11 +1611,10 @@
                 <div class="grade-action-stack">
                     <form id="gradeFormEncerrar" method="post" class="d-none">
                         <input type="hidden" name="_csrf" id="gradeEncerrarCsrf">
-                        <button type="submit"
+                        <button type="button"
                                 class="btn btn-outline-primary"
-                                id="gradeBtnEncerrar"
-                                onclick="return confirm('Isso vai encerrar esta serie desta data em diante. Os horarios passados continuam no historico. Deseja continuar?');">
-                            Encerrar serie fixa
+                                id="gradeBtnEncerrar">
+                            Encerrar série fixa
                         </button>
                     </form>
                     <form id="gradeFormCancelar" method="post" class="d-none">
@@ -1549,6 +1631,41 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade admin-modal" id="encerrarSerieModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="encerrarSerieTitulo">Encerrar série</h2>
+                    <p class="text-muted small mb-0" id="encerrarSerieResumo">Todos os horários da série serão removidos.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="encerrarSerieForm" method="post">
+                <div class="modal-body px-4">
+                    <input type="hidden" name="_csrf" id="encerrarSerieCsrf">
+                    <p class="small text-muted mb-3">
+                        A série inteira será apagada: todos os horários futuros e passados desta recorrência.
+                    </p>
+                    <label class="form-label" for="encerrarSerieMotivo">Motivo do encerramento</label>
+                    <textarea id="encerrarSerieMotivo"
+                              name="motivoEncerramento"
+                              class="form-control"
+                              rows="4"
+                              maxlength="500"
+                              minlength="3"
+                              required
+                              placeholder="Ex.: cliente encerrou tratamento, mudança de horário fixo..."></textarea>
+                    <div class="form-text">Obrigatório. Mínimo 3 caracteres.</div>
+                </div>
+                <div class="modal-footer px-4 pb-4 pt-0 border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar encerramento</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -1856,11 +1973,11 @@
             var subtitulo = document.getElementById('agendamentoErroSubtitulo');
             if (titulo && subtitulo) {
                 if (contexto === 'relatorio') {
-                    titulo.textContent = 'Relatorio mensal';
+                    titulo.textContent = 'Relatório mensal';
                     subtitulo.textContent = 'Consulta de uso das salas por profissional.';
                 } else {
-                    titulo.textContent = 'Horario indisponivel';
-                    subtitulo.textContent = 'Nao foi possivel salvar este agendamento.';
+                    titulo.textContent = 'Horário indisponível';
+                    subtitulo.textContent = 'Não foi possível salvar este agendamento.';
                 }
             }
 
@@ -1927,12 +2044,50 @@
         }
 
         var basePath = /*[[@{/}]]*/ '/';
+        var podeCancelarNaGrade = /*[[${isAdmin or isDonaClinica}]]*/ false;
+
+        var encerrarSerieModalEl = document.getElementById('encerrarSerieModal');
+        var encerrarSerieForm = document.getElementById('encerrarSerieForm');
+        var encerrarSerieMotivo = document.getElementById('encerrarSerieMotivo');
+        var encerrarSerieResumo = document.getElementById('encerrarSerieResumo');
+        var encerrarSerieTitulo = document.getElementById('encerrarSerieTitulo');
+        var encerrarSerieCsrf = document.getElementById('encerrarSerieCsrf');
+
+        function copiarCsrfEncerrarSerie() {
+            var csrf = document.querySelector('input[name="_csrf"]');
+            if (csrf && encerrarSerieCsrf) {
+                encerrarSerieCsrf.name = csrf.name;
+                encerrarSerieCsrf.value = csrf.value;
+            }
+        }
+
+        function abrirModalEncerrarSerie(agendamentoId, resumo, tipoSerie) {
+            if (!encerrarSerieModalEl || !encerrarSerieForm || !agendamentoId) {
+                return;
+            }
+            copiarCsrfEncerrarSerie();
+            encerrarSerieForm.action = basePath + 'agendamentos/' + agendamentoId + '/encerrar-fixo';
+            if (encerrarSerieMotivo) {
+                encerrarSerieMotivo.value = '';
+            }
+            if (encerrarSerieResumo) {
+                encerrarSerieResumo.textContent = resumo || 'Todos os horários da série serão removidos.';
+            }
+            if (encerrarSerieTitulo) {
+                encerrarSerieTitulo.textContent = tipoSerie === 'QUINZENAL'
+                    ? 'Encerrar série quinzenal'
+                    : 'Encerrar série semanal';
+            }
+            bootstrap.Modal.getOrCreateInstance(encerrarSerieModalEl).show();
+        }
 
         document.querySelectorAll('.meus-agendamentos-serie-linha').forEach(function (card) {
             var cancelForm = card.querySelector('.meus-agendamentos-cancelar-data-form');
             var cancelBtn = cancelForm ? cancelForm.querySelector('.meus-agendamentos-cancelar-data-btn') : null;
             var payBtn = card.querySelector('.meus-agendamentos-pagar-data-btn');
             var relocBtn = card.querySelector('.meus-agendamentos-realocar-data-btn');
+            var encerrarBtn = card.querySelector('.meus-agendamentos-encerrar-serie-btn');
+            var tipoSerie = encerrarBtn ? encerrarBtn.getAttribute('data-tipo-serie') : null;
             var radios = card.querySelectorAll('.meus-agendamentos-data-radio');
             if (radios.length === 0) {
                 return;
@@ -2074,6 +2229,22 @@
                     }
                 });
             }
+
+            if (encerrarBtn) {
+                encerrarBtn.addEventListener('click', function () {
+                    var referenciaId = encerrarBtn.getAttribute('data-agendamento-referencia-id');
+                    if (!referenciaId) {
+                        return;
+                    }
+                    var tituloSerie = card.querySelector('.meus-agendamentos-serie-linha__titulo');
+                    var cabecalho = tituloSerie ? tituloSerie.textContent.trim() : 'Série';
+                    abrirModalEncerrarSerie(
+                        referenciaId,
+                        cabecalho + ' — série completa',
+                        tipoSerie
+                    );
+                });
+            }
         });
 
         var modalElement = document.getElementById('gradeAgendamentoModal');
@@ -2083,6 +2254,7 @@
         var btnEncerrar = document.getElementById('gradeBtnEncerrar');
         var resumo = document.getElementById('gradeModalResumo');
         var csrfSource = document.querySelector('input[name="_csrf"]');
+        var encerrarContextoGrade = { id: null, tipo: null, resumo: null };
 
         if (!modalElement || !formCancelar) {
             return;
@@ -2126,7 +2298,11 @@
                 + (valores ? ' | ' + valores : '');
 
             formCancelar.action = basePath + 'agendamentos/' + id + '/cancelar';
-            formCancelar.classList.remove('d-none');
+            if (podeCancelarNaGrade) {
+                formCancelar.classList.remove('d-none');
+            } else {
+                formCancelar.classList.add('d-none');
+            }
 
             if (formPagarAgora) {
                 if (celula.dataset.podePagar === 'true') {
@@ -2139,16 +2315,38 @@
             }
 
             if (tipo === 'SEMANAL' || tipo === 'QUINZENAL') {
-                formEncerrar.action = basePath + 'agendamentos/' + id + '/encerrar-fixo';
+                encerrarContextoGrade.id = id;
+                encerrarContextoGrade.tipo = tipo;
+                encerrarContextoGrade.resumo = cliente + ' — série completa (' + sala + ')'
                 btnEncerrar.textContent = tipo === 'QUINZENAL'
-                    ? 'Encerrar serie quinzenal'
-                    : 'Encerrar serie fixa';
+                    ? 'Encerrar série quinzenal'
+                    : 'Encerrar série fixa';
                 formEncerrar.classList.remove('d-none');
             } else {
+                encerrarContextoGrade.id = null;
+                encerrarContextoGrade.tipo = null;
+                encerrarContextoGrade.resumo = null;
                 formEncerrar.classList.add('d-none');
             }
 
             bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        }
+
+        if (btnEncerrar) {
+            btnEncerrar.addEventListener('click', function () {
+                if (!encerrarContextoGrade.id) {
+                    return;
+                }
+                var gradeModal = bootstrap.Modal.getInstance(modalElement);
+                if (gradeModal) {
+                    gradeModal.hide();
+                }
+                abrirModalEncerrarSerie(
+                    encerrarContextoGrade.id,
+                    encerrarContextoGrade.resumo,
+                    encerrarContextoGrade.tipo
+                );
+            });
         }
 
         document.querySelectorAll('td.slot-own-actionable').forEach(function (celula) {
@@ -2236,7 +2434,7 @@
                     botao.textContent = textoOriginal;
                 }, 2000);
             }).catch(function () {
-                window.alert('Nao foi possivel copiar a chave PIX. Copie manualmente o link do pagamento.');
+                window.alert('Não foi possível copiar a chave PIX. Copie manualmente o link do pagamento.');
             });
         });
 

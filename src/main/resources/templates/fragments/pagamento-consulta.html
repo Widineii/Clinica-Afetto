@@ -6,10 +6,10 @@
      class="alert comprovante-polyana-aviso border-2 border-warning mb-3 py-3 px-3 text-center"
      role="status">
     <p class="mb-1 fw-bold fs-6 text-dark">
-        Apos pagar, envie o comprovante do PIX para a <span class="text-primary">Polyana</span>.
+        Após pagar, envie o comprovante do PIX para a <span class="text-primary">Polyana</span>.
     </p>
     <p class="mb-0 small text-muted">
-        E para a Polyana ter o controle de quem pagou. Obg!
+        É para a Polyana ter o controle de quem pagou. Obrigada!
     </p>
 </div>
 
@@ -17,7 +17,7 @@
     <span th:if="${agendamento != null and agendamento.statusPagamento != null}"
           class="badge rounded-pill ms-1"
           th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.esperandoConfirmacaoPagamento ? ' text-bg-warning' : (agendamento.pagamentoPendente ? ' text-bg-secondary' : ' text-bg-light text-dark'))}"
-          th:text="${pagamentoService.rotuloStatusPagamento(agendamento)}">Esperando confirmacao</span>
+          th:text="${pagamentoService.rotuloStatusPagamento(agendamento, usuarioLogado)}">Esperando confirmação</span>
 </div>
 
 <div th:fragment="acoes (agendamento)">
@@ -80,7 +80,7 @@
                 <span class="badge rounded-pill text-bg-warning">Voltar ao QR</span>
             </h2>
             <p class="small text-muted mb-3">
-                Consultas reservadas aguardando PIX. Tempo restante: 5 minutos — depois o horario e liberado automaticamente.
+                Consultas reservadas aguardando PIX. Tempo restante: 5 minutos — depois o horário é liberado automaticamente.
             </p>
             <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
@@ -89,7 +89,7 @@
                         <span class="small text-muted d-block"
                               th:text="${item.dataHoraInicio != null ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') + ' · ' + (item.sala != null ? item.sala.nome : '-') : '-'}">28/05 10:00</span>
                         <span class="small text-muted d-block"
-                              th:text="${'Taxa da clinica (PIX): ' + pagamentoService.formatarValorTaxaPix(item)}">Taxa: R$ 32,00</span>
+                              th:text="${'Taxa da clínica (PIX): ' + pagamentoService.formatarValorTaxaPix(item)}">Taxa: R$ 32,00</span>
                     </div>
                     <span class="badge text-bg-warning pagamento-countdown"
                           th:attr="data-expira-em=${item.pagamentoExpiraEm != null ? #temporals.format(item.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
@@ -134,7 +134,7 @@
                         <span class="small text-muted d-block"
                               th:text="${consulta.dataHoraInicio != null ? #temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy HH:mm') + ' · ' + (consulta.sala != null ? consulta.sala.nome : '-') : '-'}">04/06 10:00</span>
                         <span class="small text-muted d-block"
-                              th:text="${'Taxa da clinica (PIX): ' + pagamentoService.formatarValorTaxaPix(consulta)}">Taxa: R$ 32,00</span>
+                              th:text="${'Taxa da clínica (PIX): ' + pagamentoService.formatarValorTaxaPix(consulta)}">Taxa: R$ 32,00</span>
                     </div>
                     <form th:action="@{/pagamentos/{id}/gerar-link(id=${consulta.id})}"
                           method="post"
@@ -158,13 +158,13 @@
             <div class="modal-content">
                 <div class="modal-header px-4 py-3">
                     <div>
-                        <h2 class="modal-title h5 mb-1">Esperando confirmacao do pagamento</h2>
+                        <h2 class="modal-title h5 mb-1">Esperando confirmação do pagamento</h2>
                         <p class="small text-muted mb-0">
-                            Horario reservado na agenda. Pague em
+                            Horário reservado na agenda. Pague em
                             <strong class="pagamento-countdown"
                                     th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
                                     th:text="${agendamento.tempoRestantePagamentoFormatado}">5:00</strong>
-                            ou o agendamento sera cancelado.
+                            ou o agendamento será cancelado.
                         </p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -173,7 +173,7 @@
                     <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
                     <p class="small text-muted mb-3"
                        th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026 10:00</p>
-                    <p class="mb-3">Taxa da clinica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
+                    <p class="mb-3">Taxa da clínica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
 
                     <img th:if="${agendamento.pagamentoLink != null}"
                          th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
@@ -248,7 +248,7 @@
                     botao.textContent = 'Copiar chave PIX';
                 }, 2000);
             }).catch(function () {
-                window.alert('Nao foi possivel copiar a chave PIX. Copie manualmente o link do pagamento.');
+                window.alert('Não foi possível copiar a chave PIX. Copie manualmente o link do pagamento.');
             });
         });
     })();

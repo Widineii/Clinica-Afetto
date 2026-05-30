@@ -12,10 +12,13 @@ import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.dto.RelatorioUsoSalaItem;
 import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.EncerramentoSerieRegistro;
 import com.clinica.sistema.model.PagamentoStatus;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
+import com.clinica.sistema.repository.EncerramentoSerieRegistroRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
@@ -57,6 +60,7 @@ public class AgendamentoService {
     private final AuthService authService;
     private final ValorConsultaService valorConsultaService;
     private final PagamentoConsultaService pagamentoConsultaService;
+    private final EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository;
 
     public AgendamentoService(
             AgendamentoRepository repository,
@@ -64,7 +68,8 @@ public class AgendamentoService {
             SalaRepository salaRepository,
             AuthService authService,
             ValorConsultaService valorConsultaService,
-            PagamentoConsultaService pagamentoConsultaService
+            PagamentoConsultaService pagamentoConsultaService,
+            EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository
     ) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
@@ -72,6 +77,7 @@ public class AgendamentoService {
         this.authService = authService;
         this.valorConsultaService = valorConsultaService;
         this.pagamentoConsultaService = pagamentoConsultaService;
+        this.encerramentoSerieRegistroRepository = encerramentoSerieRegistroRepository;
     }
 
     public List<Agendamento> buscarParaUsuario(Usuario usuarioLogado) {
@@ -411,7 +417,7 @@ public class AgendamentoService {
     @Transactional
     public long limparAgendamentosNoPeriodo(LocalDateTime inicio, LocalDateTime fim) {
         if (!inicio.isBefore(fim)) {
-            throw new RuntimeException("Periodo invalido para limpeza.");
+            throw new RuntimeException("Período inválido para limpeza.");
         }
         return repository.deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim);
     }
@@ -533,7 +539,7 @@ public class AgendamentoService {
             boolean aplicarRegra24Horas
     ) {
         if (fim.isBefore(inicio)) {
-            throw new RuntimeException("Periodo invalido para o relatorio.");
+            throw new RuntimeException("Período inválido para o relatório.");
         }
         LocalDateTime inicioDataHora = inicio.atStartOfDay();
         LocalDateTime fimDataHora = fim.plusDays(1).atStartOfDay();
@@ -613,7 +619,7 @@ public class AgendamentoService {
 
         Usuario profissional = carregarProfissional(form.getProfissionalId(), usuarioLogado);
         Sala sala = salaRepository.findById(form.getSalaId())
-                .orElseThrow(() -> new RuntimeException("Sala nao encontrada."));
+                .orElseThrow(() -> new RuntimeException("Sala não encontrada."));
 
         LocalDateTime inicio = LocalDateTime.of(
                 form.getDataAtendimento(),
@@ -662,7 +668,7 @@ public class AgendamentoService {
         }
 
         repository.saveAll(novosAgendamentos);
-        pagamentoConsultaService.configurarPagamentosAoSalvar(novosAgendamentos, profissional);
+        pagamentoConsultaService.configurarPagamentosAoSalvar(novosAgendamentos, profissional, usuarioLogado);
         repository.saveAll(novosAgendamentos);
         if (!RECORRENCIA_AVULSO.equals(recorrencia)) {
             renovarSeriesRecorrentesAtivas();
@@ -720,7 +726,7 @@ public class AgendamentoService {
         if (agendamento == null || usuarioLogado == null) {
             return false;
         }
-        if (!PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+        if (!statusPermiteRealocacao(agendamento)) {
             return false;
         }
         if (agendamento.getDataHoraInicio() == null) {
@@ -740,17 +746,35 @@ public class AgendamentoService {
                 && agendamento.getProfissional().getId().equals(usuarioLogado.getId());
     }
 
+    private boolean statusPermiteRealocacao(Agendamento agendamento) {
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return true;
+        }
+        if (!PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
+        if (agendamento.getProfissional() == null) {
+            return false;
+        }
+        PeriodicidadePagamento periodicidade = pagamentoConsultaService.resolverPeriodicidade(
+                agendamento.getProfissional()
+        );
+        return periodicidade == PeriodicidadePagamento.SEMANAL
+                || periodicidade == PeriodicidadePagamento.MENSAL;
+    }
+
     @Transactional
     public Agendamento realocar(Long agendamentoId, RelocacaoAgendamentoForm form, Usuario usuarioLogado) {
         if (form == null || form.getSalaId() == null || form.getDataAtendimento() == null || form.getHorarioAtendimento() == null) {
-            throw new RuntimeException("Informe sala, data e horario para realocar.");
+            throw new RuntimeException("Informe sala, data e horário para realocar.");
         }
 
         Agendamento agendamento = repository.findById(agendamentoId)
-                .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
+                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
         if (!podeRealocar(agendamento, usuarioLogado)) {
             throw new RuntimeException(
-                    "Realocacao permitida somente para agendamentos ja pagos e antes do horario do atendimento."
+                    "Realocação permitida somente antes do horário do atendimento, com pagamento confirmado "
+                            + "ou cobrança semanal/mensal ainda pendente."
             );
         }
 
@@ -760,7 +784,7 @@ public class AgendamentoService {
         }
 
         Sala novaSala = salaRepository.findById(form.getSalaId())
-                .orElseThrow(() -> new RuntimeException("Sala nao encontrada."));
+                .orElseThrow(() -> new RuntimeException("Sala não encontrada."));
 
         LocalDateTime novoInicio = LocalDateTime.of(
                 form.getDataAtendimento(),
@@ -770,18 +794,18 @@ public class AgendamentoService {
         validarHorario(novoInicio, novoFim);
 
         if (!novoInicio.isAfter(LocalDateTime.now())) {
-            throw new RuntimeException("Nao e possivel realocar para data ou horario no passado.");
+            throw new RuntimeException("Não é possível realocar para data ou horário no passado.");
         }
 
         if (!dataPermitidaParaRealocacao(agendamento, form.getDataAtendimento())) {
             String recorrencia = recorrenciaDoAgendamento(agendamento);
             if (RECORRENCIA_QUINZENAL.equals(recorrencia)) {
                 throw new RuntimeException(
-                        "Para serie quinzenal, escolha uma das proximas 6 datas da cadencia (a cada 2 semanas, mesmo dia da semana)."
+                        "Para série quinzenal, escolha uma das próximas 6 datas da cadência (a cada 2 semanas, mesmo dia da semana)."
                 );
             }
             throw new RuntimeException(
-                    "Para serie fixa semanal, escolha uma das proximas 12 datas da cadencia (mesmo dia da semana)."
+                    "Para série fixa semanal, escolha uma das próximas 12 datas da cadência (mesmo dia da semana)."
             );
         }
 
@@ -796,10 +820,25 @@ public class AgendamentoService {
                 agendamento.getId()
         );
 
+        preservarReferenciasCobrancaNaRealocacao(agendamento);
+
         agendamento.setSala(novaSala);
         agendamento.setDataHoraInicio(novoInicio);
         agendamento.setDataHoraFim(novoFim);
         return repository.save(agendamento);
+    }
+
+    private void preservarReferenciasCobrancaNaRealocacao(Agendamento agendamento) {
+        if (agendamento.getDataHoraInicio() == null) {
+            return;
+        }
+        LocalDate dataOriginal = agendamento.getDataHoraInicio().toLocalDate();
+        if (agendamento.getDataReferenciaSemanaPagamento() == null) {
+            agendamento.setDataReferenciaSemanaPagamento(dataOriginal);
+        }
+        if (agendamento.getDataReferenciaMesPagamento() == null) {
+            agendamento.setDataReferenciaMesPagamento(dataOriginal.withDayOfMonth(1));
+        }
     }
 
     /**
@@ -816,6 +855,9 @@ public class AgendamentoService {
     }
 
     private void estenderSerieAteHorizonte(String serieFixaId) {
+        if (repository.existsBySerieFixaIdAndSerieEncerradaEmIsNotNull(serieFixaId)) {
+            return;
+        }
         Agendamento ultimo = repository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieFixaId).orElse(null);
         if (ultimo == null || ultimo.getDataHoraInicio() == null || ultimo.getProfissional() == null || ultimo.getSala() == null) {
             return;
@@ -923,6 +965,27 @@ public class AgendamentoService {
         return agendamento.getProfissional() != null;
     }
 
+    public boolean podeEncerrarSerieFixa(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || usuarioLogado == null) {
+            return false;
+        }
+        if (!agendamento.isFixoSemanal() && !agendamento.isQuinzenal()) {
+            return false;
+        }
+        if (agendamento.getSerieFixaId() == null || agendamento.getSerieFixaId().isBlank()) {
+            return false;
+        }
+        if (agendamento.getDataHoraInicio() == null
+                || !agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        if (agendamento.getProfissional() == null) {
+            return false;
+        }
+        return podeGerenciarAgendamentoDeOutros(usuarioLogado)
+                || isAgendamentoDoUsuario(agendamento, usuarioLogado);
+    }
+
     public String tipoAcaoGrade(Agendamento agendamento) {
         if (agendamento.isQuinzenal()) {
             return "QUINZENAL";
@@ -947,7 +1010,8 @@ public class AgendamentoService {
                 continue;
             }
             for (Agendamento agendamento : linha.getAgendamentos()) {
-                if (podeCancelarAgendamento(agendamento, usuarioLogado)) {
+                if (podeCancelarAgendamento(agendamento, usuarioLogado)
+                        || podeEncerrarSerieFixa(agendamento, usuarioLogado)) {
                     acoes.put(agendamento.getId(), tipoAcaoGrade(agendamento));
                 }
             }
@@ -958,28 +1022,59 @@ public class AgendamentoService {
     @Transactional
     public void cancelar(Long id, Usuario usuarioLogado) {
         Agendamento agendamento = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
-        validarPermissaoCancelamentoOuEncerramento(agendamento, usuarioLogado);
+                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
+        validarPermissaoCancelamento(agendamento, usuarioLogado);
         repository.deleteById(id);
     }
 
+    public List<EncerramentoSerieRegistro> listarEncerramentosSerieRecentes() {
+        return encerramentoSerieRegistroRepository.findTop30ByOrderByEncerradoEmDesc();
+    }
+
     @Transactional
-    public void encerrarSerieFixa(Long id, Usuario usuarioLogado) {
+    public void encerrarSerieFixa(Long id, String motivoEncerramento, Usuario usuarioLogado) {
         Agendamento agendamento = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
+                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
 
         if (!Boolean.TRUE.equals(agendamento.getFixo()) || agendamento.getSerieFixaId() == null || agendamento.getSerieFixaId().isBlank()) {
-            throw new RuntimeException("Este agendamento nao pertence a uma serie fixa.");
+            throw new RuntimeException("Este agendamento não pertence a uma série fixa.");
         }
 
-        validarPermissaoCancelamentoOuEncerramento(agendamento, usuarioLogado);
+        String recorrencia = recorrenciaDoAgendamento(agendamento);
+        if (RECORRENCIA_AVULSO.equals(recorrencia)) {
+            throw new RuntimeException("Somente séries semanal ou quinzenal podem ser encerradas.");
+        }
 
-        List<Agendamento> futurosDaSerie = repository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
-                agendamento.getSerieFixaId(),
-                agendamento.getDataHoraInicio()
-        );
+        String motivo = motivoEncerramento != null ? motivoEncerramento.trim() : "";
+        if (motivo.length() < 3) {
+            throw new RuntimeException("Informe o motivo do encerramento da série (mínimo 3 caracteres).");
+        }
+        if (motivo.length() > 500) {
+            throw new RuntimeException("O motivo do encerramento deve ter no maximo 500 caracteres.");
+        }
 
-        repository.deleteAll(futurosDaSerie);
+        validarPermissaoEncerramentoSerie(agendamento, usuarioLogado);
+
+        String serieFixaId = agendamento.getSerieFixaId();
+        List<Agendamento> serieCompleta = repository.findBySerieFixaIdOrderByDataHoraInicioAsc(serieFixaId);
+        if (serieCompleta.isEmpty()) {
+            throw new RuntimeException("Nenhum horário encontrado para esta série.");
+        }
+
+        Agendamento referencia = serieCompleta.get(0);
+        EncerramentoSerieRegistro registro = new EncerramentoSerieRegistro();
+        registro.setSerieFixaId(serieFixaId);
+        registro.setNomeCliente(referencia.getNomeCliente() != null ? referencia.getNomeCliente().trim() : "-");
+        registro.setProfissional(referencia.getProfissional());
+        registro.setSala(referencia.getSala());
+        registro.setTipoRecorrencia(recorrencia);
+        registro.setMotivo(motivo);
+        registro.setEncerradoEm(LocalDateTime.now());
+        registro.setEncerradoPor(usuarioLogado);
+        registro.setQuantidadeHorarios(serieCompleta.size());
+        encerramentoSerieRegistroRepository.save(registro);
+
+        repository.deleteAll(serieCompleta);
     }
 
     private void validarFormulario(AgendamentoForm form) {
@@ -993,7 +1088,7 @@ public class AgendamentoService {
             throw new RuntimeException("Informe a data da consulta.");
         }
         if (form.getHorarioAtendimento() == null) {
-            throw new RuntimeException("Selecione um horario fixo.");
+            throw new RuntimeException("Selecione um horário fixo.");
         }
         if (normalizarRecorrencia(form) == null) {
             throw new RuntimeException("Selecione um tipo de recorrencia valido.");
@@ -1099,12 +1194,26 @@ public class AgendamentoService {
         return authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado);
     }
 
-    private void validarPermissaoCancelamentoOuEncerramento(Agendamento agendamento, Usuario usuarioLogado) {
+    private void validarPermissaoCancelamento(Agendamento agendamento, Usuario usuarioLogado) {
         if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
             throw new RuntimeException(
-                    "Somente a administracao ou a dona da clinica podem cancelar ou encerrar locacoes de sala."
+                    "Somente a administração ou a dona da clínica podem cancelar locações de sala."
             );
         }
+        validarAgendamentoParaAcaoGestao(agendamento);
+    }
+
+    private void validarPermissaoEncerramentoSerie(Agendamento agendamento, Usuario usuarioLogado) {
+        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)
+                && !isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
+            throw new RuntimeException(
+                    "Você só pode encerrar as suas próprias séries semanal ou quinzenal."
+            );
+        }
+        validarAgendamentoParaAcaoGestao(agendamento);
+    }
+
+    private void validarAgendamentoParaAcaoGestao(Agendamento agendamento) {
         if (agendamento.getProfissional() == null) {
             throw new RuntimeException("Agendamento sem profissional vinculado.");
         }
@@ -1178,13 +1287,13 @@ public class AgendamentoService {
                 && profissional.getId().equals(usuarioLogado.getId());
 
         if (agendandoParaSiMesmo) {
-            return "Voce ja tem um agendamento nesse horario na " + salaConflito + ".";
+            return "Você já tem um agendamento nesse horário na " + salaConflito + ".";
         }
 
         String nomeProfissional = profissional.getNome() != null && !profissional.getNome().isBlank()
                 ? profissional.getNome()
                 : "Este profissional";
-        return nomeProfissional + " ja tem um agendamento nesse horario na " + salaConflito + ".";
+        return nomeProfissional + " já tem um agendamento nesse horário na " + salaConflito + ".";
     }
 
     private RuntimeException conflitoMensagem(String mensagemBase, LocalDateTime inicio, boolean fixo, int indiceSemana) {
@@ -1192,7 +1301,7 @@ public class AgendamentoService {
             return new RuntimeException(mensagemBase);
         }
         return new RuntimeException(
-                mensagemBase + " Conflito encontrado na repeticao da semana de "
+                mensagemBase + " Conflito encontrado na repetição da semana de "
                         + inicio.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + "."
         );
     }
@@ -1202,23 +1311,23 @@ public class AgendamentoService {
                 ? sala.getNome()
                 : "Sala";
         return "Conflito de agenda: a Sala " + nomeSala
-                + " ja esta ocupada em "
+                + " já está ocupada em "
                 + inicio.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                + " as "
+                + " às "
                 + inicio.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
-                + ". Nao e possivel salvar este horario.";
+                + ". Não é possível salvar este horário.";
     }
 
     private Usuario carregarProfissional(Long profissionalId, Usuario usuarioLogado) {
-        if (!authService.isAdmin(usuarioLogado) && !usuarioLogado.getId().equals(profissionalId)) {
-            throw new RuntimeException("Voce so pode agendar para o seu proprio usuario.");
+        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado) && !usuarioLogado.getId().equals(profissionalId)) {
+            throw new RuntimeException("Você só pode agendar para o seu próprio usuário.");
         }
 
         Usuario profissional = usuarioRepository.findById(profissionalId)
-                .orElseThrow(() -> new RuntimeException("Profissional nao encontrado."));
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado."));
 
         if (!podeAtender(profissional)) {
-            throw new RuntimeException("O usuario selecionado nao e um profissional.");
+            throw new RuntimeException("O usuário selecionado não é um profissional.");
         }
 
         return profissional;
@@ -1241,7 +1350,7 @@ public class AgendamentoService {
     private void validarHorario(LocalDateTime inicio, LocalDateTime fim) {
         DayOfWeek diaSemana = inicio.getDayOfWeek();
         if (diaSemana == DayOfWeek.SUNDAY) {
-            throw new RuntimeException("A clinica funciona somente de segunda a sabado.");
+            throw new RuntimeException("A clínica funciona somente de segunda a sábado.");
         }
 
         LocalDate data = inicio.toLocalDate();

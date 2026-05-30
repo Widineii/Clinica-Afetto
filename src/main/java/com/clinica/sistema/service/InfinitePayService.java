@@ -58,6 +58,10 @@ public class InfinitePayService {
         return gerarLinkPagamentoLote(agendamentos, "dia-", "dia", "/pagamentos/checkout-teste-dia?order=");
     }
 
+    public LinkPagamentoGerado gerarLinkPagamentoMes(List<Agendamento> agendamentos) {
+        return gerarLinkPagamentoLote(agendamentos, "mes-", "mes", "/pagamentos/checkout-teste-mes?order=");
+    }
+
     private LinkPagamentoGerado gerarLinkPagamentoLote(
             List<Agendamento> agendamentos,
             String prefixoPedido,

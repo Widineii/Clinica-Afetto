@@ -7,12 +7,10 @@
         <th:block th:replace="~{fragments/estilos-notificacao-relatorio :: css}"></th:block>
         <style>
             :root {
-                --fin-teal: #0f766e;
-                --fin-teal-dark: #164e63;
-                --fin-bg: #f0fdfa;
+                --fin-bg: var(--afetto-teal-soft);
                 --fin-text: #0f172a;
-                --fin-muted: #64748b;
-                --fin-border: rgba(15, 118, 110, 0.12);
+                --fin-muted: var(--afetto-grey);
+                --fin-border: var(--afetto-teal-muted);
             }
 
             body.financeiro-page {
@@ -20,7 +18,7 @@
                 margin: 0;
                 font-family: 'Lato', sans-serif;
                 color: var(--fin-text);
-                background: linear-gradient(165deg, #ecfdf5 0%, #f8fafc 45%, #eff6ff 100%);
+                background: linear-gradient(165deg, var(--afetto-teal-soft) 0%, #f8fafc 45%, #eef8f7 100%);
                 padding: 24px 16px 48px;
             }
 
@@ -55,8 +53,8 @@
             }
 
             .financeiro-resumo-card--destaque {
-                background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-                border-color: rgba(15, 118, 110, 0.25);
+                background: linear-gradient(135deg, var(--afetto-teal-soft), var(--afetto-teal-soft-2));
+                border-color: var(--afetto-teal-muted-strong);
             }
 
             .financeiro-resumo-label {

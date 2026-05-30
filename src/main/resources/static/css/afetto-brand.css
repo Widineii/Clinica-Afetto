@@ -1,0 +1,27 @@
+:root {
+    /* Paleta oficial — Afetto Psicologia & Saude */
+    --afetto-teal-dark: #0a8785;
+    --afetto-teal: #12c6bd;
+    --afetto-grey: #a5a5a5;
+
+    /* Tons derivados */
+    --afetto-teal-soft: #e6faf9;
+    --afetto-teal-soft-2: #d4f5f3;
+    --afetto-teal-muted: rgba(10, 135, 133, 0.12);
+    --afetto-teal-muted-strong: rgba(10, 135, 133, 0.25);
+    --afetto-gradient-hero: linear-gradient(135deg, #0a8785 0%, #12c6bd 100%);
+    --afetto-gradient-showcase: linear-gradient(
+        160deg,
+        rgba(10, 135, 133, 0.97) 0%,
+        rgba(18, 198, 189, 0.92) 52%,
+        rgba(10, 135, 133, 0.88) 100%
+    );
+
+    /* Aliases usados nas telas do sistema */
+    --brand-deep: var(--afetto-teal-dark);
+    --brand-mid: var(--afetto-teal);
+    --brand-soft: var(--afetto-teal-soft);
+    --brand-accent: var(--afetto-teal);
+    --fin-teal: var(--afetto-teal-dark);
+    --fin-teal-dark: var(--afetto-teal-dark);
+}

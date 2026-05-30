@@ -5,6 +5,7 @@ import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.exception.PagamentoWebhookNaoAutorizadoException;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,14 +15,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -76,7 +81,7 @@ class PagamentoConsultaServiceTest {
         );
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
-        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), profissional);
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), profissional, profissional);
 
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
         assertEquals(new BigDecimal("32.00"), agendamento.getValorPagamento());
@@ -102,7 +107,11 @@ class PagamentoConsultaServiceTest {
         );
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
-        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento, segunda), profissional);
+        pagamentoConsultaService.configurarPagamentosAoSalvar(
+                java.util.List.of(agendamento, segunda),
+                profissional,
+                profissional
+        );
 
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
         assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, segunda.getStatusPagamento());
@@ -138,11 +147,15 @@ class PagamentoConsultaServiceTest {
         Usuario profissional = new Usuario();
         profissional.setId(10L);
         profissional.setDonaClinica(false);
+        profissional.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
 
         var periodo = pagamentoConsultaService.resolverPeriodoSemanaPagamento(LocalDate.now());
-        LocalDate diaFuturo = periodo.inicio().plusDays(2);
+        LocalDate diaFuturo = periodo.inicio().plusDays(1);
         if (!diaFuturo.isAfter(LocalDate.now())) {
-            diaFuturo = LocalDate.now().plusDays(2);
+            diaFuturo = LocalDate.now().plusDays(1);
+        }
+        if (diaFuturo.isAfter(periodo.fim().minusDays(1))) {
+            diaFuturo = periodo.inicio().plusDays(1);
         }
 
         Agendamento paga = new Agendamento();
@@ -242,9 +255,91 @@ class PagamentoConsultaServiceTest {
         agendamento.setProfissional(polyana);
         when(authService.profissionalIgnoraValoresEPagamento(polyana)).thenReturn(true);
 
-        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), polyana);
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), polyana, polyana);
 
         assertEquals(PagamentoStatus.PAGO, agendamento.getStatusPagamento());
+    }
+
+    @Test
+    void gestorAgendandoParaOutroDeixaPrimeiraConsultaPagaSemQr() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(11L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
+
+        pagamentoConsultaService.configurarPagamentosAoSalvar(
+                java.util.List.of(agendamento),
+                anaPaula,
+                polyana
+        );
+
+        assertEquals(PagamentoStatus.PAGO, agendamento.getStatusPagamento());
+        assertNotNull(agendamento.getDataPagamento());
+        verify(infinitePayService, never()).gerarLinkPagamento(any());
+    }
+
+    @Test
+    void gestorAgendandoSerieFixaDeixaPrimeiraPagaERestoComRegraDoProfissional() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(11L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        Agendamento segunda = new Agendamento();
+        segunda.setId(2L);
+        segunda.setDataHoraInicio(LocalDate.now().plusWeeks(1).atTime(10, 0));
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
+
+        pagamentoConsultaService.configurarPagamentosAoSalvar(
+                java.util.List.of(agendamento, segunda),
+                anaPaula,
+                polyana
+        );
+
+        assertEquals(PagamentoStatus.PAGO, agendamento.getStatusPagamento());
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, segunda.getStatusPagamento());
+        verify(infinitePayService, never()).gerarLinkPagamento(any());
+    }
+
+    @Test
+    void gestorAgendandoQuinzenalDeixaPrimeiraPagaERestoDiarioComoPagamentoFuturo() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(11L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        Agendamento segunda = new Agendamento();
+        segunda.setId(2L);
+        segunda.setDataHoraInicio(LocalDate.now().plusWeeks(2).atTime(10, 0));
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
+
+        pagamentoConsultaService.configurarPagamentosAoSalvar(
+                java.util.List.of(agendamento, segunda),
+                anaPaula,
+                polyana
+        );
+
+        assertEquals(PagamentoStatus.PAGO, agendamento.getStatusPagamento());
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, segunda.getStatusPagamento());
     }
 
     @Test
@@ -389,7 +484,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(carol)).thenReturn(false);
         when(authService.isDonaClinica(carol)).thenReturn(false);
 
-        assertEquals("Aguardando confirmacoes",
+        assertEquals("Aguardando confirmações",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, carol));
     }
 
@@ -440,6 +535,210 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
+    void rotuloEsperandoNaGradeMensalMostraJanelaFutura() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        LocalDate referencia = LocalDate.of(2026, 5, 15);
+        agendamento.setProfissional(julia);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(referencia.atTime(10, 0));
+        agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 5, 1));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertEquals("Você vai pagar do dia 01 ao 10/06",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+    }
+
+    @Test
+    void rotuloMensalNaJanelaDePagamentoMostraAviso01Ao10() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        agendamento.setProfissional(julia);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 6, 1));
+        agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 29).atTime(10, 0));
+
+        assertEquals("Você tem do dia 01 ao 10 para pagar",
+                pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 7, 5)));
+    }
+
+    @Test
+    void realocacaoMensalDeJunhoParaJulhoMantemFaturaDeJunho() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        agendamento.setProfissional(julia);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 6, 1));
+        agendamento.setDataHoraInicio(LocalDate.of(2026, 7, 7).atTime(10, 0));
+
+        assertEquals("06/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
+        assertEquals("01 ao 10/07", pagamentoConsultaService.formatarJanelaPagamentoMensal(agendamento));
+        assertEquals("Você vai pagar do dia 01 ao 10/07",
+                pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 6, 30)));
+    }
+
+    @Test
+    void referenciaMesPreservaRotuloAposRealocacao() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        agendamento.setProfissional(julia);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 5, 1));
+        agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 8).atTime(10, 0));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertEquals("Você vai pagar do dia 01 ao 10/06",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+        assertEquals("05/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
+    }
+
+    @Test
+    void rotuloEsperandoNaGradeSemanalMostraDataPagamento() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        LocalDate referencia = LocalDate.of(2026, 6, 1);
+        agendamento.setProfissional(julia);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(referencia.atTime(10, 0));
+        agendamento.setDataReferenciaSemanaPagamento(referencia);
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertEquals("Você vai pagar no dia 07/06",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+    }
+
+    @Test
+    void referenciaSemanaPreservaRotuloAposRealocacao() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        LocalDate referenciaOriginal = LocalDate.of(2026, 6, 1);
+        agendamento.setProfissional(julia);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataReferenciaSemanaPagamento(referenciaOriginal);
+        agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 8).atTime(10, 0));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertEquals("Você vai pagar no dia 07/06",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+    }
+
+    @Test
+    void resolverSemanaPorDataReferenciaIncluiDomingoNaMesmaSemana() {
+        LocalDate domingo = LocalDate.of(2026, 6, 7);
+        var periodo = pagamentoConsultaService.resolverSemanaPorDataReferencia(domingo);
+        assertEquals(LocalDate.of(2026, 6, 1), periodo.inicio());
+        assertEquals(LocalDate.of(2026, 6, 7), periodo.fim());
+    }
+
+    @Test
+    void polyanaVeRotuloDePagamentoDoProfissionalNaGrade() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(1L);
+        anaPaula.setNome("Ana Paula");
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        agendamento.setProfissional(anaPaula);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 15).atTime(15, 0));
+        agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 6, 1));
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+
+        assertEquals(
+                "Ana Paula: pagamento do dia 01 ao 10/07",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
+        );
+    }
+
+    @Test
+    void polyanaVeRotuloConfirmadoQuandoPrimeiraConsultaEstaPaga() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(1L);
+        anaPaula.setNome("Ana Paula");
+
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        agendamento.setProfissional(anaPaula);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+
+        assertEquals(
+                "Confirmado — acerto com a profissional",
+                pagamentoConsultaService.rotuloPagoNaGrade(agendamento, polyana)
+        );
+    }
+
+    @Test
+    void rotuloEsperandoNaGradeDeProfissionalMensalParaOutroMostraSalaConfirmada() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(1L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+        Usuario julia = new Usuario();
+        julia.setId(2L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        agendamento.setProfissional(anaPaula);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(LocalDate.now().plusDays(10).atTime(15, 0));
+        agendamento.setDataReferenciaMesPagamento(LocalDate.now().plusDays(10).withDayOfMonth(1));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertTrue(pagamentoConsultaService.exibirSalaConfirmadaNaGrade(agendamento, julia));
+        assertEquals("Sala confirmada",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+    }
+
+    @Test
+    void rotuloEsperandoNaGradeDeProfissionalSemanalParaOutroMostraSalaConfirmada() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(1L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+        Usuario julia = new Usuario();
+        julia.setId(2L);
+
+        agendamento.setProfissional(anaPaula);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(LocalDate.now().plusDays(5).atTime(15, 0));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertEquals("Sala confirmada",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+    }
+
+    @Test
     void rotuloPendenteNaGradeParaPagamentoFuturoDeOutroProfissional() {
         Usuario julia = new Usuario();
         julia.setId(1L);
@@ -449,12 +748,13 @@ class PagamentoConsultaServiceTest {
         agendamento.setProfissional(julia);
         agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
         agendamento.setDataHoraInicio(LocalDate.now().plusDays(10).atTime(10, 0));
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
 
         when(authService.isAdmin(carol)).thenReturn(false);
         when(authService.isDonaClinica(carol)).thenReturn(false);
 
         assertTrue(agendamento.isReservaPendenteNaGrade());
-        assertEquals("Aguardando confirmacoes",
+        assertEquals("Aguardando confirmações",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, carol));
     }
 
@@ -575,7 +875,7 @@ class PagamentoConsultaServiceTest {
         assertEquals(1, bloqueados.size());
         assertEquals(1L, bloqueados.get(0).getProfissionalId());
         assertEquals("Julia", bloqueados.get(0).getNome());
-        assertEquals("Sistema do usuario Julia foi bloqueado por nao pagar.", bloqueados.get(0).getMensagemBloqueio());
+        assertEquals("Sistema do usuário Julia foi bloqueado por não pagar.", bloqueados.get(0).getMensagemBloqueio());
         assertEquals(1, bloqueados.get(0).getPendencias());
     }
 
@@ -606,6 +906,7 @@ class PagamentoConsultaServiceTest {
         Usuario julia = new Usuario();
         julia.setId(1L);
         julia.setDonaClinica(false);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
 
         Agendamento pendente = new Agendamento();
         pendente.setId(11L);
@@ -614,9 +915,6 @@ class PagamentoConsultaServiceTest {
         pendente.setDataHoraInicio(dataPendente.atTime(9, 0));
         pendente.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
 
-        when(authService.isAdmin(julia)).thenReturn(false);
-        when(authService.isDonaClinica(julia)).thenReturn(false);
-        when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
         when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(1L))
                 .thenReturn(java.util.List.of(pendente));
 
@@ -749,5 +1047,532 @@ class PagamentoConsultaServiceTest {
         Agendamento liberado = new Agendamento();
         liberado.setStatusPagamento(PagamentoStatus.LIBERADO_FALTA_PAGAMENTO);
         assertFalse(pagamentoConsultaService.ocupaVagaNaGrade(liberado));
+    }
+
+    @Test
+    void deveMigrarAgendamentosFuturosDeDiarioParaMensal() {
+        Usuario carol = new Usuario();
+        carol.setId(5L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        Agendamento futuro = new Agendamento();
+        futuro.setId(20L);
+        futuro.setProfissional(carol);
+        futuro.setDataHoraInicio(LocalDate.now().plusDays(5).atTime(15, 0));
+        futuro.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        futuro.setPagamentoOrderNsu("ordem-antiga");
+        futuro.setPagamentoLink("http://localhost/link");
+        futuro.setPagamentoExpiraEm(LocalDateTime.now().plusMinutes(3));
+
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                eq(5L),
+                any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(futuro));
+        when(repository.save(futuro)).thenReturn(futuro);
+
+        int migrados = pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.DIARIO,
+                PeriodicidadePagamento.MENSAL
+        );
+
+        assertEquals(1, migrados);
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, futuro.getStatusPagamento());
+        assertEquals(LocalDate.now().plusDays(5).withDayOfMonth(1), futuro.getDataReferenciaMesPagamento());
+        assertEquals(null, futuro.getDataReferenciaSemanaPagamento());
+        assertEquals(null, futuro.getPagamentoOrderNsu());
+        assertEquals(null, futuro.getPagamentoLink());
+        verify(repository).save(futuro);
+    }
+
+    @Test
+    void naoDeveMigrarAgendamentosPagosAoAlterarPeriodicidade() {
+        Usuario carol = new Usuario();
+        carol.setId(5L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        Agendamento pago = new Agendamento();
+        pago.setId(21L);
+        pago.setProfissional(carol);
+        pago.setDataHoraInicio(LocalDate.now().plusDays(2).atTime(10, 0));
+        pago.setStatusPagamento(PagamentoStatus.PAGO);
+
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                eq(5L),
+                any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(pago));
+
+        int migrados = pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.DIARIO,
+                PeriodicidadePagamento.MENSAL
+        );
+
+        assertEquals(0, migrados);
+        assertEquals(PagamentoStatus.PAGO, pago.getStatusPagamento());
+        verify(repository, never()).save(pago);
+    }
+
+    @Test
+    void deveMigrarAgendamentosDeSemanalParaMensalRecalculandoReferencia() {
+        Usuario carol = new Usuario();
+        carol.setId(5L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        LocalDate consulta = LocalDate.now().plusDays(10);
+        Agendamento futuro = new Agendamento();
+        futuro.setId(22L);
+        futuro.setProfissional(carol);
+        futuro.setDataHoraInicio(consulta.atTime(9, 0));
+        futuro.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        futuro.setDataReferenciaSemanaPagamento(consulta.minusDays(2));
+
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                eq(5L),
+                any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(futuro));
+        when(repository.save(futuro)).thenReturn(futuro);
+
+        int migrados = pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.SEMANAL,
+                PeriodicidadePagamento.MENSAL
+        );
+
+        assertEquals(1, migrados);
+        assertEquals(consulta.withDayOfMonth(1), futuro.getDataReferenciaMesPagamento());
+        assertEquals(null, futuro.getDataReferenciaSemanaPagamento());
+    }
+
+    // --- Cobertura completa: diario, semanal, mensal e migracoes ---
+
+    @Test
+    void janelaPagamentoSemanalSoSabadoEDomingo() {
+        DayOfWeek dia = LocalDate.now().getDayOfWeek();
+        boolean esperado = dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY;
+        assertEquals(esperado, pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
+    }
+
+    @Test
+    void janelaPagamentoMensalDoDia01Ao10() {
+        int dia = LocalDate.now().getDayOfMonth();
+        boolean esperado = dia >= 1 && dia <= 10;
+        assertEquals(esperado, pagamentoConsultaService.estaEmJanelaPagamentoMensal());
+    }
+
+    @Test
+    void profissionalSemanalForaDaJanelaNaoListaConsultasParaPagamento() {
+        assumeFalse(
+                pagamentoConsultaService.estaEmJanelaPagamentoSemanal(),
+                "Lista vazia fora da janela: valido de segunda a sexta"
+        );
+
+        Usuario julia = new Usuario();
+        julia.setId(3L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        assertTrue(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
+    }
+
+    @Test
+    void profissionalSemanalNaJanelaListaConsultasNaoPagasDaSemana() {
+        assumeTrue(
+                pagamentoConsultaService.estaEmJanelaPagamentoSemanal(),
+                "Lista na janela: valido sabado e domingo"
+        );
+
+        Usuario julia = new Usuario();
+        julia.setId(3L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        LocalDate referencia = LocalDate.now().plusDays(1);
+        Agendamento consulta = new Agendamento();
+        consulta.setId(31L);
+        consulta.setProfissional(julia);
+        consulta.setDataHoraInicio(referencia.atTime(10, 0));
+        consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        consulta.setDataReferenciaSemanaPagamento(referencia);
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(3L))
+                .thenReturn(java.util.List.of(consulta));
+
+        var consultas = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
+        assertFalse(consultas.isEmpty());
+        assertEquals(31L, consultas.get(0).getId());
+    }
+
+    @Test
+    void gerarPixSemanaRejeitaProfissionalSemanalForaDaJanela() {
+        assumeFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
+
+        Usuario julia = new Usuario();
+        julia.setId(3L);
+        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        RuntimeException ex = assertThrows(
+                RuntimeException.class,
+                () -> pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(julia)
+        );
+        assertEquals("Pagamento semanal disponível apenas sábado e domingo.", ex.getMessage());
+    }
+
+    @Test
+    void gerarPixSemanaProfissionalDiarioMarcaConsultasEmEsperandoConfirmacao() {
+        Usuario carol = new Usuario();
+        carol.setId(4L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        var periodo = pagamentoConsultaService.resolverPeriodoSemanaPagamento(LocalDate.now());
+        LocalDate diaConsulta = periodo.fim();
+        if (!diaConsulta.isAfter(LocalDate.now())) {
+            diaConsulta = LocalDate.now().plusDays(2);
+        }
+
+        Agendamento consulta = new Agendamento();
+        consulta.setId(40L);
+        consulta.setProfissional(carol);
+        consulta.setDataHoraInicio(diaConsulta.atTime(14, 0));
+        consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        consulta.setValorClinicaCobra(new BigDecimal("35.00"));
+
+        when(authService.isAdmin(carol)).thenReturn(false);
+        when(authService.isDonaClinica(carol)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(4L))
+                .thenReturn(java.util.List.of(consulta));
+        when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
+        when(infinitePayService.resolverValorTaxaClinica(consulta)).thenReturn(new BigDecimal("35.00"));
+        when(infinitePayService.gerarLinkPagamentoSemana(java.util.List.of(consulta)))
+                .thenReturn(new com.clinica.sistema.dto.LinkPagamentoGerado(
+                        "sem-4-abc12345", "http://localhost/pix-semana", "slug-semana"
+                ));
+        when(repository.save(consulta)).thenReturn(consulta);
+
+        String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(carol);
+
+        assertEquals("sem-4-abc12345", orderNsu);
+        assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, consulta.getStatusPagamento());
+        assertEquals("http://localhost/pix-semana", consulta.getPagamentoLink());
+        verify(repository).save(consulta);
+    }
+
+    @Test
+    void listarConsultasPagamentoMensalRetornaConsultasDoMesAnterior() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(7L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        YearMonth mesAnterior = YearMonth.from(LocalDate.now()).minusMonths(1);
+        LocalDate diaConsulta = mesAnterior.atDay(12);
+
+        Agendamento doMesAnterior = new Agendamento();
+        doMesAnterior.setId(50L);
+        doMesAnterior.setProfissional(anaPaula);
+        doMesAnterior.setDataHoraInicio(diaConsulta.atTime(9, 0));
+        doMesAnterior.setDataReferenciaMesPagamento(mesAnterior.atDay(1));
+        doMesAnterior.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        Agendamento doMesAtual = new Agendamento();
+        doMesAtual.setId(51L);
+        doMesAtual.setProfissional(anaPaula);
+        doMesAtual.setDataHoraInicio(LocalDate.now().plusDays(5).atTime(9, 0));
+        doMesAtual.setDataReferenciaMesPagamento(LocalDate.now().withDayOfMonth(1));
+        doMesAtual.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        when(authService.isAdmin(anaPaula)).thenReturn(false);
+        when(authService.isDonaClinica(anaPaula)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(7L))
+                .thenReturn(java.util.List.of(doMesAnterior, doMesAtual));
+
+        var consultas = pagamentoConsultaService.listarConsultasPagamentoMensal(anaPaula);
+
+        assertEquals(1, consultas.size());
+        assertEquals(50L, consultas.get(0).getId());
+    }
+
+    @Test
+    void listarConsultasPagamentoMensalVazioParaProfissionalDiario() {
+        Usuario carol = new Usuario();
+        carol.setId(4L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        assertTrue(pagamentoConsultaService.listarConsultasPagamentoMensal(carol).isEmpty());
+    }
+
+    @Test
+    void gerarPixMesAnteriorRejeitaProfissionalDiario() {
+        Usuario carol = new Usuario();
+        carol.setId(4L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        RuntimeException ex = assertThrows(
+                RuntimeException.class,
+                () -> pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(carol)
+        );
+        assertEquals("Pagamento mensal não se aplica a este profissional.", ex.getMessage());
+    }
+
+    @Test
+    void gerarPixMesAnteriorMarcaConsultasEmEsperandoConfirmacao() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(7L);
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        YearMonth mesAnterior = YearMonth.from(LocalDate.now()).minusMonths(1);
+        Agendamento consulta = new Agendamento();
+        consulta.setId(60L);
+        consulta.setProfissional(anaPaula);
+        consulta.setDataHoraInicio(mesAnterior.atDay(8).atTime(11, 0));
+        consulta.setDataReferenciaMesPagamento(mesAnterior.atDay(1));
+        consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        consulta.setValorClinicaCobra(new BigDecimal("35.00"));
+
+        when(authService.isAdmin(anaPaula)).thenReturn(false);
+        when(authService.isDonaClinica(anaPaula)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(7L))
+                .thenReturn(java.util.List.of(consulta));
+        when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
+        when(infinitePayService.resolverValorTaxaClinica(consulta)).thenReturn(new BigDecimal("35.00"));
+        when(infinitePayService.gerarLinkPagamentoMes(java.util.List.of(consulta)))
+                .thenReturn(new com.clinica.sistema.dto.LinkPagamentoGerado(
+                        "mes-7-abc12345", "http://localhost/pix-mes", "slug-mes"
+                ));
+        when(repository.save(consulta)).thenReturn(consulta);
+
+        String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(anaPaula);
+
+        assertEquals("mes-7-abc12345", orderNsu);
+        assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, consulta.getStatusPagamento());
+        assertEquals("http://localhost/pix-mes", consulta.getPagamentoLink());
+    }
+
+    @Test
+    void confirmarPagamentoMensalMarcaTodasConsultasComoPago() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(7L);
+
+        Agendamento primeira = new Agendamento();
+        primeira.setId(70L);
+        primeira.setProfissional(anaPaula);
+        primeira.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        primeira.setPagamentoOrderNsu("mes-7-abc12345");
+        primeira.setPagamentoLink("http://localhost/pix");
+        primeira.setPagamentoExpiraEm(LocalDateTime.now().plusMinutes(5));
+
+        Agendamento segunda = new Agendamento();
+        segunda.setId(71L);
+        segunda.setProfissional(anaPaula);
+        segunda.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        segunda.setPagamentoOrderNsu("mes-7-abc12345");
+        segunda.setPagamentoLink("http://localhost/pix");
+        segunda.setPagamentoExpiraEm(LocalDateTime.now().plusMinutes(5));
+
+        when(repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc("mes-7-abc12345"))
+                .thenReturn(java.util.List.of(primeira, segunda));
+        when(repository.save(any(Agendamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        pagamentoConsultaService.confirmarPagamentoPorOrderNsu("mes-7-abc12345");
+
+        assertEquals(PagamentoStatus.PAGO, primeira.getStatusPagamento());
+        assertEquals(PagamentoStatus.PAGO, segunda.getStatusPagamento());
+    }
+
+    @Test
+    void deveMigrarAgendamentosDeMensalParaDiario() {
+        Usuario carol = new Usuario();
+        carol.setId(5L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        LocalDate consulta = LocalDate.now().plusDays(4);
+        Agendamento futuro = new Agendamento();
+        futuro.setId(80L);
+        futuro.setProfissional(carol);
+        futuro.setDataHoraInicio(consulta.atTime(15, 0));
+        futuro.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        futuro.setDataReferenciaMesPagamento(consulta.withDayOfMonth(1));
+
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                eq(5L), any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(futuro));
+        when(repository.save(futuro)).thenReturn(futuro);
+
+        int migrados = pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.MENSAL,
+                PeriodicidadePagamento.DIARIO
+        );
+
+        assertEquals(1, migrados);
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, futuro.getStatusPagamento());
+        assertEquals(null, futuro.getDataReferenciaMesPagamento());
+        assertEquals(null, futuro.getDataReferenciaSemanaPagamento());
+    }
+
+    @Test
+    void deveMigrarAgendamentosDeDiarioParaSemanalRecalculandoReferencia() {
+        Usuario carol = new Usuario();
+        carol.setId(5L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        LocalDate consulta = LocalDate.now().plusDays(6);
+        Agendamento futuro = new Agendamento();
+        futuro.setId(81L);
+        futuro.setProfissional(carol);
+        futuro.setDataHoraInicio(consulta.atTime(10, 0));
+        futuro.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                eq(5L), any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(futuro));
+        when(repository.save(futuro)).thenReturn(futuro);
+
+        int migrados = pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.DIARIO,
+                PeriodicidadePagamento.SEMANAL
+        );
+
+        assertEquals(1, migrados);
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, futuro.getStatusPagamento());
+        assertEquals(consulta, futuro.getDataReferenciaSemanaPagamento());
+        assertEquals(null, futuro.getDataReferenciaMesPagamento());
+    }
+
+    @Test
+    void deveMigrarAgendamentosDeMensalParaSemanalRecalculandoReferencia() {
+        Usuario carol = new Usuario();
+        carol.setId(5L);
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        LocalDate consulta = LocalDate.now().plusDays(8);
+        Agendamento futuro = new Agendamento();
+        futuro.setId(82L);
+        futuro.setProfissional(carol);
+        futuro.setDataHoraInicio(consulta.atTime(11, 0));
+        futuro.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        futuro.setDataReferenciaMesPagamento(consulta.withDayOfMonth(1));
+
+        when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                eq(5L), any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(futuro));
+        when(repository.save(futuro)).thenReturn(futuro);
+
+        int migrados = pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.MENSAL,
+                PeriodicidadePagamento.SEMANAL
+        );
+
+        assertEquals(1, migrados);
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, futuro.getStatusPagamento());
+        assertEquals(consulta, futuro.getDataReferenciaSemanaPagamento());
+        assertEquals(null, futuro.getDataReferenciaMesPagamento());
+    }
+
+    @Test
+    void polyanaVeRotuloSemanalDoProfissionalNaGrade() {
+        Usuario anaPaula = new Usuario();
+        anaPaula.setId(1L);
+        anaPaula.setNome("Ana Paula");
+        anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        LocalDate referencia = LocalDate.of(2026, 6, 1);
+        agendamento.setProfissional(anaPaula);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(referencia.atTime(10, 0));
+        agendamento.setDataReferenciaSemanaPagamento(referencia);
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+
+        assertEquals(
+                "Ana Paula: pagamento no dia 07/06",
+                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
+        );
+    }
+
+    @Test
+    void notificacaoPagamentoDiarioLembraDataDoAgendamento() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        profissional.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        Agendamento amanha = new Agendamento();
+        amanha.setId(1L);
+        amanha.setProfissional(profissional);
+        amanha.setDataHoraInicio(LocalDate.now().plusDays(1).atTime(9, 0));
+        amanha.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+                .thenReturn(java.util.List.of(amanha));
+
+        var notificacao = pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional);
+
+        assertTrue(notificacao.isPresent());
+        assertEquals("Pagamento do agendamento", notificacao.get().getMensagemResumo());
+        assertTrue(notificacao.get().getMensagemPainel().contains("Não esqueça de pagar"));
+        assertEquals(
+                LocalDate.now().plusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                notificacao.get().getRotuloData()
+        );
+    }
+
+    @Test
+    void notificacaoPagamentoOcultaParaDonaClinica() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+
+        assertTrue(pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(polyana).isEmpty());
+    }
+
+    @Test
+    void notificacaoPagamentoMensalRespeitaJanelaDoMes() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        profissional.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
+
+        if (pagamentoConsultaService.estaEmJanelaPagamentoMensal()) {
+            Agendamento consulta = new Agendamento();
+            consulta.setId(1L);
+            consulta.setProfissional(profissional);
+            consulta.setDataHoraInicio(YearMonth.now().minusMonths(1).atDay(5).atTime(10, 0));
+            consulta.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+            when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+                    .thenReturn(java.util.List.of(consulta));
+
+            var notificacao = pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional);
+
+            assertTrue(notificacao.isPresent());
+            assertEquals("Pagamento mensal", notificacao.get().getMensagemResumo());
+            assertTrue(notificacao.get().getMensagemPainel().contains("até o dia 10"));
+        } else {
+            assertTrue(pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional).isEmpty());
+        }
     }
 }

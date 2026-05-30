@@ -1,19 +1,27 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService();
+        authService = new AuthService(usuarioRepository);
     }
 
     @Test
@@ -39,5 +47,22 @@ class AuthServiceTest {
         admin.setCargo("ROLE_ADMIN");
 
         assertFalse(authService.deveUsarMeusAgendamentosResumido(admin));
+    }
+
+    @Test
+    void somenteDonaClinicaAcessaCentralProfissionais() {
+        Usuario polyana = new Usuario();
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+
+        Usuario julia = new Usuario();
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        assertTrue(authService.podeAcessarCentralProfissionais(polyana));
+        assertFalse(authService.podeAcessarCentralProfissionais(admin));
+        assertFalse(authService.podeAcessarCentralProfissionais(julia));
     }
 }

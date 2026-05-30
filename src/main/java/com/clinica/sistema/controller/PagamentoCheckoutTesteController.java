@@ -105,6 +105,19 @@ public class PagamentoCheckoutTesteController {
         return confirmarCheckoutTesteLote(order, redirectAttributes, "Pagamento da semana confirmado (modo teste).");
     }
 
+    @GetMapping("/checkout-teste-mes")
+    public String checkoutTesteMes(@RequestParam String order, Model model) {
+        return checkoutTesteLote(order, model, "PIX unico do mes", "Confirmar PIX do mes (teste)");
+    }
+
+    @PostMapping("/checkout-teste-mes/confirmar")
+    public String confirmarCheckoutTesteMes(
+            @RequestParam String order,
+            RedirectAttributes redirectAttributes
+    ) {
+        return confirmarCheckoutTesteLote(order, redirectAttributes, "Pagamento do mes confirmado (modo teste).");
+    }
+
     private String checkoutTesteLote(String order, Model model, String titulo, String rotuloBotao) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         List<Agendamento> consultas = pagamentoConsultaService.listarAgendamentosPorOrderNsu(order, usuarioLogado);
@@ -116,7 +129,9 @@ public class PagamentoCheckoutTesteController {
         model.addAttribute("rotuloBotao", rotuloBotao);
         model.addAttribute("acaoConfirmar", order.startsWith("dia-")
                 ? "/pagamentos/checkout-teste-dia/confirmar"
-                : "/pagamentos/checkout-teste-semana/confirmar");
+                : order.startsWith("mes-")
+                        ? "/pagamentos/checkout-teste-mes/confirmar"
+                        : "/pagamentos/checkout-teste-semana/confirmar");
         return "pagamento-checkout-teste-lote";
     }
 

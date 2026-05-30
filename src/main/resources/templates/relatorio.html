@@ -175,7 +175,7 @@
         <!-- ABA SEMANAL (padrao ao entrar em Relatorio) -->
         <section class="relatorio-pane" th:classappend="${abaAtiva == 'semanal'} ? ' active' : ''">
             <div class="alert-box alert-info">
-                Semana atual (segunda a sabado), somente dias ja passados e consultas com mais de 24h.
+                Semana atual (segunda a sábado), somente dias já passados e consultas com mais de 24h.
                 Periodo: <strong th:text="${periodoLabel}">semana</strong>.
             </div>
 
@@ -183,7 +183,7 @@
                 <div class="card">
                     <div class="card-icon"><i class="fa-solid fa-calendar-days"></i></div>
                     <div class="card-info">
-                        <p>Horarios na semana</p>
+                        <p>Horários na semana</p>
                         <h3 th:text="${relatorioSemanal.totalGeral}">0</h3>
                     </div>
                 </div>
@@ -195,7 +195,7 @@
                     </div>
                 </div>
             </div>
-            <p class="disclaimer">* Cancelados nao entram</p>
+            <p class="disclaimer">* Cancelados não entram</p>
 
             <div class="table-container" th:if="${!#lists.isEmpty(linhasSemanal)}">
                 <div class="table-scroll">
@@ -248,22 +248,22 @@
                      th:classappend="${relatorioGeradoAguardando} ? 'mes-passado-panel--ready' : ''">
                 <div class="mes-passado-panel__tab">
                     <i class="fa-solid fa-file-pdf"></i>
-                    <span>Relatorio do mes passado — <span th:text="${mesPassadoLabel}">Mes</span></span>
+                    <span>Relatório do mês passado — <span th:text="${mesPassadoLabel}">Mês</span></span>
                     <span th:if="${relatorioGeradoAguardando and !pdfJaBaixado}" class="badge-aguardando">Aguardando download</span>
                     <span th:if="${pdfJaBaixado}" class="badge-baixado">PDF baixado</span>
                 </div>
                 <div class="mes-passado-panel__body">
                     <p class="mes-passado-status" th:if="${aguardandoDia3}">
-                        O PDF do mes passado (<strong th:text="${mesPassadoLabel}">abril</strong>) e gerado automaticamente
-                        todo dia <strong th:text="${diaFechamento}">3</strong> de cada mes.
-                        Ainda nao chegou o dia <strong th:text="${diaFechamento}">3</strong> de
+                        O PDF do mês passado (<strong th:text="${mesPassadoLabel}">abril</strong>) é gerado automaticamente
+                        todo dia <strong th:text="${diaFechamento}">3</strong> de cada mês.
+                        Ainda não chegou o dia <strong th:text="${diaFechamento}">3</strong> de
                         <strong th:text="${mesAtualLabel}">maio</strong> — volte depois para ver o arquivo aqui.
                     </p>
 
                     <p class="mes-passado-status" th:if="${aguardandoProcessamentoAutomatico}">
-                        Ja passou do dia <strong th:text="${diaFechamento}">3</strong>.
+                        Já passou do dia <strong th:text="${diaFechamento}">3</strong>.
                         O sistema vai gerar o PDF de <strong th:text="${mesPassadoLabel}">abril</strong> em breve
-                        (ao abrir esta aba ou no proximo processamento automatico).
+                        (ao abrir esta aba ou no próximo processamento automático).
                     </p>
 
                     <p class="mes-passado-status" th:if="${exibirPdfInline}">
@@ -272,21 +272,21 @@
                         <span th:if="${geradoEmMensal != null}">
                             Gerado em <strong th:text="${#temporals.format(geradoEmMensal, 'dd/MM/yyyy HH:mm')}">data</strong>.
                         </span>
-                        Baixe abaixo para o sino de notificacao sumir.
+                        Baixe abaixo para o sino de notificação sumir.
                     </p>
 
                     <p class="mes-passado-status" th:if="${relatorioSaiuDaTela}">
-                        O relatorio de <strong th:text="${mesPassadoLabel}">abril</strong> saiu da tela no dia
-                        <strong th:text="${diaRemocaoPdf}">10</strong> deste mes.
-                        No dia <strong th:text="${diaFechamento}">3</strong> do proximo mes o novo relatorio aparecera aqui.
+                        O relatório de <strong th:text="${mesPassadoLabel}">abril</strong> saiu da tela no dia
+                        <strong th:text="${diaRemocaoPdf}">10</strong> deste mês.
+                        No dia <strong th:text="${diaFechamento}">3</strong> do próximo mês o novo relatório aparecerá aqui.
                     </p>
 
                     <div th:if="${exibirPdfInline}" class="pdf-viewer-wrap">
                         <div class="pdf-viewer-caption">
-                            <i class="fa-solid fa-eye"></i> Visualizacao do PDF — <span th:text="${mesPassadoLabel}">Mes passado</span>
+                            <i class="fa-solid fa-eye"></i> Visualização do PDF — <span th:text="${mesPassadoLabel}">Mês passado</span>
                         </div>
                         <iframe th:src="@{/agendamentos/relatorio/mensal/visualizar(v=${versaoDownload})}"
-                                title="PDF do relatorio mensal"
+                                title="PDF do relatório mensal"
                                 loading="lazy"></iframe>
                     </div>
 

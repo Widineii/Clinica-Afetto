@@ -1,7 +1,9 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +39,9 @@ class UsuarioServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private PagamentoConsultaService pagamentoConsultaService;
+
     @InjectMocks
     private UsuarioService usuarioService;
 
@@ -63,13 +68,19 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void deveCadastrarProfissionalQuandoUsuarioLogadoForAdmin() {
-        when(authService.podeGerenciarEquipe(admin)).thenReturn(true);
+    void deveCadastrarProfissionalQuandoUsuarioLogadoForDonaClinica() {
+        Usuario dona = new Usuario();
+        dona.setId(3L);
+        dona.setNome("Polyana");
+        dona.setCargo("ROLE_PROFISSIONAL");
+        dona.setDonaClinica(true);
+
+        when(authService.podeAcessarCentralProfissionais(dona)).thenReturn(true);
         when(usuarioRepository.findByLogin("novoprof")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("1234")).thenReturn("hash-1234");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Usuario usuarioSalvo = usuarioService.cadastrarProfissional(form, admin);
+        Usuario usuarioSalvo = usuarioService.cadastrarProfissional(form, dona);
 
         assertEquals("Novo Profissional", usuarioSalvo.getNome());
         assertEquals("novoprof", usuarioSalvo.getLogin());
@@ -79,13 +90,23 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void naoDeveCadastrarQuandoUsuarioNaoForAdmin() {
-        when(authService.podeGerenciarEquipe(profissional)).thenReturn(false);
+    void adminNaoDeveCadastrarProfissionalNaCentral() {
+        when(authService.podeAcessarCentralProfissionais(admin)).thenReturn(false);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> usuarioService.cadastrarProfissional(form, admin));
+
+        assertEquals("Somente a dona da clínica pode acessar a central dos profissionais.", exception.getMessage());
+    }
+
+    @Test
+    void naoDeveCadastrarQuandoUsuarioNaoForDonaClinica() {
+        when(authService.podeAcessarCentralProfissionais(profissional)).thenReturn(false);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> usuarioService.cadastrarProfissional(form, profissional));
 
-        assertEquals("Somente administracao ou dona da clinica podem gerenciar a equipe.", exception.getMessage());
+        assertEquals("Somente a dona da clínica pode acessar a central dos profissionais.", exception.getMessage());
     }
 
     @Test
@@ -126,12 +147,52 @@ class UsuarioServiceTest {
 
     @Test
     void naoDeveCadastrarQuandoLoginJaExistir() {
-        when(authService.podeGerenciarEquipe(admin)).thenReturn(true);
+        Usuario dona = new Usuario();
+        dona.setId(3L);
+        dona.setDonaClinica(true);
+
+        when(authService.podeAcessarCentralProfissionais(dona)).thenReturn(true);
         when(usuarioRepository.findByLogin("novoprof")).thenReturn(Optional.of(new Usuario()));
 
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> usuarioService.cadastrarProfissional(form, admin));
+                () -> usuarioService.cadastrarProfissional(form, dona));
 
         assertEquals("Ja existe um usuario com esse login.", exception.getMessage());
+    }
+
+    @Test
+    void deveMigrarAgendamentosAoAtualizarPeriodicidadeNaCentral() {
+        Usuario dona = new Usuario();
+        dona.setId(3L);
+        dona.setDonaClinica(true);
+
+        Usuario carol = new Usuario();
+        carol.setId(7L);
+        carol.setCargo("ROLE_PROFISSIONAL");
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        AtualizarPeriodicidadeForm form = new AtualizarPeriodicidadeForm();
+        form.setUsuarioId(7L);
+        form.setPeriodicidade(PeriodicidadePagamento.MENSAL);
+
+        when(authService.podeAcessarCentralProfissionais(dona)).thenReturn(true);
+        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(carol));
+        when(pagamentoConsultaService.resolverPeriodicidade(carol)).thenReturn(PeriodicidadePagamento.DIARIO);
+        when(usuarioRepository.save(carol)).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.DIARIO,
+                PeriodicidadePagamento.MENSAL
+        )).thenReturn(3);
+
+        int migrados = usuarioService.atualizarPeriodicidadePagamento(form, dona);
+
+        assertEquals(3, migrados);
+        assertEquals(PeriodicidadePagamento.MENSAL, carol.getPeriodicidadePagamento());
+        verify(pagamentoConsultaService).migrarAgendamentosAoAlterarPeriodicidade(
+                carol,
+                PeriodicidadePagamento.DIARIO,
+                PeriodicidadePagamento.MENSAL
+        );
     }
 }

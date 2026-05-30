@@ -6,6 +6,7 @@ import com.clinica.sistema.dto.ReceitaPixMesView;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.FinanceiroReceitaPixService;
 import com.clinica.sistema.service.PagamentoConsultaService;
@@ -29,6 +30,7 @@ public class FinanceiroController {
     private final FinanceiroPolyanaAcessoService acessoService;
     private final AuthService authService;
     private final RelatorioMensalService relatorioMensalService;
+    private final EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService;
     private final AgendamentoService agendamentoService;
     private final PagamentoConsultaService pagamentoConsultaService;
 
@@ -37,6 +39,7 @@ public class FinanceiroController {
             FinanceiroPolyanaAcessoService acessoService,
             AuthService authService,
             RelatorioMensalService relatorioMensalService,
+            EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService,
             AgendamentoService agendamentoService,
             PagamentoConsultaService pagamentoConsultaService
     ) {
@@ -44,6 +47,7 @@ public class FinanceiroController {
         this.acessoService = acessoService;
         this.authService = authService;
         this.relatorioMensalService = relatorioMensalService;
+        this.encerramentoSerieNotificacaoService = encerramentoSerieNotificacaoService;
         this.agendamentoService = agendamentoService;
         this.pagamentoConsultaService = pagamentoConsultaService;
     }
@@ -142,6 +146,7 @@ public class FinanceiroController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model, session);
+        encerramentoSerieNotificacaoService.adicionarNotificacaoAoModelSeAplicavel(model, session);
         return null;
     }
 

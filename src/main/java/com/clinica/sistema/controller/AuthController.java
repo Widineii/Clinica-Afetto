@@ -42,7 +42,6 @@ public class AuthController {
             @RequestParam(required = false) String senhaAlterada
     ) {
         if (senhaAlterada != null) {
-            encerrarSessaoDoUsuario(request, response);
             model.addAttribute("sucesso", "Senha alterada com sucesso. Entre com a nova senha.");
             model.addAttribute("loginForm", new LoginForm());
             return "login";
@@ -58,10 +57,10 @@ public class AuthController {
             model.addAttribute("loginForm", new LoginForm());
         }
         if (erro != null) {
-            model.addAttribute("erro", "Login ou senha invalidos.");
+            model.addAttribute("erro", "Login ou senha inválidos.");
         }
         if (logout != null) {
-            model.addAttribute("sucesso", "Voce saiu do sistema com sucesso.");
+            model.addAttribute("sucesso", "Você saiu do sistema com sucesso.");
         }
         return "login";
     }
@@ -87,7 +86,7 @@ public class AuthController {
             redirectAttributes.addFlashAttribute("erroSenha", e.getMessage());
             redirectAttributes.addFlashAttribute("erroSenhaAtual", senhaAtualIncorreta);
             redirectAttributes.addFlashAttribute("trocarSenhaForm", trocarSenhaForm);
-            if (authService.podeGerenciarEquipe(usuarioLogado)) {
+            if (authService.isDonaClinica(usuarioLogado)) {
                 return "redirect:/agendamentos/central-profissionais";
             }
             return "redirect:/agendamentos/dashboard";

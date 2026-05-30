@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Manual de uso - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    
+        <link href="/css/afetto-brand.css" rel="stylesheet">
+    
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(10, 135, 133, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+        }
+        .app-shell { width: min(960px, 100%); margin-inline: auto; padding: 24px 16px 48px; }
+        .hero-band {
+            background: var(--afetto-gradient-hero);
+            color: #fff; border-radius: 24px; padding: clamp(16px, 3vw, 24px);
+        }
+        .shell-card {
+            border: 0; border-radius: 24px; background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+        .fact-card {
+            border-radius: 16px; background: var(--afetto-teal-soft); border: 1px solid var(--afetto-teal-soft-2);
+            padding: 1rem; height: 100%; text-align: center;
+        }
+        .fact-card strong { display: block; color: var(--afetto-teal-dark); font-size: 1.05rem; }
+        .video-wrap {
+            position: relative; border-radius: 16px; overflow: hidden;
+            background: #0f172a; aspect-ratio: 16 / 9;
+        }
+        .video-wrap iframe, .video-wrap video { width: 100%; height: 100%; border: 0; display: block; }
+        .video-amostra {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; color: #e2e8f0; text-align: center; padding: 1.5rem;
+        }
+        .video-amostra .play-ring {
+            width: 72px; height: 72px; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.5);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem; font-size: 1.75rem;
+        }
+        .passo-amostra {
+            display: flex; gap: 0.75rem; align-items: flex-start;
+            padding: 0.65rem 0; border-bottom: 1px dashed #e2e8f0;
+        }
+        .passo-amostra:last-child { border-bottom: 0; }
+        .passo-amostra .num {
+            width: 1.5rem; height: 1.5rem; border-radius: 50%;
+            background: var(--afetto-teal-dark); color: #fff; font-size: 0.75rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .accordion-button:not(.collapsed) {
+            background: #f0fdfa; color: var(--afetto-teal-dark); box-shadow: none;
+        }
+        .accordion-button:focus { box-shadow: 0 0 0 0.2rem rgba(10, 135, 133, 0.25); }
+        .chip {
+            display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px;
+            background: #e0f2fe; color: #0369a1; font-size: 0.75rem; font-weight: 600;
+        }
+        .lista-curta { margin: 0; padding-left: 1.1rem; }
+        .lista-curta li { margin-bottom: 0.35rem; }
+        .manual-lead {
+            color: #475569;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            margin-bottom: 0;
+        }
+        .manual-nota {
+            border-left: 3px solid var(--afetto-teal-dark);
+            background: #f0fdfa;
+            border-radius: 0 12px 12px 0;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            margin: 0.85rem 0 0;
+        }
+        .manual-subtitulo {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--afetto-teal-dark);
+            margin: 1rem 0 0.45rem;
+        }
+        .manual-periodicidade-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: #ecfdf5;
+            border: 1px solid #99f6e4;
+            color: var(--afetto-teal-dark);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 0.85rem;
+        }
+        body { padding-bottom: 5.5rem; }
+        .whatsapp-suporte {
+            position: fixed;
+            right: max(16px, env(safe-area-inset-right));
+            bottom: max(16px, env(safe-area-inset-bottom));
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+            text-decoration: none;
+        }
+        .whatsapp-suporte__btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 0.85rem 0.65rem 0.65rem;
+            border-radius: 999px;
+            background: #25d366;
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .whatsapp-suporte__btn:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(37, 211, 102, 0.5);
+        }
+        .whatsapp-suporte__icon {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+        .whatsapp-suporte__texto {
+            font-size: 0.8rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-align: right;
+            max-width: 140px;
+        }
+        .whatsapp-suporte__nome {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            opacity: 0.95;
+        }
+        .whatsapp-suporte__rotulo {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 500;
+            opacity: 0.85;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div class="hero-band mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75">Agenda Afetto</p>
+                <h1 class="h2 mb-2">Manual de uso</h1>
+                <p class="mb-0 opacity-75 small">
+                    Guia completo para <strong>Polyana</strong> — como agendar, pagar e usar a agenda no dia a dia.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/agendamentos/dashboard" class="btn btn-light btn-sm">Agenda</a>
+                
+                <form action="/logout" method="post" class="d-inline"><input type="hidden" name="_csrf" value="tBOPBuhqqcIaXFqmchLM_8-_zQMxmhbkIfN15KYHAo_oiPz5hSK-MtBbnfo3ZWKVQT_4yv3e4GJU_C7JQMMQ0JNlZrfcuM-c"/>
+                    <input type="hidden" name="_csrf" value="tBOPBuhqqcIaXFqmchLM_8-_zQMxmhbkIfN15KYHAo_oiPz5hSK-MtBbnfo3ZWKVQT_4yv3e4GJU_C7JQMMQ0JNlZrfcuM-c">
+                    <button type="submit" class="btn btn-light btn-sm">Sair</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="fact-card">
+                <strong>Seg–Sáb</strong>
+                <span class="small text-muted">07h às 21h</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="fact-card">
+                <strong>Domingo</strong>
+                <span class="small text-muted">Fechado · PIX da próxima semana</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="fact-card">
+                
+                
+                
+                <strong>Equipe na agenda</strong>
+                
+                
+                
+                <span class="small text-muted">Polyana define na Central</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shell-card mb-4" id="video">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h2 class="h5 mb-0">Como usar a Agenda Afetto (video de amostra)</h2>
+                <span class="chip">Amostra</span>
+            </div>
+            <p class="text-muted small mb-3">Passo a passo em video. Troque o link quando tiver o tutorial gravado pela clinica.</p>
+
+            <div class="video-wrap mb-3">
+                
+                
+                <div class="video-amostra">
+                    <div class="play-ring" aria-hidden="true">▶</div>
+                    <p class="mb-1 fw-semibold">Vídeo de demonstração (amostra)</p>
+                    <p class="small opacity-75 mb-0">
+                        Quando a clínica gravar o tutorial, o vídeo aparece aqui automaticamente.
+                    </p>
+                </div>
+            </div>
+
+            <p class="small fw-semibold text-secondary mb-2">Enquanto isso, veja o fluxo em 4 passos:</p>
+            <div class="passo-amostra">
+                <span class="num">1</span>
+                <div><strong>Entrar</strong> — login e senha · trocar senha no primeiro acesso.</div>
+            </div>
+            
+            <div class="passo-amostra">
+                <span class="num">2</span>
+                <div><strong>Agendar</strong> — ver grade de todos ou cadastrar na Central dos profissionais.</div>
+            </div>
+            
+            
+            
+            
+            <div class="passo-amostra">
+                <span class="num">3</span>
+                <div><strong>Acompanhar</strong> — status na grade · sino do relatório mensal (dia 3).</div>
+            </div>
+            <div class="passo-amostra">
+                <span class="num">4</span>
+                <div><strong>Dúvida ou cancelamento?</strong> — fale com a Polyana ou use este manual.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion shell-card mb-4" id="manualAccordion">
+        <div class="accordion-item border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#acc-func" aria-expanded="true">
+                    Horários da clínica
+                </button>
+            </h2>
+            <div id="acc-func" class="accordion-collapse collapse show" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        A clínica funciona com consultas de <strong>1 hora</strong>, em horários cheios (07:00, 08:00, 09:00…).
+                        Cada sala aparece na grade semanal da agenda.
+                    </p>
+                    <ul class="lista-curta mt-3">
+                        <li>Atendimento <strong>segunda a sábado</strong>, das 07:00 às 21:00.</li>
+                        <li><strong>Domingo fechado</strong> — não é possível marcar consulta nesse dia.</li>
+                        <li>No <strong>domingo</strong>, quem paga <strong>por dia</strong> pode adiantar o PIX da <strong>próxima semana</strong> (segunda a sábado).</li>
+                        
+                        
+                        
+                        <li>Cada profissional segue a forma de pagamento definida pela Polyana (diário, semanal ou mensal).</li>
+                    </ul>
+                    
+                    
+                    
+                    <div class="manual-nota mb-0">
+                        Profissionais com pagamento <strong>diário</strong> ainda podem recuperar no mesmo dia, até o horário da consulta.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-grade">
+                    Como usar a tela da agenda
+                </button>
+            </h2>
+            <div id="acc-grade" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        A agenda mostra a semana atual em formato de grade: <strong>linhas = horários</strong> e
+                        <strong>colunas = salas</strong>. Cada célula ocupada traz o nome do cliente e do profissional.
+                    </p>
+                    <p class="manual-subtitulo">Partes da tela</p>
+                    <ul class="lista-curta">
+                        <li><strong>Grade semanal</strong> — visão geral de quem está em cada sala e horário.</li>
+                        
+                        
+                        <li><strong>Central dos profissionais</strong> — cadastro da equipe (dona da clínica).</li>
+                        <li><strong>Manual</strong> — este guia, sempre acessível pelo botão no topo.</li>
+                    </ul>
+                    <p class="manual-subtitulo">Dois cliques na grade</p>
+                    <ul class="lista-curta mb-0">
+                        <li>Polyana e a administração podem <strong>cancelar</strong> uma data ou <strong>encerrar</strong> série semanal/quinzenal.</li>
+                        
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-agenda">
+                    Agendamentos e taxas PIX
+                </button>
+            </h2>
+            <div id="acc-agenda" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        Ao marcar um horário, você paga a <strong>taxa de locação da sala</strong> (PIX).
+                        O valor depende do tipo de agendamento e da sala escolhida.
+                    </p>
+                    <div class="row g-3 mt-1">
+                        <div class="col-sm-4">
+                            <span class="chip">Avulso</span>
+                            <p class="small mb-0 mt-1"><strong>1 data só.</strong> Taxa R$ 35 por consulta.</p>
+                        </div>
+                        <div class="col-sm-4">
+                            <span class="chip">Fixo semanal</span>
+                            <p class="small mb-0 mt-1"><strong>12 semanas</strong> no mesmo dia/hora. Taxa R$ 32 por consulta.</p>
+                        </div>
+                        <div class="col-sm-4">
+                            <span class="chip">Quinzenal</span>
+                            <p class="small mb-0 mt-1"><strong>6 datas</strong> (a cada 2 semanas). Taxa R$ 35 por consulta.</p>
+                        </div>
+                    </div>
+                    <p class="manual-subtitulo">Taxas especiais</p>
+                    <ul class="lista-curta">
+                        <li><strong>Sala 4:</strong> taxa reduzida de <strong>R$ 25</strong> por consulta.</li>
+                        <li><strong>Indicação da clínica:</strong> a taxa passa a ser <strong>30%</strong> do valor que o profissional recebe na consulta (marque o checkbox no formulário).</li>
+                    </ul>
+                    
+                    
+                    <p class="manual-subtitulo">Cancelar x encerrar série</p>
+                    <ul class="lista-curta">
+                        <li><strong>Encerrar série</strong> — interrompe as próximas datas de um fixo semanal ou quinzenal (profissional pode encerrar a própria; Polyana/admin encerram qualquer um).</li>
+                        <li><strong>Cancelar data</strong> — remove um horário específico; somente Polyana e a administração fazem isso na grade.</li>
+                        <li>Horário <strong>já pago</strong> = locação de sala, <strong>sem reembolso</strong>. Para cancelar, fale com a <strong>Polyana</strong>.</li>
+                    </ul>
+                    <div class="manual-nota mb-0">
+                        Séries fixas se renovam sozinhas: quando uma data passa, o sistema mantém até
+                        <strong>12 semanas</strong> (fixo) ou <strong>6 ocorrências</strong> (quinzenal) sempre à frente.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+
+        <div class="accordion-item border-0 border-top" id="pagamentos-visao">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-pix-visao">
+                    Pagamentos (visão da gestão)
+                </button>
+            </h2>
+            <div id="acc-pix-visao" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        Cada profissional (exceto a dona da clínica) paga a locação via <strong>Meus pagamentos</strong>.
+                        A Polyana define na <strong>Central dos profissionais</strong> se a pessoa paga
+                        <strong>por dia</strong>, <strong>por semana</strong> ou <strong>por mês</strong>.
+                    </p>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <span class="chip">Diário</span>
+                            <p class="small mb-0 mt-2">Paga na véspera de cada consulta (D-1)</p>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="chip">Semanal</span>
+                            <p class="small mb-0 mt-2">Semana liberada até domingo; paga sábado ou domingo</p>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="chip">Mensal</span>
+                            <p class="small mb-0 mt-2">Mês liberado para agendar; paga até dia 10 do mês seguinte</p>
+                        </div>
+                    </div>
+                    <p class="manual-subtitulo">Resumo das três formas</p>
+                    <ul class="lista-curta">
+                        <li><strong>Diário:</strong> cobrança na véspera de cada consulta (D-1), até 23:59; recuperação no mesmo dia até o horário.</li>
+                        <li><strong>Semanal:</strong> semana liberada até domingo; PIX no sábado ou domingo; bloqueia na segunda se não pagar.</li>
+                        <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 10 paga o mês anterior; bloqueia após o dia 10.</li>
+                    </ul>
+                    <div class="manual-nota mb-0">
+                        No manual, cada profissional vê <strong>só a explicação da forma de pagamento dele</strong>.
+                        No <strong>Financeiro</strong>, a Polyana confere receita PIX por mês.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" id="dona-admin">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-dona">
+                    Dona da clínica e administração
+                </button>
+            </h2>
+            <div id="acc-dona" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        Como dona da clínica, você gerencia equipe, cancelamentos e visão financeira da Afetto.
+                    </p>
+                    
+                    <ul class="lista-curta mb-3">
+                        <li><strong>Central dos profissionais</strong> — cadastrar profissional, resetar senha e escolher se paga <strong>por dia, semana ou mês</strong>.</li>
+                        <li><strong>Grade semanal</strong> — dois cliques em um horário para cancelar data ou encerrar série de qualquer profissional.</li>
+                        <li><strong>Relatório mensal</strong> — no <strong>dia 3</strong> o mês anterior é fechado; PDF disponível até o <strong>dia 10</strong> (ícone de sino).</li>
+                        <li><strong>Financeiro</strong> — receita PIX por mês, conferência de atendimentos e exportação.</li>
+                        
+                    </ul>
+                    <div class="manual-nota mb-3">
+                        Horários pagos são locação de sala. Cancelamentos são tratados com a profissional;
+                        o sistema não estorna PIX automaticamente.
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="/agendamentos/central-profissionais" class="btn btn-warning btn-sm">Central</a>
+                        <a href="/agendamentos/financeiro" class="btn btn-outline-primary btn-sm">Financeiro</a>
+                        <a href="/agendamentos/dashboard" class="btn btn-outline-secondary btn-sm">Abrir agenda</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-senha">
+                    Senha e ajuda rápida
+                </button>
+            </h2>
+            <div id="acc-senha" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body" id="duvidas">
+                    <p class="manual-lead">
+                        Cada profissional tem login individual. Não compartilhe senha — o histórico de agendamentos e pagamentos fica vinculado ao seu usuário.
+                    </p>
+                    <ul class="lista-curta">
+                        <li>No <strong>primeiro acesso</strong>, troque a senha em <strong>Trocar senha</strong> (menu da agenda).</li>
+                        <li>Esqueceu a senha? Peça reset na <strong>Central dos profissionais</strong> (Polyana).</li>
+                    </ul>
+                    <p class="manual-subtitulo">Respostas rápidas</p>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light"><tr><th>Se…</th><th>Faça…</th></tr></thead>
+                            <tbody>
+                            <tr><td>Quer marcar consulta</td><td>Agenda → <strong>Novo agendamento</strong></td></tr>
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            <tr><td>Cancelar horário pago</td><td>Dois cliques na grade (Polyana/admin)</td></tr>
+                            <tr><td>Dúvida geral</td><td>Fale com a <strong>Polyana</strong> ou use o WhatsApp de suporte</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ajuda-suporte-rodape card shell-card mt-3">
+    <div class="card-body py-3 px-4">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <p class="small text-muted mb-0">
+                <strong class="text-dark">Precisa de ajuda?</strong>
+                Se tiver dificuldade,
+                <a href="/agendamentos/manual" class="fw-semibold">acesse o manual</a>.
+                Se tiver problema com o site, entre em contato com o suporte.
+            </p>
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-shrink-0">
+                <a href="/agendamentos/manual" class="btn btn-sm btn-outline-primary">
+                    Abrir manual
+                </a>
+                <a href="https://wa.me/5537998550994?text=Ola%21%20Preciso%20de%20suporte%20com%20a%20Agenda%20Afetto."
+                   class="btn btn-sm btn-success d-inline-flex align-items-center gap-2"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Falar com suporte no WhatsApp">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                    WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<a class="whatsapp-suporte"
+   href="https://wa.me/5537998550994?text=Ola%21%20Preciso%20de%20suporte%20com%20a%20Agenda%20Afetto."
+   target="_blank"
+   rel="noopener noreferrer"
+   aria-label="Falar com suporte no WhatsApp"
+   title="Falar com suporte no WhatsApp">
+    <span class="whatsapp-suporte__texto text-end text-secondary">
+        <span class="whatsapp-suporte__rotulo">Suporte - WhatsApp</span>
+    </span>
+    <span class="whatsapp-suporte__btn">
+        <svg class="whatsapp-suporte__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+        <span class="fw-semibold small">WhatsApp</span>
+    </span>
+</a>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        var hash = window.location.hash;
+        if (!hash) return;
+        var map = {
+            '#pagamentos': 'acc-pix',
+            '#pagamentos-visao': 'acc-pix-visao',
+            '#dona-admin': 'acc-dona',
+            '#funcionamento': 'acc-func',
+            '#grade': 'acc-grade',
+            '#agendamentos': 'acc-agenda',
+            '#senha': 'acc-senha',
+            '#duvidas': 'acc-senha',
+            '#video': null
+        };
+        if (hash === '#video') {
+            document.getElementById('video')?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+        var targetId = map[hash];
+        if (!targetId) return;
+        var el = document.getElementById(targetId);
+        if (el) {
+            bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).show();
+            el.closest('.accordion-item')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    })();
+</script>
+</body>
+</html>

@@ -37,7 +37,41 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                     ADD COLUMN IF NOT EXISTS pdf_notificacao_baixado_em TIMESTAMP
                     """
             );
-            log.info("Schema PostgreSQL: coluna pdf_notificacao_baixado_em verificada.");
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS periodicidade_pagamento VARCHAR(20) DEFAULT 'DIARIO'
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE agendamentos
+                    ADD COLUMN IF NOT EXISTS data_referencia_semana_pagamento DATE
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE agendamentos
+                    ADD COLUMN IF NOT EXISTS data_referencia_mes_pagamento DATE
+                    """
+            );
+            jdbcTemplate.update(
+                    """
+                    UPDATE agendamentos
+                    SET data_referencia_semana_pagamento = CAST(data_hora_inicio AS DATE)
+                    WHERE data_referencia_semana_pagamento IS NULL
+                      AND data_hora_inicio IS NOT NULL
+                    """
+            );
+            jdbcTemplate.update(
+                    """
+                    UPDATE agendamentos
+                    SET data_referencia_mes_pagamento = DATE_TRUNC('month', CAST(data_hora_inicio AS DATE))::DATE
+                    WHERE data_referencia_mes_pagamento IS NULL
+                      AND data_hora_inicio IS NOT NULL
+                    """
+            );
+            log.info("Schema PostgreSQL: colunas de pagamento e usuarios verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
         }

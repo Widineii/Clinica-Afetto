@@ -30,14 +30,14 @@
 </div>
 
 <div th:fragment="series-lista (series, radioPrefix)">
-    <p th:if="${#lists.isEmpty(series)}" class="text-muted small mb-0 py-1">Nenhuma serie nesta categoria.</p>
+    <p th:if="${#lists.isEmpty(series)}" class="text-muted small mb-0 py-1">Nenhuma série nesta categoria.</p>
     <div th:each="serie : ${series}" class="meus-agendamentos-serie-linha">
         <div class="meus-agendamentos-serie-linha__titulo" th:text="${serie.rotuloCabecalho}">Cliente - Sala</div>
         <p th:if="${serie.valoresConsultaResumo != null}"
            class="agendamento-valores small text-muted mb-2"
            th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
         <p class="meus-agendamentos-serie-linha__dica mb-2"
-           th:text="${isAdmin or isDonaClinica ? 'Selecione uma data e use Cancelar data, Pagar data ou Realocar data (se ja pago).' : 'Selecione uma data para pagar ou realocar (datas com ✓). Cancelamento so com a dona da clinica ou administracao.'}">
+           th:text="${isAdmin or isDonaClinica ? 'Selecione uma data para cancelar, pagar ou realocar. Encerrar série remove todos os horários de uma vez.' : 'Selecione uma data para pagar ou realocar. Encerrar série remove todos os horários de uma vez. Cancelamento de uma data só com a Polyana.'}">
             Selecione uma data para pagar.
         </p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
@@ -76,13 +76,13 @@
                     Cancelar data
                 </button>
             </form>
-            <form th:if="${isAdmin or isDonaClinica}"
-                  th:action="@{/agendamentos/{id}/encerrar-fixo(id=${serie.agendamentoReferenciaId})}"
+            <form class="meus-agendamentos-encerrar-serie-form d-inline"
                   method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                <button type="submit" class="btn btn-sm btn-outline-primary"
-                        onclick="return confirm('Isso vai encerrar esta serie desta data em diante. Deseja continuar?');">
-                    Encerrar serie
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary meus-agendamentos-encerrar-serie-btn"
+                        th:attr="data-tipo-serie=${serie.tipoRecorrencia},data-agendamento-referencia-id=${serie.agendamentoReferenciaId}">
+                    Encerrar série
                 </button>
             </form>
         </div>

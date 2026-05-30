@@ -559,7 +559,7 @@
                  th:classappend="${relatorioGeradoAguardando} ? 'mes-passado-panel--ready' : ''">
             <div class="mes-passado-panel__tab">
                 <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
-                <span>Relatorio do mes passado — <span th:text="${mesPassadoLabel}">Abril de 2026</span></span>
+                <span>Relatório do mês passado — <span th:text="${mesPassadoLabel}">Abril de 2026</span></span>
                 <span th:if="${relatorioGeradoAguardando and !pdfJaBaixado}" class="badge-aguardando">Aguardando download</span>
                 <span th:if="${pdfJaBaixado}" class="badge-baixado">PDF baixado</span>
             </div>
@@ -567,28 +567,28 @@
                 <p class="mes-passado-status" th:if="${aguardandoDia3}">
                     A partir do dia <strong th:text="${diaFechamento}">3</strong> de
                     <strong th:text="${mesAtualLabel}">maio</strong> o sistema gera o PDF de
-                    <strong th:text="${mesPassadoLabel}">abril</strong>, guarda o relatorio aqui e so depois
-                    remove os agendamentos <strong>avulsos</strong> daquele mes.
+                    <strong th:text="${mesPassadoLabel}">abril</strong>, guarda o relatório aqui e só depois
+                    remove os agendamentos <strong>avulsos</strong> daquele mês.
                 </p>
                 <p class="mes-passado-status" th:if="${aguardandoProcessamentoAutomatico}">
-                    Ja passou do dia <strong th:text="${diaFechamento}">3</strong>. O fechamento automatico vai gerar o PDF
+                    Já passou do dia <strong th:text="${diaFechamento}">3</strong>. O fechamento automático vai gerar o PDF
                     e limpar os avulsos de <strong th:text="${mesPassadoLabel}">abril</strong> em breve
-                    (ao abrir esta pagina ou no proximo reinicio do servidor local).
+                    (ao abrir esta página ou no próximo reinício do servidor local).
                 </p>
                 <p class="mes-passado-status" th:if="${relatorioGeradoAguardando}">
-                    Fechamento do dia <strong th:text="${diaFechamento}">3</strong> concluido para
+                    Fechamento do dia <strong th:text="${diaFechamento}">3</strong> concluído para
                     <strong th:text="${mesPassadoLabel}">abril</strong>.
                     <span th:if="${geradoEm != null}">
                         Gerado em <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
                     </span>
                     <span th:if="${agendamentosRemovidos != null and agendamentosRemovidos > 0}">
-                        <strong th:text="${agendamentosRemovidos}">0</strong> avulso(s) do mes passado ja foram removidos da agenda.
+                        <strong th:text="${agendamentosRemovidos}">0</strong> avulso(s) do mês passado já foram removidos da agenda.
                     </span>
-                    Visualize o PDF abaixo ou use <strong>Baixar PDF oficial (mensal)</strong>. O relatorio semanal nao altera o sino.
+                    Visualize o PDF abaixo ou use <strong>Baixar PDF oficial (mensal)</strong>. O relatório semanal não altera o sino.
                 </p>
                 <p class="mes-passado-status" th:if="${pdfRemovido and relatorioArquivado and !aguardandoDia3}">
-                    O PDF foi removido do banco no dia <strong th:text="${diaRemocaoPdf}">10</strong> para economizar espaco.
-                    Voce ainda pode baixar: o sistema gera o PDF na hora com os dados salvos.
+                    O PDF foi removido do banco no dia <strong th:text="${diaRemocaoPdf}">10</strong> para economizar espaço.
+                    Você ainda pode baixar: o sistema gera o PDF na hora com os dados salvos.
                 </p>
 
                 <div th:if="${exibirPdfInline}" class="pdf-viewer-wrap">
@@ -605,7 +605,7 @@
             <div class="card">
                 <div class="card-icon"><i class="fa-solid fa-calendar-days"></i></div>
                 <div class="card-info">
-                    <p>Total de Horarios Agendados no Mes</p>
+                    <p>Total de horários agendados no mês</p>
                     <h3 th:text="${relatorio.totalGeral}">0</h3>
                 </div>
             </div>
@@ -617,7 +617,7 @@
                 </div>
             </div>
         </div>
-        <p class="disclaimer">* Agendamentos cancelados nao entram neste relatorio</p>
+        <p class="disclaimer">* Agendamentos cancelados não entram neste relatório</p>
 
         <div class="table-container" th:if="${!#lists.isEmpty(linhas)}">
             <div class="table-scroll">

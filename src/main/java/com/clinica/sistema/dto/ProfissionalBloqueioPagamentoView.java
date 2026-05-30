@@ -18,6 +18,6 @@ public class ProfissionalBloqueioPagamentoView {
     }
 
     public String getMensagemBloqueio() {
-        return "Sistema do usuario " + nome + " foi bloqueado por nao pagar.";
+        return "Sistema do usuário " + nome + " foi bloqueado por não pagar.";
     }
 }

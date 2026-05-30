@@ -21,7 +21,7 @@ import java.util.Map;
 public class GlobalControllerExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalControllerExceptionHandler.class);
-    private static final String MSG_PADRAO = "Nao foi possivel concluir sua solicitacao. Tente novamente.";
+    private static final String MSG_PADRAO = "Não foi possível concluir sua solicitação. Tente novamente.";
 
     @ExceptionHandler(PagamentoWebhookNaoAutorizadoException.class)
     public ResponseEntity<Map<String, String>> tratarWebhookNaoAutorizado(PagamentoWebhookNaoAutorizadoException ex) {

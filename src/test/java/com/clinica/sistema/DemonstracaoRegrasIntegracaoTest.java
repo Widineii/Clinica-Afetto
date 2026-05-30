@@ -3,6 +3,7 @@ package com.clinica.sistema;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
@@ -17,13 +18,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.List;
-
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -82,6 +82,8 @@ class DemonstracaoRegrasIntegracaoTest {
         Usuario admin = usuarioRepository.findByLogin("admin").orElseThrow();
         Usuario polyana = usuarioRepository.findByLogin("polyana").orElseThrow();
         Usuario carol = usuarioRepository.findByLogin("carol").orElseThrow();
+        carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+        usuarioRepository.save(carol);
         Sala sala1 = agendamentoService.listarSalas().stream()
                 .filter(s -> "Sala 1".equals(s.getNome()))
                 .findFirst()
@@ -92,13 +94,15 @@ class DemonstracaoRegrasIntegracaoTest {
                 .orElseThrow();
 
         LocalDate hoje = LocalDate.now();
-        LocalDate amanha = hoje.plusDays(1);
-        LocalDate depoisDeAmanha = hoje.plusDays(2);
+        LocalDate amanha = proximoDiaUtil(hoje.plusDays(1));
+        LocalDate depoisDeAmanha = proximoDiaUtil(hoje.plusDays(2));
 
-        // 1) Realocacao: avulso pago (Carol, depois de amanha)
+        // 1) Realocacao: avulso pago (Carol, depois de amanha) — admin ja marca 1a consulta como PAGO
         Agendamento pago = salvarAvulso(carol, admin, sala1, depoisDeAmanha, LocalTime.of(10, 0), PREFIXO + "REALOCAR");
-        pagamentoConsultaService.simularPagamento(pago.getId(), admin);
-        pago = agendamentoRepository.findById(pago.getId()).orElseThrow();
+        if (!PagamentoStatus.PAGO.equals(pago.getStatusPagamento())) {
+            pagamentoConsultaService.simularPagamento(pago.getId(), admin);
+            pago = agendamentoRepository.findById(pago.getId()).orElseThrow();
+        }
 
         assertTrue(agendamentoService.podeRealocar(pago, polyana));
         RelocacaoAgendamentoForm reloc = new RelocacaoAgendamentoForm();
@@ -112,11 +116,13 @@ class DemonstracaoRegrasIntegracaoTest {
         LocalDate dataRealocada = proximoDiaUtil(depoisDeAmanha.plusDays(1));
         assertEquals(LocalDateTime.of(dataRealocada, LocalTime.of(14, 0)), realocado.getDataHoraInicio());
 
-        // 2) D-1 liberacao: consulta HOJE (prazo vespera ja passou) sem pagamento
+        // 2) D-1 liberacao: consulta HOJE sem pagamento (salvo direto no banco para evitar QR automatico)
         LocalTime horarioFuturoHoje = LocalTime.now().getHour() < 20
                 ? LocalTime.of(20, 0)
                 : LocalTime.of(21, 0);
-        Agendamento semPagamento = salvarAvulso(carol, admin, sala1, hoje, horarioFuturoHoje, PREFIXO + "LIBERAR");
+        Agendamento semPagamento = salvarDiretoNoBanco(
+                carol, sala1, hoje, horarioFuturoHoje, PREFIXO + "LIBERAR", PagamentoStatus.AGUARDANDO_PAGAMENTO
+        );
         assertTrue(pagamentoConsultaService.passouPrazoPagamentoVespera(semPagamento));
 
         int liberados = pagamentoConsultaService.liberarVagasPorFaltaPagamento();
@@ -147,6 +153,31 @@ class DemonstracaoRegrasIntegracaoTest {
         form.setValorProfissionalRecebe(new BigDecimal("200.00"));
         form.setValorClinicaCobra(new BigDecimal("35.00"));
         return agendamentoService.salvar(form, gestor);
+    }
+
+    private Agendamento salvarDiretoNoBanco(
+            Usuario profissional,
+            Sala sala,
+            LocalDate data,
+            LocalTime hora,
+            String cliente,
+            PagamentoStatus status
+    ) {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setProfissional(profissional);
+        agendamento.setSala(sala);
+        agendamento.setNomeCliente(cliente);
+        agendamento.setDataHoraInicio(LocalDateTime.of(data, hora));
+        agendamento.setDataHoraFim(LocalDateTime.of(data, hora.plusHours(1)));
+        agendamento.setFixo(false);
+        agendamento.setTipoRecorrencia("AVULSO");
+        agendamento.setValorProfissionalRecebe(new BigDecimal("200.00"));
+        agendamento.setValorClinicaCobra(new BigDecimal("35.00"));
+        agendamento.setValorLiquidoProfissional(new BigDecimal("165.00"));
+        agendamento.setValorPagamento(new BigDecimal("35.00"));
+        agendamento.setIndicacaoDona(false);
+        agendamento.setStatusPagamento(status);
+        return agendamentoRepository.save(agendamento);
     }
 
     private static LocalDate proximoDiaUtil(LocalDate data) {

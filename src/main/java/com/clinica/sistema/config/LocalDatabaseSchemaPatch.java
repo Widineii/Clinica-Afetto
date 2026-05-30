@@ -39,6 +39,10 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaSeNecessario("pagamento_iniciado_em", "TIMESTAMP");
             adicionarColunaSeNecessario("pagamento_expira_em", "TIMESTAMP");
             adicionarColunaSeNecessario("liberado_em", "TIMESTAMP");
+            adicionarColunaUsuariosSeNecessario("periodicidade_pagamento", "VARCHAR(20) DEFAULT 'DIARIO'");
+            adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");
+            adicionarColunaSeNecessario("data_referencia_mes_pagamento", "DATE");
+            preencherReferenciasCobranca();
             removerChecksStatusPagamento();
             log.info("Schema H2 local: pagamento e status_pagamento verificados.");
         } catch (Exception ex) {
@@ -60,6 +64,41 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
         if (existe != null && existe == 0) {
             jdbcTemplate.execute("ALTER TABLE agendamentos ADD COLUMN " + coluna + " " + tipoSql);
         }
+    }
+
+    private void adicionarColunaUsuariosSeNecessario(String coluna, String tipoSql) {
+        Integer existe = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE UPPER(TABLE_NAME) = 'USUARIOS'
+                  AND UPPER(COLUMN_NAME) = ?
+                """,
+                Integer.class,
+                coluna.toUpperCase()
+        );
+        if (existe != null && existe == 0) {
+            jdbcTemplate.execute("ALTER TABLE usuarios ADD COLUMN " + coluna + " " + tipoSql);
+        }
+    }
+
+    private void preencherReferenciasCobranca() {
+        jdbcTemplate.update(
+                """
+                UPDATE agendamentos
+                SET data_referencia_semana_pagamento = CAST(data_hora_inicio AS DATE)
+                WHERE data_referencia_semana_pagamento IS NULL
+                  AND data_hora_inicio IS NOT NULL
+                """
+        );
+        jdbcTemplate.update(
+                """
+                UPDATE agendamentos
+                SET data_referencia_mes_pagamento = TRUNC(CAST(data_hora_inicio AS DATE), 'MONTH')
+                WHERE data_referencia_mes_pagamento IS NULL
+                  AND data_hora_inicio IS NOT NULL
+                """
+        );
     }
 
     private void removerChecksStatusPagamento() {

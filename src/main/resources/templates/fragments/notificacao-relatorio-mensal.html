@@ -2,23 +2,53 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
 <th:block th:fragment="sino">
-    <div class="dropdown notif-bell-wrap">
+    <div class="dropdown notif-bell-wrap"
+         th:with="temNotifRelatorio=${exibirBolinhaNotificacaoRelatorio == true}, temNotifEncerramento=${exibirBolinhaNotificacaoEncerramento == true}, temNotifPagamento=${exibirBolinhaNotificacaoPagamento == true}, temAlgumaNotif=${temNotifRelatorio or temNotifEncerramento or temNotifPagamento}">
         <button type="button"
                 class="btn btn-light btn-notif-bell position-relative dropdown-toggle"
                 data-bs-toggle="dropdown"
                 data-bs-auto-close="outside"
                 aria-expanded="false"
-                th:attr="aria-label=${exibirBolinhaNotificacaoRelatorio == true} ? 'Voce tem notificacao do relatorio mensal' : 'Notificacoes'"
+                th:attr="aria-label=${temAlgumaNotif} ? 'Você tem notificações pendentes' : 'Notificações'"
                 title="Notificacoes">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6V11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10 3.17 10 4v.68C7.13 5.36 5.5 7.92 5.5 11v5l-2 2v1h17v-1l-2-2z"/>
             </svg>
-            <span th:if="${exibirBolinhaNotificacaoRelatorio}"
+            <span th:if="${temAlgumaNotif}"
                   class="notif-bell-badge"
                   aria-hidden="true"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-end shadow notif-bell-panel p-3">
-            <th:block th:if="${exibirBolinhaNotificacaoRelatorio}">
+            <th:block th:if="${temNotifPagamento}">
+                <p class="notif-bell-kicker mb-1">Pagamento</p>
+                <p class="notif-bell-title mb-2"
+                   th:text="${notificacaoPagamentoProfissional.mensagemResumo}">Pagamento pendente</p>
+                <p class="notif-bell-data mb-2"
+                   th:if="${notificacaoPagamentoProfissional.rotuloData != null}"
+                   th:text="${notificacaoPagamentoProfissional.rotuloData}">29/05/2026</p>
+                <p class="notif-bell-text mb-3"
+                   th:text="${notificacaoPagamentoProfissional.mensagemPainel}">Detalhes</p>
+                <a th:href="${notificacaoPagamentoProfissional.urlMeusPagamentos}"
+                   class="btn btn-warning w-100"
+                   th:classappend="${temNotifEncerramento or temNotifRelatorio} ? ' mb-3' : ''">
+                    Ir para pagamentos
+                </a>
+            </th:block>
+            <th:block th:if="${temNotifEncerramento}">
+                <hr th:if="${temNotifPagamento}" class="notif-bell-divider my-3">
+                <p class="notif-bell-kicker mb-1">Encerramento de série</p>
+                <p class="notif-bell-title mb-2"
+                   th:text="${notificacaoEncerramentoSerie.mensagemResumo}">Alguém encerrou série</p>
+                <p class="notif-bell-text mb-3"
+                   th:text="${notificacaoEncerramentoSerie.mensagemPainel}">Detalhes</p>
+                <a th:href="@{/agendamentos/central-profissionais(aba='encerramentos',viaNotificacaoEncerramento=true)}"
+                   class="btn btn-teal w-100"
+                   th:classappend="${temNotifRelatorio} ? ' mb-3' : ''">
+                    Ver encerramentos
+                </a>
+            </th:block>
+            <th:block th:if="${temNotifRelatorio}">
+                <hr th:if="${temNotifPagamento or temNotifEncerramento}" class="notif-bell-divider my-3">
                 <p class="notif-bell-kicker mb-1">Relatorio mensal</p>
                 <p class="notif-bell-title mb-2"
                    th:text="${notificacaoRelatorioMensal.mensagemResumo}">Relatorio pronto</p>
@@ -26,13 +56,13 @@
                    th:text="${notificacaoRelatorioMensal.mensagemPainel}">Mensagem</p>
                 <a th:href="@{/agendamentos/relatorio/mensal(viaNotificacao=1)}"
                    class="btn btn-warning w-100"
-                   th:text="${notificacaoRelatorioMensal.pendenteArquivamento} ? 'Ver relatorio do mes passado' : 'Relatorio gerado — baixar PDF'">
+                   th:text="${notificacaoRelatorioMensal.pendenteArquivamento} ? 'Ver relatório do mês passado' : 'Relatório gerado — baixar PDF'">
                     Abrir relatorio
                 </a>
             </th:block>
-            <th:block th:unless="${exibirBolinhaNotificacaoRelatorio}">
+            <th:block th:unless="${temAlgumaNotif}">
                 <p class="notif-bell-kicker mb-1">Notificacoes</p>
-                <p class="notif-bell-empty mb-0">Nao tem notificacao.</p>
+                <p class="notif-bell-empty mb-0">Não tem notificação.</p>
             </th:block>
         </div>
     </div>

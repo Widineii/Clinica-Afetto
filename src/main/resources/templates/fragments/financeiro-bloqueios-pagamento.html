@@ -11,14 +11,14 @@
             <div>
                 <h2 class="financeiro-bloqueios__title h6 mb-1">Profissionais com agenda bloqueada</h2>
                 <p class="financeiro-bloqueios__subtitle mb-0">
-                    Pagamento da sala em atraso. O profissional nao agenda nem usa sala ate quitar.
+                    Pagamento da sala em atraso. O profissional não agenda nem usa sala até quitar.
                 </p>
             </div>
         </div>
         <ul class="financeiro-bloqueios__lista mb-0">
             <li th:each="bloqueio : ${bloqueios}" class="financeiro-bloqueios__item">
                 <span class="financeiro-bloqueios__msg" th:text="${bloqueio.mensagemBloqueio}">
-                    Sistema do usuario Julia foi bloqueado por nao pagar.
+                    Sistema do usuário Julia foi bloqueado por não pagar.
                 </span>
                 <span class="financeiro-bloqueios__meta"
                       th:text="${bloqueio.pendencias + (bloqueio.pendencias == 1 ? ' pendencia' : ' pendencias')}">

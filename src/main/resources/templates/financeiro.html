@@ -11,7 +11,7 @@
 
     <div th:replace="~{fragments/financeiro-hero :: hero(
         titulo='Gestao financeira',
-        subtitulo='Receita da clinica confirmada por PIX. O total muda conforme os pagamentos entram no mes.'
+        subtitulo='Receita da clínica confirmada por PIX. O total muda conforme os pagamentos entram no mês.'
     )}"></div>
 
     <div th:if="${sucesso}" class="alert alert-success financeiro-card mb-3" th:text="${sucesso}"></div>
@@ -33,7 +33,7 @@
                     <div class="col-md-7">
                         <p class="mb-1 fw-semibold" th:text="'Visualizando ' + ${receita.mesAnoLabel}">Visualizando Maio de 2026</p>
                         <p class="financeiro-hint mb-0">
-                            Soma das taxas da clinica com status <strong>Pago</strong>, pela data em que o PIX foi confirmado.
+                            Soma das taxas da clínica com status <strong>Pago</strong>, pela data em que o PIX foi confirmado.
                         </p>
                     </div>
                 </div>
@@ -43,7 +43,7 @@
 
     <div class="financeiro-resumo-grid mb-4">
         <div class="financeiro-resumo-card financeiro-resumo-card--destaque">
-            <div class="financeiro-resumo-label">Total recebido no mes (PIX)</div>
+            <div class="financeiro-resumo-label">Total recebido no mês (PIX)</div>
             <div class="financeiro-resumo-valor" th:text="${receita.totalRecebidoFormatado}">R$ 0,00</div>
         </div>
         <div class="financeiro-resumo-card">
@@ -72,7 +72,7 @@
                         <th>Cliente</th>
                         <th>Sala</th>
                         <th>Consulta</th>
-                        <th class="text-end">Taxa clinica</th>
+                        <th class="text-end">Taxa clínica</th>
                     </tr>
                     </thead>
                     <tbody>
