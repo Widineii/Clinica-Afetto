@@ -39,6 +39,40 @@ iframe {
     white-space: nowrap;
 }
 
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .afetto-page-shell {
+        --afetto-shell-max: 100%;
+    }
+
+    .hero-actions .btn,
+    .hero-actions form .btn {
+        font-size: 0.875rem;
+    }
+}
+
+/* Notebook + celular: telas abaixo de monitor largo */
+@media (max-width: 1199.98px) {
+    .afetto-top-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .afetto-top-actions .btn,
+    .afetto-top-actions form {
+        flex: 0 1 auto;
+    }
+
+    .afetto-hero-stack {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .table-responsive,
+    .grade-scroll-wrap {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
 @media (max-width: 767.98px) {
     .hero-actions {
         width: 100%;
@@ -124,12 +158,6 @@ iframe {
     .whatsapp-suporte__btn {
         padding: 0.75rem;
         border-radius: 50%;
-    }
-}
-
-@media (min-width: 768px) and (max-width: 1199.98px) {
-    .afetto-page-shell {
-        --afetto-shell-max: 100%;
     }
 }
 

@@ -143,7 +143,15 @@
 
         .grade-scroll-wrap {
             position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            border-radius: 1rem;
+        }
+
+        .grade-scroll-wrap.table-responsive {
+            overflow-x: auto;
         }
 
         .grade-scroll-wrap::after {
@@ -161,6 +169,85 @@
         .grade-scroll-hint {
             display: none;
             margin-bottom: 8px;
+            padding: 0.45rem 0.75rem;
+            border-radius: 10px;
+            background: #f1f5f9;
+            border: 1px dashed #cbd5e1;
+            font-weight: 500;
+        }
+
+        .grade-scroll-hint::before {
+            content: "→ ";
+        }
+
+        .agenda-dia-cards {
+            display: none;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .agenda-dia-card {
+            border: 1px solid #dbe7f0;
+            border-radius: 14px;
+            padding: 0.85rem 0.95rem;
+            background: #fff;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        }
+
+        .agenda-dia-card__head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .agenda-dia-card__hora {
+            font-weight: 700;
+            color: var(--afetto-teal-dark);
+            font-size: 0.95rem;
+        }
+
+        .agenda-dia-card__sala {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+        }
+
+        .agenda-dia-card__cliente {
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: #0f172a;
+            margin-bottom: 0.35rem;
+        }
+
+        .agenda-dia-card__meta {
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        .agenda-dia-card__footer {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #eef2f6;
+        }
+
+        .agenda-dia-card__empty {
+            text-align: center;
+            color: #64748b;
+            padding: 1.5rem 1rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            background: #f8fafc;
+            font-size: 0.9rem;
         }
 
         .agenda-grid {
@@ -797,6 +884,17 @@
             justify-content: flex-end;
         }
 
+        .grade-semana-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .grade-semana-nav .btn {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
         .admin-modal .modal-content {
             border: 0;
             border-radius: 24px;
@@ -907,7 +1005,7 @@
         /* Notebook / tablet: grade com rolagem lateral */
         @media (max-width: 1199.98px) {
             .agenda-sidebar {
-                margin-top: 0.5rem;
+                margin-top: 0;
             }
 
             .shell-card .card-body {
@@ -916,6 +1014,12 @@
 
             .grade-scroll-hint {
                 display: block;
+            }
+
+            .grade-scroll-wrap {
+                margin-inline: -0.15rem;
+                scroll-snap-type: x proximity;
+                touch-action: pan-x;
             }
 
             .grade-scroll-wrap::after {
@@ -930,17 +1034,33 @@
 
             .agenda-grid thead th:not(.time-col) {
                 width: auto;
-                min-width: 96px;
+                min-width: clamp(84px, 11vw, 104px);
             }
 
             .agenda-grid .time-col {
                 width: 72px;
                 min-width: 72px;
             }
+
+            .agenda-dia-cards {
+                display: flex;
+            }
+
+            .grade-semana-nav {
+                width: 100%;
+            }
+
+            .grade-semana-nav .btn {
+                flex: 1 1 calc(50% - 0.25rem);
+            }
         }
 
         /* Celular */
         @media (max-width: 767.98px) {
+            .shell-card .card-body {
+                overflow: visible;
+            }
+
             .app-shell {
                 padding-top: 0.75rem;
                 padding-bottom: 1.5rem;
@@ -1026,12 +1146,10 @@
 
             .history-panel {
                 max-height: none;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
             }
 
-            .history-table {
-                min-width: 36rem;
+            .grade-semana-nav .btn {
+                flex: 1 1 100%;
             }
 
             .action-stack {
@@ -1095,7 +1213,7 @@
 <body>
 <div class="app-shell">
     <div class="hero-band mb-4">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 afetto-hero-stack">
             <div class="hero-band__brand">
                 <img class="hero-band__logo"
                      th:src="@{/images/afetto-logo.png}"
@@ -1108,7 +1226,7 @@
                     </p>
                 </div>
             </div>
-            <div class="top-actions">
+            <div class="top-actions afetto-top-actions">
                 <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
@@ -1164,7 +1282,7 @@
     </nav>
 
     <div class="row g-4 align-items-start agenda-main">
-        <div class="col-12 col-lg-4 order-2 order-lg-1 agenda-sidebar">
+        <div class="col-12 col-xl-4 agenda-sidebar">
             <div class="card shell-card" id="novo-agendamento">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1263,7 +1381,7 @@
                             </div>
 
                             <div class="row g-3 valores-consulta-grid">
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="valores-consulta-campo">
                                         <label class="form-label" for="valorProfissionalRecebe">Profissional recebe (R$)</label>
                                         <input th:field="*{valorProfissionalRecebe}"
@@ -1276,7 +1394,7 @@
                                                required>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="valores-consulta-campo">
                                         <label class="form-label" for="valorClinicaCobra">Clínica cobra nesta sessão (R$)</label>
                                         <input th:field="*{valorClinicaCobra}"
@@ -1361,10 +1479,10 @@
             </div>
         </div>
 
-        <div class="col-12 col-lg-8 order-1 order-lg-2" id="grade-semanal">
+        <div class="col-12 col-xl-8" id="grade-semanal">
             <div class="card shell-card">
                 <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
                         <div>
                             <p class="text-uppercase small text-muted mb-1">Visual inspirado na planilha</p>
                             <h2 class="h4 mb-1" th:text="${'Grade semanal da ' + agendaSala.sala.nome}">Grade semanal</h2>
@@ -1375,7 +1493,7 @@
                                 <strong th:text="${#temporals.format(agendaSala.inicioSemana.plusDays(5), 'dd/MM/yyyy')}">06/01/2026</strong>
                             </p>
                         </div>
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div class="grade-semana-nav d-flex flex-wrap gap-2 align-items-center">
                             <a class="btn btn-outline-secondary"
                                th:href="@{/agendamentos/dashboard(salaId=${agendaSala.sala.id}, semana=${agendaSala.inicioSemana.minusWeeks(1)})}">
                                 Semana anterior
@@ -1415,7 +1533,7 @@
                     </div>
 
                     <p class="grade-scroll-hint small text-muted">Deslize a grade para o lado para ver todos os dias da semana (segunda a sábado).</p>
-                    <div class="table-responsive rounded-4 overflow-hidden border grade-scroll-wrap">
+                    <div class="table-responsive rounded-4 border grade-scroll-wrap">
                         <table class="table agenda-grid mb-0">
                             <thead>
                             <tr>
@@ -1512,8 +1630,53 @@
                         <span class="text-muted small" th:unless="${podeGerenciarEquipe}">Seus horários de hoje em todas as salas.</span>
                     </div>
 
-                    <p class="small text-muted mb-3 d-md-none">Deslize a tabela para o lado para ver todas as colunas.</p>
-                    <div class="table-responsive history-panel">
+                    <div class="agenda-dia-cards d-xl-none">
+                        <div th:if="${#lists.isEmpty(agendamentosDoDia)}" class="agenda-dia-card__empty"
+                             th:text="${podeGerenciarEquipe ? 'Nenhum agendamento cadastrado para hoje.' : 'Você não tem atendimentos hoje.'}">
+                            Nenhum atendimento hoje.
+                        </div>
+                        <article th:each="registro : ${agendamentosDoDia}" class="agenda-dia-card">
+                            <div class="agenda-dia-card__head">
+                                <span class="agenda-dia-card__hora"
+                                      th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' – ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 – 09:00</span>
+                                <span class="agenda-dia-card__sala"
+                                      th:text="${registro.sala != null ? registro.sala.nome : '—'}">Sala 2</span>
+                            </div>
+                            <div class="agenda-dia-card__cliente">
+                                <span th:text="${registro.nomeCliente}">Cliente</span>
+                                <span th:if="${registro.fixo == true}" class="fixed-badge ms-1" th:text="${registro.recorrenciaLabel}">Fixo</span>
+                            </div>
+                            <div th:if="${podeGerenciarEquipe}" class="agenda-dia-card__meta">
+                                Profissional:
+                                <strong th:text="${registro.profissional != null ? registro.profissional.nome : '—'}">Julia</strong>
+                            </div>
+                            <div class="agenda-dia-card__meta"
+                                 th:if="${registro.possuiValoresConsulta() and (podeVerValoresDeTodos or (registro.profissional != null and registro.profissional.id == usuarioLogado.id))}">
+                                Valores:
+                                <strong>
+                                    <span th:text="${registro.valorProfissionalRecebeFormatado}">R$ 150,00</span>
+                                    /
+                                    <span th:text="${registro.valorClinicaCobraFormatado}">R$ 35,00</span>
+                                </strong>
+                                <span th:if="${registro.indicacaoDona == true}" class="text-muted"> (30%)</span>
+                            </div>
+                            <div class="agenda-dia-card__footer">
+                                <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${registro})}"></div>
+                                <form th:if="${pagamentoService.podePagarAgora(registro) and pagamentoService.podeVerPagamento(registro, usuarioLogado)}"
+                                      th:action="@{/pagamentos/{id}/gerar-link(id=${registro.id})}"
+                                      method="post"
+                                      class="d-inline">
+                                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                    <button type="submit" class="btn btn-sm btn-warning">Pagar agora</button>
+                                </form>
+                                <a th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
+                                   th:href="@{/pagamentos/{id}(id=${registro.id})}"
+                                   class="btn btn-sm btn-outline-primary">Ver QR</a>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div class="table-responsive history-panel d-none d-xl-block">
                         <table class="table history-table align-middle mb-0 responsive-stack-table">
                             <thead>
                             <tr>
