@@ -1,0 +1,15 @@
+# Copie cada linha para Railway → servico clinica-agenda → Variables
+# Troque os valores entre < >. NAO commite este arquivo com senhas reais.
+
+SPRING_PROFILES_ACTIVE=prod
+
+PGHOST=<ep-xxxx.us-east-1.aws.neon.tech>
+PGPORT=5432
+PGDATABASE=neondb
+PGUSER=neondb_owner
+PGPASSWORD=<senha-definida-no-neon-sql-editor>
+PGSSLMODE=require
+
+ADMIN_LOGIN=admin
+ADMIN_PASSWORD=<senha-forte-admin-clinica>
+ADMIN_NAME=Administracao

@@ -36,7 +36,7 @@ public class PostgresDataSourceConfig {
         if (urlBanco != null && urlBanco.contains("****")) {
             throw new IllegalStateException(
                     "DATABASE_URL contem asteriscos (senha mascarada). "
-                            + "Use variaveis PGHOST, PGUSER, PGPASSWORD separadas no Render."
+                            + "Use variaveis PGHOST, PGUSER, PGPASSWORD separadas no Railway ou Render."
             );
         }
 
@@ -62,8 +62,8 @@ public class PostgresDataSourceConfig {
             config.setPassword(pgPassword);
         } else {
             throw new IllegalStateException(
-                    "PostgreSQL nao configurado. Crie o banco no Neon, copie a connection string "
-                            + "e defina DATABASE_URL no Web Service do Render."
+                    "PostgreSQL nao configurado. Crie o banco no Neon e defina PGHOST, PGUSER, "
+                            + "PGPASSWORD, PGDATABASE e PGSSLMODE no Railway (ou DATABASE_URL completa)."
             );
         }
 

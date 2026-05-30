@@ -5,17 +5,18 @@
 ![Java](https://img.shields.io/badge/Java-17+-f97316)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-22c55e)
 ![Database](https://img.shields.io/badge/database-H2%20%7C%20PostgreSQL%20%7C%20MySQL-2563eb)
-![Deploy](https://img.shields.io/badge/deploy-Render-5b21b6)
+![Deploy](https://img.shields.io/badge/deploy-Railway%20%2B%20Neon-5b21b6)
 
 Sistema web de agenda para clinica com controle por profissional, sala, cliente, data e horario.
 
 Este projeto foi desenvolvido como item de portfolio para substituir o uso de planilhas abertas por um fluxo mais seguro, organizado e visual para a rotina de uma clinica.
 
-## Producao (Neon + Render)
+## Producao (Neon + Railway) — recomendado
 
-- Deploy: **[DEPLOY-NEON-RENDER.md](DEPLOY-NEON-RENDER.md)** (banco Neon + site Render)
-- Repositorio: [github.com/Widineii/clinica-agenda](https://github.com/Widineii/clinica-agenda)
-- Apos o deploy: `https://SEU-SERVICO.onrender.com`
+- Deploy: **[DEPLOY-NEON-RAILWAY.md](DEPLOY-NEON-RAILWAY.md)** (banco Neon grátis + site Railway Hobby)
+- Alternativa: **[DEPLOY-NEON-RENDER.md](DEPLOY-NEON-RENDER.md)** (banco Neon + site Render)
+- Repositorio: [github.com/Widineii/Clinica-Afetto](https://github.com/Widineii/Clinica-Afetto)
+- Apos o deploy: URL gerada no Railway (ex.: `https://clinica-agenda-production.up.railway.app`)
 
 ## Screenshots
 
@@ -55,7 +56,8 @@ Este projeto foi desenvolvido como item de portfolio para substituir o uso de pl
 - Bootstrap 5
 - Maven
 - Docker
-- Render
+- Railway + Neon
+- Render (alternativa)
 
 ## Como rodar localmente
 

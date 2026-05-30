@@ -1,4 +1,12 @@
-# Deploy no Railway com PostgreSQL (entrega ao cliente)
+# Deploy no Railway
+
+> **Recomendado (mais barato):** banco no **Neon grátis** + app no Railway — **[DEPLOY-NEON-RAILWAY.md](DEPLOY-NEON-RAILWAY.md)**
+
+O guia abaixo usa PostgreSQL **dentro** do Railway (custa mais). Use só se não quiser Neon.
+
+---
+
+# Deploy no Railway com PostgreSQL no Railway (alternativa)
 
 ## Por que PostgreSQL (obrigatório para o cliente)
 
