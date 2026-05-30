@@ -12,12 +12,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -144,30 +147,28 @@ class PagamentoConsultaServiceTest {
 
     @Test
     void consultaPagaNaoApareceEmPendenciasNemNaSemana() {
+        comDataReferencia(LocalDate.of(2026, 5, 28), LocalTime.of(10, 0), () -> {
         Usuario profissional = new Usuario();
         profissional.setId(10L);
         profissional.setDonaClinica(false);
         profissional.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
 
-        var periodo = pagamentoConsultaService.resolverPeriodoSemanaPagamento(LocalDate.now());
-        LocalDate diaFuturo = periodo.inicio().plusDays(1);
-        if (!diaFuturo.isAfter(LocalDate.now())) {
-            diaFuturo = LocalDate.now().plusDays(1);
-        }
-        if (diaFuturo.isAfter(periodo.fim().minusDays(1))) {
-            diaFuturo = periodo.inicio().plusDays(1);
+        LocalDate diaAdiantavel = proximoDiaAdiantavelNaSemanaAtual();
+        LocalDate diaPaga = LocalDate.now().plusDays(1);
+        if (diaPaga.equals(diaAdiantavel)) {
+            diaPaga = LocalDate.now();
         }
 
         Agendamento paga = new Agendamento();
         paga.setId(1L);
         paga.setProfissional(profissional);
-        paga.setDataHoraInicio(diaFuturo.atTime(10, 0));
+        paga.setDataHoraInicio(diaPaga.atTime(10, 0));
         paga.setStatusPagamento(PagamentoStatus.PAGO);
 
         Agendamento futura = new Agendamento();
         futura.setId(2L);
         futura.setProfissional(profissional);
-        futura.setDataHoraInicio(diaFuturo.plusDays(1).atTime(11, 0));
+        futura.setDataHoraInicio(diaAdiantavel.atTime(11, 0));
         futura.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
 
         when(authService.isAdmin(profissional)).thenReturn(false);
@@ -183,10 +184,12 @@ class PagamentoConsultaServiceTest {
         assertTrue(semana.stream().noneMatch(a -> a.getId().equals(1L)));
         assertEquals(1, semana.size());
         assertEquals(2L, semana.get(0).getId());
+        });
     }
 
     @Test
     void listarConsultasAdiantamentoSemanaIgnoraPendenciasObrigatorias() {
+        comDataReferencia(LocalDate.of(2026, 5, 28), LocalTime.of(10, 0), () -> {
         Usuario profissional = new Usuario();
         profissional.setId(10L);
         profissional.setDonaClinica(false);
@@ -194,7 +197,7 @@ class PagamentoConsultaServiceTest {
         Agendamento futuraSemana = new Agendamento();
         futuraSemana.setId(1L);
         futuraSemana.setProfissional(profissional);
-        futuraSemana.setDataHoraInicio(LocalDate.now().plusDays(2).atTime(10, 0));
+        futuraSemana.setDataHoraInicio(proximoDiaAdiantavelNaSemanaAtual().atTime(10, 0));
         futuraSemana.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
 
         Agendamento bloqueadaHoje = new Agendamento();
@@ -213,6 +216,7 @@ class PagamentoConsultaServiceTest {
 
         assertEquals(1, semana.size());
         assertEquals(1L, semana.get(0).getId());
+        });
     }
 
     @Test
@@ -1050,6 +1054,42 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
+    void rotuloLiberadoAposHorarioMostraPagamentoExpirado() {
+        Agendamento liberadoAtrasado = new Agendamento();
+        liberadoAtrasado.setProfissional(new Usuario());
+        liberadoAtrasado.getProfissional().setId(1L);
+        liberadoAtrasado.setDataHoraInicio(LocalDateTime.now().minusHours(1));
+        liberadoAtrasado.setStatusPagamento(PagamentoStatus.LIBERADO_FALTA_PAGAMENTO);
+
+        assertEquals("Pagamento expirado", pagamentoConsultaService.rotuloStatusPagamento(liberadoAtrasado));
+    }
+
+    @Test
+    void naoLiberaVagaQuandoEsperandoConfirmacaoComQrAtivo() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+
+        Agendamento esperando = new Agendamento();
+        esperando.setId(60L);
+        esperando.setProfissional(julia);
+        esperando.setDataHoraInicio(LocalDate.now().atTime(11, 0));
+        esperando.setDataHoraFim(LocalDate.now().atTime(12, 0));
+        esperando.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        esperando.setPagamentoExpiraEm(LocalDateTime.now().plusMinutes(3));
+        esperando.setPagamentoLink("http://localhost/link");
+
+        when(repository.findByStatusPagamentoInAndDataHoraInicioGreaterThanEqual(
+                org.mockito.ArgumentMatchers.anyList(),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class)
+        )).thenReturn(java.util.List.of(esperando));
+
+        int liberados = pagamentoConsultaService.liberarVagasPorFaltaPagamento();
+
+        assertEquals(0, liberados);
+        assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, esperando.getStatusPagamento());
+    }
+
+    @Test
     void deveMigrarAgendamentosFuturosDeDiarioParaMensal() {
         Usuario carol = new Usuario();
         carol.setId(5L);
@@ -1224,15 +1264,12 @@ class PagamentoConsultaServiceTest {
 
     @Test
     void gerarPixSemanaProfissionalDiarioMarcaConsultasEmEsperandoConfirmacao() {
+        comDataReferencia(LocalDate.of(2026, 5, 28), LocalTime.of(10, 0), () -> {
         Usuario carol = new Usuario();
         carol.setId(4L);
         carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
 
-        var periodo = pagamentoConsultaService.resolverPeriodoSemanaPagamento(LocalDate.now());
-        LocalDate diaConsulta = periodo.fim();
-        if (!diaConsulta.isAfter(LocalDate.now())) {
-            diaConsulta = LocalDate.now().plusDays(2);
-        }
+        LocalDate diaConsulta = proximoDiaAdiantavelNaSemanaAtual();
 
         Agendamento consulta = new Agendamento();
         consulta.setId(40L);
@@ -1260,6 +1297,7 @@ class PagamentoConsultaServiceTest {
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, consulta.getStatusPagamento());
         assertEquals("http://localhost/pix-semana", consulta.getPagamentoLink());
         verify(repository).save(consulta);
+        });
     }
 
     @Test
@@ -1574,5 +1612,29 @@ class PagamentoConsultaServiceTest {
         } else {
             assertTrue(pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional).isEmpty());
         }
+    }
+
+    private void comDataReferencia(LocalDate dia, LocalTime hora, Runnable teste) {
+        LocalDateTime agora = LocalDateTime.of(dia, hora);
+        try (MockedStatic<LocalDate> dataMock = Mockito.mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<LocalDateTime> dataHoraMock = Mockito.mockStatic(LocalDateTime.class, Mockito.CALLS_REAL_METHODS)) {
+            dataMock.when(LocalDate::now).thenReturn(dia);
+            dataHoraMock.when(LocalDateTime::now).thenReturn(agora);
+            teste.run();
+        }
+    }
+
+    private LocalDate proximoDiaAdiantavelNaSemanaAtual() {
+        var periodo = pagamentoConsultaService.resolverPeriodoSemanaPagamento(LocalDate.now());
+        for (LocalDate dia = LocalDate.now().plusDays(1); !dia.isAfter(periodo.fim()); dia = dia.plusDays(1)) {
+            if (LocalDate.now().isBefore(dia.minusDays(1))) {
+                return dia;
+            }
+        }
+        LocalDate ultimoDiaSemana = periodo.fim();
+        if (ultimoDiaSemana.isAfter(LocalDate.now()) && LocalDate.now().isBefore(ultimoDiaSemana.minusDays(1))) {
+            return ultimoDiaSemana;
+        }
+        return LocalDate.now().plusDays(3);
     }
 }

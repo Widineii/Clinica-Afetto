@@ -25,9 +25,7 @@
         }
 
         .app-shell {
-            width: min(1320px, 100%);
-            margin-inline: auto;
-            padding: clamp(12px, 2vw, 24px) clamp(12px, 2vw, 16px) 48px;
+            --afetto-shell-max: 1320px;
         }
 
         .hero-band {
@@ -507,6 +505,11 @@
         }
 
         @media (max-width: 767.98px) {
+            .app-shell {
+                padding-left: max(10px, env(safe-area-inset-left));
+                padding-right: max(10px, env(safe-area-inset-right));
+            }
+
             .top-actions {
                 width: 100%;
                 justify-content: stretch;
@@ -519,6 +522,25 @@
 
             .top-actions form .btn {
                 width: 100%;
+            }
+
+            .central-tabs {
+                flex-direction: column;
+                align-items: stretch;
+                border-bottom: 0;
+                gap: 0.35rem;
+            }
+
+            .central-tab {
+                justify-content: center;
+                margin-bottom: 0;
+                border-bottom: 0;
+                border-radius: 12px;
+                background: #f1f5f9;
+            }
+
+            .central-tab.active {
+                background: var(--afetto-teal-soft);
             }
 
             .actions-toolbar {
@@ -536,11 +558,19 @@
             }
 
             .prof-table-wrap {
-                overflow-x: auto;
+                overflow-x: visible;
+                border: 0;
+                background: transparent;
             }
 
             .prof-table {
-                min-width: 720px;
+                min-width: 0 !important;
+                width: 100% !important;
+                table-layout: auto;
+            }
+
+            .prof-table colgroup {
+                display: none;
             }
 
             .prof-table thead {
@@ -549,16 +579,22 @@
 
             .prof-table tbody tr {
                 display: block;
-                margin-bottom: 10px;
+                width: 100%;
+                margin-bottom: 12px;
                 border: 1px solid #e2e8f0;
-                border-radius: 12px;
+                border-radius: 14px;
                 overflow: hidden;
+                background: #fff;
+                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
             }
 
             .prof-table tbody td {
                 display: block;
+                width: 100% !important;
+                max-width: none !important;
                 border: 0;
                 padding: 10px 14px;
+                box-sizing: border-box;
             }
 
             .prof-table tbody td:first-child {
@@ -569,23 +605,29 @@
                 text-align: left;
                 border-left: 0;
                 border-top: 1px solid #e8eef4;
+                min-width: 0 !important;
+                max-width: none !important;
+                width: 100% !important;
             }
 
             .periodicidade-opcoes {
-                flex-direction: row;
-                flex-wrap: wrap;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
             }
 
             .periodicidade-btn {
-                width: auto;
-                flex: 1 1 calc(33.333% - 4px);
-                min-width: 4.5rem;
+                width: 100%;
+                flex: none;
+                min-width: 0;
+                font-size: 0.82rem;
+                padding: 10px 12px;
             }
         }
     </style>
 </head>
 <body>
-<div class="container-fluid app-shell">
+<div class="container-fluid app-shell afetto-page-shell">
     <div class="hero-band mb-4">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>

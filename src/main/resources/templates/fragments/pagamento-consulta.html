@@ -148,6 +148,50 @@
     </div>
 </div>
 
+<div th:fragment="modal-pix-confirmado (agendamento)">
+    <div th:if="${exibirModalPixConfirmado}"
+         class="modal fade admin-modal"
+         id="pixConfirmadoModal"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header px-4 py-3">
+                    <div>
+                        <h2 class="modal-title h5 mb-1 text-success">PIX enviado!</h2>
+                        <p class="small text-muted mb-0">
+                            Pagamento registrado com sucesso. Sua consulta está liberada na agenda.
+                        </p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4 pb-4 text-center">
+                    <div th:if="${agendamento != null}">
+                        <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
+                        <p class="small text-muted mb-3"
+                           th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026 10:00</p>
+                        <p class="mb-3">Taxa da clínica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
+                    </div>
+
+                    <div class="alert comprovante-polyana-aviso border-2 border-warning mb-4 py-3 px-3 text-center"
+                         role="status">
+                        <p class="mb-1 fw-bold fs-6 text-dark">
+                            Por favor, envie o comprovante do PIX para a <span class="text-primary">Polyana</span>.
+                        </p>
+                        <p class="mb-0 small text-muted">
+                            É para a Polyana ter o controle de quem pagou. Obrigada!
+                        </p>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div th:fragment="modal-pos-agendamento (agendamento)">
     <div th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}"
          class="modal fade admin-modal"

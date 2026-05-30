@@ -1,5 +1,6 @@
 package com.clinica.sistema.controller;
 
+import com.clinica.sistema.config.InfinitePayProperties;
 import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
@@ -34,17 +35,20 @@ public class PagamentoController {
     private final AgendamentoRepository agendamentoRepository;
     private final AuthService authService;
     private final QrCodeService qrCodeService;
+    private final InfinitePayProperties infinitePayProperties;
 
     public PagamentoController(
             PagamentoConsultaService pagamentoConsultaService,
             AgendamentoRepository agendamentoRepository,
             AuthService authService,
-            QrCodeService qrCodeService
+            QrCodeService qrCodeService,
+            InfinitePayProperties infinitePayProperties
     ) {
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.agendamentoRepository = agendamentoRepository;
         this.authService = authService;
         this.qrCodeService = qrCodeService;
+        this.infinitePayProperties = infinitePayProperties;
     }
 
     @GetMapping("/{id}")
@@ -288,10 +292,16 @@ public class PagamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             pagamentoConsultaService.simularPagamento(id, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Pagamento simulado com sucesso (modo teste).");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            return "redirect:/agendamentos/meus-pagamentos";
         }
+        if (infinitePayProperties.isModoTeste()) {
+            redirectAttributes.addFlashAttribute("exibirModalPixConfirmado", true);
+            redirectAttributes.addFlashAttribute("pixConfirmadoAgendamentoId", id);
+            return "redirect:/agendamentos/dashboard";
+        }
+        redirectAttributes.addFlashAttribute("sucesso", "Pagamento simulado com sucesso (modo teste).");
         String referer = request.getHeader("Referer");
         if (referer != null && referer.contains("/pagamentos/checkout-teste")) {
             return "redirect:/agendamentos/dashboard";

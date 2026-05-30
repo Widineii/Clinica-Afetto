@@ -247,11 +247,21 @@
             }
 
             .showcase-side {
-                padding: 24px 20px;
+                padding: 20px 18px 24px;
             }
 
             .feature-list {
-                gap: 10px;
+                display: none;
+            }
+
+            .showcase-title {
+                font-size: 1.45rem;
+                margin-top: 16px;
+            }
+
+            .brand-logo {
+                width: min(160px, 55%);
+                padding: 10px 14px;
             }
 
             .form-side {
@@ -288,7 +298,7 @@
 <div class="page-shell">
     <div class="login-shell">
         <div class="row g-0">
-            <div class="col-lg-6">
+            <div class="col-lg-6 order-2 order-lg-1">
                 <section class="showcase-side h-100">
                     <img class="brand-logo" th:src="@{/images/afetto-logo.png}" alt="Afetto Psicologia e Saúde">
                     <h1 class="showcase-title">Agende seu<br>horário na<br>clínica Afetto.</h1>
@@ -319,7 +329,7 @@
                 </section>
             </div>
 
-            <div class="col-lg-6">
+            <div class="col-lg-6 order-1 order-lg-2">
                 <section class="form-side h-100">
                     <div class="form-wrap">
                         <div class="form-kicker">Área de acesso</div>

@@ -72,10 +72,12 @@ public class PagamentoCheckoutTesteController {
                 throw new RuntimeException("Pedido de pagamento invalido.");
             }
             pagamentoConsultaService.confirmarPagamentoPorOrderNsuModoTeste(order);
-            redirectAttributes.addFlashAttribute("sucesso", "Pagamento confirmado (modo teste).");
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            return "redirect:/agendamentos/dashboard";
         }
+        redirectAttributes.addFlashAttribute("exibirModalPixConfirmado", true);
+        redirectAttributes.addFlashAttribute("pixConfirmadoAgendamentoId", agendamento);
         return "redirect:/agendamentos/dashboard";
     }
 
@@ -143,11 +145,12 @@ public class PagamentoCheckoutTesteController {
         try {
             authService.buscarUsuarioLogadoObrigatorio();
             pagamentoConsultaService.confirmarPagamentoPorOrderNsuModoTeste(order);
-            redirectAttributes.addFlashAttribute("sucesso", mensagemSucesso);
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            return "redirect:/agendamentos/meus-pagamentos";
         }
-        return "redirect:/agendamentos/dashboard";
+        redirectAttributes.addFlashAttribute("exibirModalPixConfirmado", true);
+        return "redirect:/agendamentos/meus-pagamentos";
     }
 
     private void validarAcesso(Agendamento agendamento, Usuario usuarioLogado) {

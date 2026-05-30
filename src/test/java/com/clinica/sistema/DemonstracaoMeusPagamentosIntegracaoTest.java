@@ -11,6 +11,8 @@ import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -62,6 +64,7 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
 
     @Test
     void montarCenarioMeusPagamentos() {
+        comDataReferencia(LocalDate.of(2026, 5, 28), LocalTime.of(10, 0), () -> {
         Usuario carol = usuarioRepository.findByLogin("carol").orElseThrow();
         carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
         usuarioRepository.save(carol);
@@ -105,6 +108,17 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
                 pagamentoConsultaService.formatarTotalTaxaPix(pendentes),
                 pagamentoConsultaService.formatarTotalTaxaPix(semana),
                 amanha, hoje, horarioHoje, diaSemana);
+        });
+    }
+
+    private void comDataReferencia(LocalDate dia, LocalTime hora, Runnable teste) {
+        LocalDateTime agora = LocalDateTime.of(dia, hora);
+        try (MockedStatic<LocalDate> dataMock = Mockito.mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<LocalDateTime> dataHoraMock = Mockito.mockStatic(LocalDateTime.class, Mockito.CALLS_REAL_METHODS)) {
+            dataMock.when(LocalDate::now).thenReturn(dia);
+            dataHoraMock.when(LocalDateTime::now).thenReturn(agora);
+            teste.run();
+        }
     }
 
     private LocalDate resolverDiaAdiantamentoSemana(LocalDate hoje, LocalDate amanha) {
@@ -112,7 +126,7 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
                 ? hoje.plusDays(1)
                 : hoje.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate fimSemana = inicioSemana.plusDays(6);
-        LocalDate candidato = hoje.plusDays(2);
+        LocalDate candidato = hoje.plusDays(1);
         while (!candidato.isAfter(fimSemana)) {
             if (!candidato.equals(hoje)
                     && !candidato.equals(amanha)
@@ -122,7 +136,12 @@ class DemonstracaoMeusPagamentosIntegracaoTest {
             }
             candidato = candidato.plusDays(1);
         }
-        return hoje.plusDays(2);
+        for (LocalDate dia = hoje.plusDays(1); !dia.isAfter(fimSemana); dia = dia.plusDays(1)) {
+            if (!dia.equals(hoje) && !dia.equals(amanha) && LocalDate.now().isBefore(dia.minusDays(1))) {
+                return dia;
+            }
+        }
+        return fimSemana;
     }
 
     private boolean deveAbrirPagamentoAgora(LocalDate dataConsulta) {

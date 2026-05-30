@@ -11,6 +11,8 @@ import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -62,6 +64,7 @@ class DemonstracaoPagamentoSemanaIntegracaoTest {
 
     @Test
     void montarCenarioPagamentoSemanaUnico() {
+        comDataReferencia(LocalDate.of(2026, 5, 28), LocalTime.of(10, 0), () -> {
         Usuario julia = usuarioRepository.findByLogin("julia").orElseThrow();
         julia.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
         usuarioRepository.save(julia);
@@ -103,16 +106,32 @@ class DemonstracaoPagamentoSemanaIntegracaoTest {
         String total = pagamentoConsultaService.formatarTotalTaxaPix(semana);
 
         imprimirRoteiro(total, dia1, dia2, semana.size());
+        });
+    }
+
+    private void comDataReferencia(LocalDate dia, LocalTime hora, Runnable teste) {
+        LocalDateTime agora = LocalDateTime.of(dia, hora);
+        try (MockedStatic<LocalDate> dataMock = Mockito.mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<LocalDateTime> dataHoraMock = Mockito.mockStatic(LocalDateTime.class, Mockito.CALLS_REAL_METHODS)) {
+            dataMock.when(LocalDate::now).thenReturn(dia);
+            dataHoraMock.when(LocalDateTime::now).thenReturn(agora);
+            teste.run();
+        }
     }
 
     private LocalDate resolverDiaAdiantamentoSemana(LocalDate inicioSemana, LocalDate fimSemana) {
         LocalDate hoje = LocalDate.now();
-        LocalDate candidato = hoje.plusDays(2);
+        LocalDate candidato = hoje.plusDays(1);
         while (!candidato.isAfter(fimSemana)) {
             if (candidato.isAfter(hoje) && !deveAbrirPagamentoAgora(candidato)) {
                 return candidato;
             }
             candidato = candidato.plusDays(1);
+        }
+        for (LocalDate dia = hoje.plusDays(1); !dia.isAfter(fimSemana); dia = dia.plusDays(1)) {
+            if (LocalDate.now().isBefore(dia.minusDays(1))) {
+                return dia;
+            }
         }
         return fimSemana;
     }

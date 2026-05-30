@@ -36,8 +36,7 @@ public class PagamentoConsultaService {
     private static final String CARGO_PROFISSIONAL = "ROLE_PROFISSIONAL";
     private static final List<PagamentoStatus> STATUS_CANDIDATOS_LIBERACAO = List.of(
             PagamentoStatus.PAGAMENTO_FUTURO,
-            PagamentoStatus.AGUARDANDO_PAGAMENTO,
-            PagamentoStatus.ESPERANDO_CONFIRMACAO
+            PagamentoStatus.AGUARDANDO_PAGAMENTO
     );
     private static final DateTimeFormatter FORMATO_DATA_COMPLETA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String URL_MEUS_PAGAMENTOS_DIA = "/agendamentos/meus-pagamentos#pagamentos-pendentes";
@@ -214,6 +213,9 @@ public class PagamentoConsultaService {
                 continue;
             }
             if (PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
+                continue;
+            }
+            if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
                 continue;
             }
             if (agendamento.getProfissional() != null
@@ -1094,9 +1096,7 @@ public class PagamentoConsultaService {
                     ? "Não pago — sala bloqueada"
                     : "Aguardando pagamento";
             case PAGAMENTO_FUTURO -> rotuloPagamentoFuturo(agendamento);
-            case LIBERADO_FALTA_PAGAMENTO -> vagaPreenchidaPorOutroProfissional(agendamento)
-                    ? "Vaga preenchida por outro profissional"
-                    : "Vaga liberada — você ainda pode pagar para recuperar";
+            case LIBERADO_FALTA_PAGAMENTO -> rotuloLiberadoFaltaPagamento(agendamento);
         };
     }
 
@@ -1128,7 +1128,9 @@ public class PagamentoConsultaService {
             return rotuloPagamentoFuturo(agendamento);
         }
         if (status == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO) {
-            return "Vaga liberada — pague para recuperar";
+            return podeRecuperarVagaComPagamento(agendamento)
+                    ? "Vaga liberada — pague para recuperar"
+                    : "Pagamento expirado";
         }
         return "";
     }
@@ -1217,6 +1219,16 @@ public class PagamentoConsultaService {
             return nomeProfissional + ": vaga liberada";
         }
         return "";
+    }
+
+    private String rotuloLiberadoFaltaPagamento(Agendamento agendamento) {
+        if (vagaPreenchidaPorOutroProfissional(agendamento)) {
+            return "Vaga preenchida por outro profissional";
+        }
+        if (podeRecuperarVagaComPagamento(agendamento)) {
+            return "Vaga liberada — você ainda pode pagar para recuperar";
+        }
+        return "Pagamento expirado";
     }
 
     private String resolverNomeProfissionalAgendamento(Agendamento agendamento) {

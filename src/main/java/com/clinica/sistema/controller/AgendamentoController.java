@@ -279,7 +279,19 @@ public class AgendamentoController {
         if (pagamentoSelecionadoId != null) {
             service.buscarPorId(pagamentoSelecionadoId).ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
         }
+        aplicarModalPixConfirmadoSeNecessario(model);
         return "agenda";
+    }
+
+    private void aplicarModalPixConfirmadoSeNecessario(Model model) {
+        if (!model.containsAttribute("exibirModalPixConfirmado")) {
+            return;
+        }
+        Object idFlash = model.getAttribute("pixConfirmadoAgendamentoId");
+        Long id = extrairIdPagamento(idFlash);
+        if (id != null) {
+            service.buscarPorId(id).ifPresent(ag -> model.addAttribute("pixConfirmadoAgendamento", ag));
+        }
     }
 
     private Long extrairIdPagamento(Object pagamentoFlashId) {
@@ -399,6 +411,7 @@ public class AgendamentoController {
         model.addAttribute("totalConsultasPagamentoMes", consultasMes.size());
         model.addAttribute("rotuloMesPagamento", pagamentoConsultaService.rotuloMesPagamentoPendente());
         model.addAttribute("totalTaxaMes", pagamentoConsultaService.formatarTotalTaxaPix(consultasMes));
+        aplicarModalPixConfirmadoSeNecessario(model);
         return "meus-pagamentos";
     }
 

@@ -813,6 +813,15 @@
             font-weight: 700;
         }
 
+        .comprovante-polyana-aviso {
+            background: linear-gradient(180deg, #fff9e6 0%, #fff3cd 100%);
+            box-shadow: 0 4px 14px rgba(245, 176, 0, 0.25);
+        }
+
+        .comprovante-polyana-aviso .text-primary {
+            color: #0d6efd !important;
+        }
+
         #trocarSenhaModal.show {
             z-index: 10050;
         }
@@ -1013,6 +1022,16 @@
             .history-table td {
                 white-space: normal;
                 font-size: 0.85rem;
+            }
+
+            .history-panel {
+                max-height: none;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .history-table {
+                min-width: 36rem;
             }
 
             .action-stack {
@@ -1493,8 +1512,9 @@
                         <span class="text-muted small" th:unless="${podeGerenciarEquipe}">Seus horários de hoje em todas as salas.</span>
                     </div>
 
+                    <p class="small text-muted mb-3 d-md-none">Deslize a tabela para o lado para ver todas as colunas.</p>
                     <div class="table-responsive history-panel">
-                        <table class="table history-table align-middle mb-0">
+                        <table class="table history-table align-middle mb-0 responsive-stack-table">
                             <thead>
                             <tr>
                                 <th>Data</th>
@@ -1670,6 +1690,7 @@
     </div>
 </div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pos-agendamento(agendamento=${pagamentoAgendamento})}"></div>
+<div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
 
 <div th:unless="${isAdmin or isDonaClinica}" class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -2359,6 +2380,11 @@
         var pagamentoModalEl = document.getElementById('pagamentoPosAgendamentoModal');
         if (pagamentoModalEl) {
             bootstrap.Modal.getOrCreateInstance(pagamentoModalEl).show();
+        }
+
+        var pixConfirmadoModalEl = document.getElementById('pixConfirmadoModal');
+        if (pixConfirmadoModalEl) {
+            bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
         }
 
         function atualizarCountdownsPagamento() {
