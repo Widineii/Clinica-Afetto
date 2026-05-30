@@ -123,7 +123,13 @@ public class InfinitePayService {
             if (resposta == null) {
                 throw new RuntimeException("InfinitePay nao retornou resposta.");
             }
-            Object url = resposta.get("url");
+            Object url = resposta.get("checkout_url");
+            if (url == null || url.toString().isBlank()) {
+                url = resposta.get("url");
+            }
+            if (url == null || url.toString().isBlank()) {
+                url = resposta.get("link");
+            }
             Object slug = resposta.get("slug");
             if (url == null || url.toString().isBlank()) {
                 throw new RuntimeException("InfinitePay nao retornou link de pagamento.");

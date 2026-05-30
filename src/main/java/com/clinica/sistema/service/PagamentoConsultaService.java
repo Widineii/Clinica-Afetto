@@ -1055,6 +1055,36 @@ public class PagamentoConsultaService {
                 && agendamento.getProfissional().getId().equals(usuarioLogado.getId());
     }
 
+    public boolean modoTestePagamento() {
+        return infinitePayProperties.isModoTeste();
+    }
+
+    public boolean exibirCheckoutInfinitePay(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getPagamentoLink() == null) {
+            return false;
+        }
+        return exibirCheckoutInfinitePay(agendamento.getPagamentoLink());
+    }
+
+    public boolean exibirCheckoutInfinitePay(String pagamentoLink) {
+        if (pagamentoLink == null || pagamentoLink.isBlank()) {
+            return false;
+        }
+        return !ehPixCopiaCola(pagamentoLink.trim());
+    }
+
+    public boolean exibirQrPixEmbutido(Agendamento agendamento) {
+        return agendamento != null && ehPixCopiaCola(agendamento.getPagamentoLink());
+    }
+
+    public String rotuloBotaoCopiarPagamento(Agendamento agendamento) {
+        return exibirQrPixEmbutido(agendamento) ? "Copiar PIX copia e cola" : "Copiar link de pagamento";
+    }
+
+    private boolean ehPixCopiaCola(String link) {
+        return link != null && link.trim().startsWith("000201");
+    }
+
     public boolean exibirBotaoPagar(Agendamento agendamento) {
         return podePagarAgora(agendamento);
     }

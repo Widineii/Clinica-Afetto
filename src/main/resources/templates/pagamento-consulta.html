@@ -38,21 +38,11 @@
                             th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
                             th:text="${agendamento.tempoRestantePagamentoFormatado}">4:59</strong>
                 </p>
-                <img th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
-                     alt="QR Code PIX"
-                     class="img-fluid rounded border mb-3"
-                     width="260"
-                     height="260">
+                <div th:replace="~{fragments/pagamento-consulta :: bloco-pagamento-qr(agendamento=${agendamento}, imgWidth=260)}"></div>
                 <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
                 <div class="d-grid gap-2">
-                    <button type="button"
-                            th:if="${agendamento.pagamentoLink != null}"
-                            class="btn btn-primary copiar-chave-pix-btn"
-                            th:attr="data-pix-chave=${agendamento.pagamentoLink}">
-                        Copiar chave PIX
-                    </button>
-                    <small class="text-success fw-semibold pix-copiado-msg" hidden>Chave PIX copiada.</small>
-                    <form th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
+                    <form th:if="${pagamentoService.modoTestePagamento()}"
+                          th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                         <button type="submit" class="btn btn-outline-success w-100">Simular pagamento (teste)</button>
                     </form>

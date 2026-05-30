@@ -20,22 +20,67 @@
           th:text="${pagamentoService.rotuloStatusPagamento(agendamento, usuarioLogado)}">Esperando confirmação</span>
 </div>
 
+<div th:fragment="instrucao-checkout-infinitepay"
+     class="alert alert-info small text-start mb-3">
+    O pagamento abre na <strong>InfinitePay</strong>. Toque em <strong>Abrir pagamento</strong>,
+    escolha <strong>PIX</strong> e use o QR ou o copia e cola que aparecem <strong>na tela da InfinitePay</strong>.
+    O app do banco não lê o QR desta página quando é link de site.
+</div>
+
+<div th:fragment="bloco-pagamento-qr (agendamento, imgWidth)">
+    <th:block th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}">
+        <div th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
+             th:replace="~{fragments/pagamento-consulta :: instrucao-checkout-infinitepay}"></div>
+        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
+           th:href="${agendamento.pagamentoLink}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="btn btn-primary btn-lg w-100 mb-3">
+            Abrir pagamento PIX
+        </a>
+        <img th:if="${pagamentoService.exibirQrPixEmbutido(agendamento) and agendamento.id != null}"
+             th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
+             alt="QR Code PIX"
+             class="img-fluid rounded border mb-3"
+             th:width="${imgWidth != null ? imgWidth : 260}"
+             th:height="${imgWidth != null ? imgWidth : 260}">
+        <button type="button"
+                th:if="${agendamento.pagamentoLink != null}"
+                class="btn btn-outline-primary w-100 copiar-chave-pix-btn mb-2"
+                th:attr="data-pix-chave=${agendamento.pagamentoLink},
+                         data-rotulo-original=${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}"
+                th:text="${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}">
+            Copiar link de pagamento
+        </button>
+    </th:block>
+</div>
+
 <div th:fragment="acoes (agendamento)">
     <div th:if="${agendamento != null}" class="pagamento-acoes mt-2 d-flex flex-wrap gap-2 align-items-center">
         <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
 
+        <a th:if="${agendamento.possuiQrPagamentoAtivo() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
+           th:href="${agendamento.pagamentoLink}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="btn btn-sm btn-primary">
+            Abrir pagamento
+        </a>
+
+        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null and pagamentoService.exibirQrPixEmbutido(agendamento)}"
+           th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
+           class="btn btn-sm btn-primary">
+            Ver QR PIX
+        </a>
+
         <button type="button"
                 th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.pagamentoLink != null}"
                 class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
-                th:attr="data-pix-chave=${agendamento.pagamentoLink}">
-            Copiar chave PIX
+                th:attr="data-pix-chave=${agendamento.pagamentoLink},
+                         data-rotulo-original=${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}"
+                th:text="${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}">
+            Copiar link
         </button>
-
-        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
-           th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
-           class="btn btn-sm btn-primary">
-            Voltar ao QR
-        </a>
 
         <span th:if="${pagamentoService.vagaPreenchidaPorOutroProfissional(agendamento)}"
               class="small text-danger fw-semibold">
@@ -61,7 +106,7 @@
             Realocar
         </a>
 
-        <form th:if="${agendamento.possuiQrPagamentoAtivo()}"
+        <form th:if="${agendamento.possuiQrPagamentoAtivo() and pagamentoService.modoTestePagamento()}"
               th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
               method="post"
               class="d-inline">
@@ -77,10 +122,10 @@
         <div class="card-body p-4">
             <h2 class="h5 mb-2 d-flex align-items-center gap-2 flex-wrap">
                 Pagamentos pendentes
-                <span class="badge rounded-pill text-bg-warning">Voltar ao QR</span>
+                <span class="badge rounded-pill text-bg-warning">Aguardando PIX</span>
             </h2>
             <p class="small text-muted mb-3">
-                Consultas reservadas aguardando PIX. Tempo restante: 5 minutos — depois o horário é liberado automaticamente.
+                Consultas reservadas aguardando pagamento. Tempo restante: 5 minutos — depois o horário é liberado automaticamente.
             </p>
             <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
@@ -96,21 +141,25 @@
                           th:text="${item.tempoRestantePagamentoFormatado}">4:59</span>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <a th:href="@{/pagamentos/{id}(id=${item.id})}">
-                        <img th:src="@{/pagamentos/{id}/qr.png(id=${item.id})}"
-                             alt="QR Code"
-                             width="88"
-                             height="88"
-                             class="rounded border">
-                    </a>
                     <div class="d-grid gap-2 flex-grow-1" style="min-width: 180px;">
-                        <a th:href="@{/pagamentos/{id}(id=${item.id})}"
-                           class="btn btn-sm btn-primary">Voltar ao QR Code</a>
+                        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(item)}"
+                           th:href="${item.pagamentoLink}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-sm btn-primary">Abrir pagamento PIX</a>
+                        <a th:if="${pagamentoService.exibirQrPixEmbutido(item)}"
+                           th:href="@{/pagamentos/{id}(id=${item.id})}"
+                           class="btn btn-sm btn-primary">Ver QR PIX</a>
+                        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(item)}"
+                           th:href="@{/pagamentos/{id}(id=${item.id})}"
+                           class="btn btn-sm btn-outline-secondary">Detalhes</a>
                         <button type="button"
                                 th:if="${item.pagamentoLink != null}"
                                 class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
-                                th:attr="data-pix-chave=${item.pagamentoLink}">
-                            Copiar chave PIX
+                                th:attr="data-pix-chave=${item.pagamentoLink},
+                                         data-rotulo-original=${pagamentoService.rotuloBotaoCopiarPagamento(item)}"
+                                th:text="${pagamentoService.rotuloBotaoCopiarPagamento(item)}">
+                            Copiar link
                         </button>
                     </div>
                 </div>
@@ -219,25 +268,15 @@
                        th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026 10:00</p>
                     <p class="mb-3">Taxa da clínica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
 
-                    <img th:if="${agendamento.pagamentoLink != null}"
-                         th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
-                         alt="QR Code PIX"
-                         class="img-fluid rounded border mb-3"
-                         width="240"
-                         height="240">
+                    <div th:replace="~{fragments/pagamento-consulta :: bloco-pagamento-qr(agendamento=${agendamento}, imgWidth=240)}"></div>
 
                     <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
 
                     <p class="small text-muted mb-3">Fechou sem querer? Use a aba <a href="#pagamentos-pendentes">Pagamentos pendentes</a>.</p>
 
                     <div class="d-grid gap-2">
-                        <button type="button"
-                                th:if="${agendamento.pagamentoLink != null}"
-                                class="btn btn-primary copiar-chave-pix-btn"
-                                th:attr="data-pix-chave=${agendamento.pagamentoLink}">
-                            Copiar chave PIX
-                        </button>
-                        <form th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
+                        <form th:if="${pagamentoService.modoTestePagamento()}"
+                              th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
                             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                             <button type="submit" class="btn btn-outline-success w-100">Simular pagamento (teste)</button>
                         </form>
@@ -286,13 +325,14 @@
                 return;
             }
             var chave = botao.getAttribute('data-pix-chave') || '';
+            var rotuloOriginal = botao.getAttribute('data-rotulo-original') || 'Copiar link de pagamento';
             copiarTexto(chave).then(function () {
-                botao.textContent = 'Chave PIX copiada';
+                botao.textContent = 'Copiado!';
                 window.setTimeout(function () {
-                    botao.textContent = 'Copiar chave PIX';
+                    botao.textContent = rotuloOriginal;
                 }, 2000);
             }).catch(function () {
-                window.alert('Não foi possível copiar a chave PIX. Copie manualmente o link do pagamento.');
+                window.alert('Não foi possível copiar. Toque em Abrir pagamento PIX ou copie manualmente.');
             });
         });
     })();
