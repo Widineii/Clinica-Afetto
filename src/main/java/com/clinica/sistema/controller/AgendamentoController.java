@@ -148,7 +148,7 @@ public class AgendamentoController {
             model.addAttribute("agendamentoForm", form);
         }
         boolean podeGerenciarEquipe = authService.podeGerenciarEquipe(usuarioLogado);
-        if (!podeGerenciarEquipe && !model.containsAttribute("trocarSenhaForm")) {
+        if (!isAdmin && !model.containsAttribute("trocarSenhaForm")) {
             model.addAttribute("trocarSenhaForm", new com.clinica.sistema.dto.TrocarSenhaForm());
         }
         if (model.containsAttribute("trocarSenhaForm")) {
@@ -169,6 +169,18 @@ public class AgendamentoController {
 
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", isAdmin);
+        boolean reabrirModalTrocarSenha = model.containsAttribute("reabrirModalTrocarSenha");
+        boolean exibirModalTrocarSenhaObrigatoria = usuarioService.exibirModalTrocaSenhaPrimeiroAcesso(
+                session,
+                reabrirModalTrocarSenha
+        );
+        boolean trocaSenhaAindaPendente = usuarioService.usuarioLogadoDeveTrocarSenha()
+                && !exibirModalTrocarSenhaObrigatoria;
+        if (exibirModalTrocarSenhaObrigatoria) {
+            usuarioService.confirmarExibicaoModalTrocaSenha(session);
+        }
+        model.addAttribute("exibirModalTrocarSenhaObrigatoria", exibirModalTrocarSenhaObrigatoria);
+        model.addAttribute("trocaSenhaAindaPendente", trocaSenhaAindaPendente);
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         model.addAttribute(
                 "podeAcessarGestaoFinanceira",

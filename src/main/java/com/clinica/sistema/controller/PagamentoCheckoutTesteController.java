@@ -83,7 +83,7 @@ public class PagamentoCheckoutTesteController {
 
     @GetMapping("/checkout-teste-dia")
     public String checkoutTesteDia(@RequestParam String order, Model model) {
-        return checkoutTesteLote(order, model, "Pagamento do proximo dia", "Confirmar PIX do dia (teste)");
+        return checkoutTesteLote(order, model, "Pagamento do proximo dia", "Confirmar pagamento PIX");
     }
 
     @PostMapping("/checkout-teste-dia/confirmar")
@@ -96,7 +96,7 @@ public class PagamentoCheckoutTesteController {
 
     @GetMapping("/checkout-teste-semana")
     public String checkoutTesteSemana(@RequestParam String order, Model model) {
-        return checkoutTesteLote(order, model, "PIX unico da semana", "Confirmar PIX da semana (teste)");
+        return checkoutTesteLote(order, model, "PIX unico da semana", "Confirmar pagamento PIX");
     }
 
     @PostMapping("/checkout-teste-semana/confirmar")
@@ -109,7 +109,7 @@ public class PagamentoCheckoutTesteController {
 
     @GetMapping("/checkout-teste-mes")
     public String checkoutTesteMes(@RequestParam String order, Model model) {
-        return checkoutTesteLote(order, model, "PIX unico do mes", "Confirmar PIX do mes (teste)");
+        return checkoutTesteLote(order, model, "PIX unico do mes", "Confirmar pagamento PIX");
     }
 
     @PostMapping("/checkout-teste-mes/confirmar")

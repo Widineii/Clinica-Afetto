@@ -81,14 +81,11 @@ public class AuthController {
             SecurityContextHolder.clearContext();
             return "redirect:/login?senhaAlterada=1";
         } catch (RuntimeException e) {
-            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             boolean senhaAtualIncorreta = "Senha atual incorreta.".equals(e.getMessage());
             redirectAttributes.addFlashAttribute("erroSenha", e.getMessage());
             redirectAttributes.addFlashAttribute("erroSenhaAtual", senhaAtualIncorreta);
             redirectAttributes.addFlashAttribute("trocarSenhaForm", trocarSenhaForm);
-            if (authService.isDonaClinica(usuarioLogado)) {
-                return "redirect:/agendamentos/central-profissionais";
-            }
+            redirectAttributes.addFlashAttribute("reabrirModalTrocarSenha", true);
             return "redirect:/agendamentos/dashboard";
         }
     }

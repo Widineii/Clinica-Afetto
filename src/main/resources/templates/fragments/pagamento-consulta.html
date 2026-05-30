@@ -28,12 +28,14 @@
 
 <div th:fragment="bloco-pagamento-qr (agendamento, imgWidth)">
     <th:block th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}">
-        <div th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
+        <div th:if="${pagamentoService.modoTestePagamento()}"
+             th:replace="~{fragments/pagamento-demo-local :: instrucao-demo-local}"></div>
+        <div th:if="${!pagamentoService.modoTestePagamento() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
              th:replace="~{fragments/pagamento-consulta :: instrucao-checkout-infinitepay}"></div>
         <a th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
            th:href="${agendamento.pagamentoLink}"
-           target="_blank"
-           rel="noopener noreferrer"
+           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
+           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
            class="btn btn-primary btn-lg w-100 mb-3">
             Abrir pagamento PIX
         </a>
@@ -69,8 +71,8 @@
 
         <a th:if="${agendamento.possuiQrPagamentoAtivo() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
            th:href="${agendamento.pagamentoLink}"
-           target="_blank"
-           rel="noopener noreferrer"
+           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
+           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
            class="btn btn-sm btn-primary">
             Abrir pagamento
         </a>
@@ -169,8 +171,8 @@
                     <div class="d-grid gap-2 flex-grow-1" style="min-width: 180px;">
                         <a th:if="${pagamentoService.exibirCheckoutInfinitePay(item)}"
                            th:href="${item.pagamentoLink}"
-                           target="_blank"
-                           rel="noopener noreferrer"
+                           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
+                           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
                            class="btn btn-sm btn-primary">Abrir pagamento PIX</a>
                         <a th:if="${item.id != null}"
                            th:href="@{/pagamentos/{id}(id=${item.id})}"
@@ -302,14 +304,6 @@
                     <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
 
                     <p class="small text-muted mb-3">Fechou sem querer? Use a aba <a href="#pagamentos-pendentes">Pagamentos pendentes</a>.</p>
-
-                    <div class="d-grid gap-2">
-                        <form th:if="${pagamentoService.modoTestePagamento()}"
-                              th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
-                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                            <button type="submit" class="btn btn-outline-success w-100">Simular pagamento (teste)</button>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>

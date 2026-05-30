@@ -1232,7 +1232,7 @@
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
                    class="btn btn-warning">Uso do banco</a>
-                <a th:if="${isDonaClinica}"
+                <a th:if="${podeGerenciarEquipe}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>
                 <a th:href="@{/agendamentos/manual}"
@@ -1241,7 +1241,7 @@
                 <a th:if="${podeAcessarGestaoFinanceira}"
                    th:href="@{/agendamentos/financeiro}"
                    class="btn btn-light">Gestão financeira</a>
-                <button th:unless="${isAdmin or isDonaClinica}" type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
+                <button th:unless="${isAdmin}" type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
                     Trocar senha
                 </button>
                 <a th:if="${!isAdmin and !isDonaClinica}"
@@ -1257,6 +1257,13 @@
     </div>
 
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
+    <div th:if="${trocaSenhaAindaPendente}" class="alert alert-warning shell-card d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>Voce ainda precisa trocar sua senha para continuar usando a agenda com seguranca.</span>
+        <button type="button" class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
+            Trocar senha agora
+        </button>
+    </div>
+    <div th:replace="~{fragments/pagamento-demo-local :: banner-demo-agenda}"></div>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${pagamentoBloqueioAtivo}" class="alert alert-warning shell-card">
         <strong>Você tem pagamento pendente.</strong>
@@ -1274,6 +1281,9 @@
         <a th:href="@{/agendamentos/manual}" class="btn btn-sm btn-outline-primary">Manual de uso</a>
         <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
         <a href="#novo-agendamento" class="btn btn-sm btn-outline-secondary">Novo agendamento</a>
+        <a th:if="${podeGerenciarEquipe}"
+           th:href="@{/agendamentos/central-profissionais}"
+           class="btn btn-sm btn-warning">Central dos profissionais</a>
         <a th:if="${isAdmin}" href="#agendamentos-profissionais" class="btn btn-sm btn-outline-secondary">Agendamentos por profissional</a>
         <a th:unless="${isAdmin}" href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
         <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary">Agenda do dia</a>
@@ -1291,7 +1301,7 @@
                         <span class="badge text-bg-info">1 hora</span>
                     </div>
 
-                    <form th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
+                    <form id="formNovoAgendamento" th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                         <div class="col-12">
                             <label class="form-label">Profissional</label>
@@ -1301,7 +1311,7 @@
                                     <option th:each="profissional : ${profissionais}"
                                             th:value="${profissional.id}"
                                             th:text="${profissional.nome}"
-                                            th:attr="data-sem-valores=${profissional.donaClinica == true}">Profissional</option>
+                                            th:attr="data-sem-valores=${profissional.donaClinica != null and profissional.donaClinica ? 'true' : 'false'}">Profissional</option>
                                 </select>
                                 <div class="form-text">A administração ou a dona da clínica podem escolher qual profissional será vinculado ao agendamento.</div>
                             </div>
@@ -1858,17 +1868,29 @@
 <div th:replace="~{fragments/pagamento-consulta :: modal-pos-agendamento(agendamento=${pagamentoAgendamento})}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
 
-<div th:unless="${isAdmin or isDonaClinica}" class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
+<div th:unless="${isAdmin}" class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header px-4 py-3">
                 <div>
-                    <h2 class="modal-title h5 mb-1">Trocar senha</h2>
-                    <p class="text-muted small mb-0">Altera somente a senha do seu usuario.</p>
+                    <h2 class="modal-title h5 mb-1"
+                        th:text="${exibirModalTrocarSenhaObrigatoria} ? 'Primeiro acesso: troque sua senha' : 'Trocar senha'">
+                        Trocar senha
+                    </h2>
+                    <p class="text-muted small mb-0"
+                       th:text="${exibirModalTrocarSenhaObrigatoria}
+                           ? 'Por seguranca, defina uma senha pessoal antes de usar a agenda.'
+                           : 'Altera somente a senha do seu usuario.'">
+                        Altera somente a senha do seu usuario.
+                    </p>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                <button th:unless="${exibirModalTrocarSenhaObrigatoria}" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body p-4">
+                <div th:if="${exibirModalTrocarSenhaObrigatoria and (erroSenha == null and (erro == null or erroContexto != 'senha'))}"
+                     class="alert alert-info mb-3 py-3">
+                    Use a senha que recebeu no cadastro. Depois de salvar, voce entrara novamente com a nova senha.
+                </div>
                 <div id="trocarSenhaErroPainel" class="text-center py-2"
                      th:if="${(erroSenha != null and erroSenhaAtual) or (erro != null and erroContexto == 'senha')}">
                     <div class="alert alert-danger mb-3 py-3" role="alert">
@@ -1911,72 +1933,50 @@
     var mensagemErroAgendamento = /*[[${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio' or erroContexto == 'uso-banco') ? erro : null}]]*/ null;
     var contextoErroAgendamento = /*[[${erroContexto}]]*/ null;
     var erroSenhaModal = /*[[${erroSenha != null ? erroSenha : (erro != null and erroContexto == 'senha' ? erro : null)}]]*/ null;
-
+    var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
+    var podeEscolherProfissionalAgendamento = /*[[${isAdmin or isDonaClinica}]]*/ false;
     var idsProfissionaisSemValores = /*[[${idsProfissionaisSemValores}]]*/ [];
 
     document.addEventListener('DOMContentLoaded', function () {
-        (function initPainelValoresPorProfissional() {
+        (function initFormularioAgendamentoValores() {
             var painel = document.getElementById('valoresConsultaPanel');
-            var hintPagamento = document.getElementById('pagamentoRecorrenciaHint');
-            var selectProf = document.getElementById('profissionalAgendamentoSelect');
-            if (!painel && !selectProf) {
+            if (!painel) {
                 return;
             }
 
-            function profissionalSemValores(profissionalId) {
-                if (!profissionalId) {
-                    return false;
-                }
-                return idsProfissionaisSemValores.some(function (id) {
-                    return String(id) === String(profissionalId);
-                });
-            }
-
-            function alternarPainelValores() {
-                var semValores = false;
-                if (selectProf) {
-                    semValores = profissionalSemValores(selectProf.value);
-                }
-                if (painel) {
-                    painel.classList.toggle('d-none', semValores);
-                    painel.querySelectorAll('input.valor-moeda-brl').forEach(function (input) {
-                        input.required = !semValores;
-                        if (semValores) {
-                            input.value = '';
-                        }
-                    });
-                    if (semValores) {
-                        var indicacaoCheckbox = painel.querySelector('input[type="checkbox"]');
-                        if (indicacaoCheckbox) {
-                            indicacaoCheckbox.checked = false;
-                        }
-                    }
-                }
-                if (hintPagamento) {
-                    hintPagamento.classList.toggle('d-none', semValores);
-                }
-            }
-
-            if (selectProf) {
-                selectProf.addEventListener('change', alternarPainelValores);
-            }
-            alternarPainelValores();
-        })();
-
-        (function initValoresConsultaPanel() {
-            var salaSelect = document.querySelector('select[name="salaId"]');
-            var recorrenciaSelect = document.querySelector('select[name="recorrencia"]');
+            var formAgendamento = document.getElementById('formNovoAgendamento');
+            var selectProf = document.getElementById('profissionalAgendamentoSelect');
+            var hintPagamento = document.getElementById('pagamentoRecorrenciaHint');
+            var salaSelect = formAgendamento ? formAgendamento.querySelector('[name="salaId"]') : null;
+            var recorrenciaSelect = formAgendamento ? formAgendamento.querySelector('[name="recorrencia"]') : null;
             var indicacaoInput = document.getElementById('indicacaoDona');
             var recebeInput = document.getElementById('valorProfissionalRecebe');
             var clinicaInput = document.getElementById('valorClinicaCobra');
             var liquidoSpan = document.getElementById('valorLiquidoProfissional');
+            var clinicaManual = false;
 
-            if (!salaSelect || !recorrenciaSelect || !recebeInput || !clinicaInput || !liquidoSpan) {
-                return;
+            function profissionalSemValores(profissionalId) {
+                if (!profissionalId) {
+                    return podeEscolherProfissionalAgendamento;
+                }
+                if (idsProfissionaisSemValores.some(function (id) {
+                    return String(id) === String(profissionalId);
+                })) {
+                    return true;
+                }
+                if (!selectProf) {
+                    return false;
+                }
+                var option = selectProf.options[selectProf.selectedIndex];
+                return option && option.getAttribute('data-sem-valores') === 'true';
             }
 
-            var clinicaManual = false;
-            var formAgendamento = recebeInput.closest('form');
+            function profissionalExigeValores() {
+                if (!selectProf) {
+                    return true;
+                }
+                return !profissionalSemValores(selectProf.value);
+            }
 
             function parseMoney(value) {
                 if (value == null || value === '') {
@@ -1998,32 +1998,10 @@
                 return formatMoney(parseMoney(value));
             }
 
-            function aplicarMascaraMoeda(input, onChange) {
-                input.addEventListener('input', function () {
-                    var digitos = input.value.replace(/\D/g, '');
-                    if (!digitos) {
-                        input.value = '';
-                        if (onChange) {
-                            onChange();
-                        }
-                        return;
-                    }
-                    var numero = parseInt(digitos, 10) / 100;
-                    input.value = formatMoney(numero);
-                    if (onChange) {
-                        onChange();
-                    }
-                });
-            }
-
-            function prepararValoresParaEnvio() {
-                var recebe = parseMoney(recebeInput.value);
-                var clinica = parseMoney(clinicaInput.value);
-                recebeInput.value = recebe > 0 ? recebe.toFixed(2) : '';
-                clinicaInput.value = clinica >= 0 ? clinica.toFixed(2) : '';
-            }
-
             function isSala4() {
+                if (!salaSelect) {
+                    return false;
+                }
                 var option = salaSelect.options[salaSelect.selectedIndex];
                 if (!option) {
                     return false;
@@ -2033,7 +2011,7 @@
             }
 
             function calcularTarifaClinica() {
-                var recebe = parseMoney(recebeInput.value);
+                var recebe = recebeInput ? parseMoney(recebeInput.value) : 0;
                 if (indicacaoInput && indicacaoInput.checked) {
                     if (recebe > 0) {
                         return Math.round(recebe * 0.30 * 100) / 100;
@@ -2043,13 +2021,16 @@
                 if (isSala4()) {
                     return 25;
                 }
-                if (recorrenciaSelect.value === 'SEMANAL') {
+                if (recorrenciaSelect && recorrenciaSelect.value === 'SEMANAL') {
                     return 32;
                 }
                 return 35;
             }
 
             function atualizarLiquido() {
+                if (!recebeInput || !clinicaInput || !liquidoSpan) {
+                    return;
+                }
                 var recebe = parseMoney(recebeInput.value);
                 var clinica = parseMoney(clinicaInput.value);
                 if (recebe <= 0) {
@@ -2060,6 +2041,9 @@
             }
 
             function atualizarClinicaAutomatica() {
+                if (!clinicaInput || !recebeInput) {
+                    return;
+                }
                 if (clinicaManual && !(indicacaoInput && indicacaoInput.checked)) {
                     atualizarLiquido();
                     return;
@@ -2081,27 +2065,87 @@
                 atualizarLiquido();
             }
 
-            aplicarMascaraMoeda(recebeInput, function () {
-                if (indicacaoInput && indicacaoInput.checked) {
-                    clinicaManual = false;
+            function alternarPainelValores() {
+                var exibir = profissionalExigeValores();
+                painel.classList.toggle('d-none', !exibir);
+                painel.querySelectorAll('input.valor-moeda-brl').forEach(function (input) {
+                    input.required = exibir;
+                    if (!exibir) {
+                        input.value = '';
+                    }
+                });
+                if (!exibir) {
+                    var indicacaoCheckbox = painel.querySelector('input[type="checkbox"]');
+                    if (indicacaoCheckbox) {
+                        indicacaoCheckbox.checked = false;
+                    }
                 }
-                atualizarClinicaAutomatica();
-            });
+                if (hintPagamento) {
+                    hintPagamento.classList.toggle('d-none', !exibir);
+                }
+                if (exibir) {
+                    clinicaManual = false;
+                    atualizarClinicaAutomatica();
+                }
+            }
 
-            aplicarMascaraMoeda(clinicaInput, function () {
-                clinicaManual = true;
-                atualizarLiquido();
-            });
+            function prepararValoresParaEnvio() {
+                if (!recebeInput || !clinicaInput) {
+                    return;
+                }
+                var recebe = parseMoney(recebeInput.value);
+                var clinica = parseMoney(clinicaInput.value);
+                recebeInput.value = recebe > 0 ? recebe.toFixed(2) : '';
+                clinicaInput.value = clinica >= 0 ? clinica.toFixed(2) : '';
+            }
 
-            salaSelect.addEventListener('change', function () {
-                clinicaManual = false;
-                atualizarClinicaAutomatica();
-            });
+            function aplicarMascaraMoeda(input, onChange) {
+                input.addEventListener('input', function () {
+                    var digitos = input.value.replace(/\D/g, '');
+                    if (!digitos) {
+                        input.value = '';
+                        if (onChange) {
+                            onChange();
+                        }
+                        return;
+                    }
+                    var numero = parseInt(digitos, 10) / 100;
+                    input.value = formatMoney(numero);
+                    if (onChange) {
+                        onChange();
+                    }
+                });
+            }
 
-            recorrenciaSelect.addEventListener('change', function () {
-                clinicaManual = false;
-                atualizarClinicaAutomatica();
-            });
+            if (recebeInput) {
+                aplicarMascaraMoeda(recebeInput, function () {
+                    if (indicacaoInput && indicacaoInput.checked) {
+                        clinicaManual = false;
+                    }
+                    atualizarClinicaAutomatica();
+                });
+            }
+
+            if (clinicaInput) {
+                aplicarMascaraMoeda(clinicaInput, function () {
+                    clinicaManual = true;
+                    atualizarLiquido();
+                });
+            }
+
+            if (salaSelect) {
+                salaSelect.addEventListener('change', function () {
+                    clinicaManual = false;
+                    atualizarClinicaAutomatica();
+                });
+            }
+
+            if (recorrenciaSelect) {
+                recorrenciaSelect.addEventListener('change', function () {
+                    clinicaManual = false;
+                    atualizarClinicaAutomatica();
+                });
+            }
 
             if (indicacaoInput) {
                 indicacaoInput.addEventListener('change', function () {
@@ -2110,19 +2154,24 @@
                 });
             }
 
-            if (recebeInput.value) {
+            if (selectProf) {
+                selectProf.addEventListener('change', alternarPainelValores);
+            }
+
+            if (recebeInput && recebeInput.value) {
                 recebeInput.value = formatMoneyInput(recebeInput.value);
-            } else {
+            } else if (recebeInput) {
                 recebeInput.value = '';
             }
-            if (clinicaInput.value) {
+            if (clinicaInput && clinicaInput.value) {
                 clinicaManual = true;
                 clinicaInput.value = formatMoneyInput(clinicaInput.value);
-            } else {
+            } else if (clinicaInput) {
                 clinicaInput.value = '';
                 clinicaManual = false;
             }
-            atualizarLiquido();
+
+            alternarPainelValores();
 
             if (formAgendamento) {
                 formAgendamento.addEventListener('submit', prepararValoresParaEnvio);
@@ -2202,10 +2251,13 @@
 
         var modalSenhaEl = document.getElementById('trocarSenhaModal');
         var painelSenhaErro = document.getElementById('trocarSenhaErroPainel');
-        if (erroSenhaModal || painelSenhaErro) {
+        if (exibirModalTrocarSenhaObrigatoria || erroSenhaModal || painelSenhaErro) {
             fecharAvisoErroAgendamento();
             if (modalSenhaEl) {
-                bootstrap.Modal.getOrCreateInstance(modalSenhaEl).show();
+                var opcoesModalSenha = exibirModalTrocarSenhaObrigatoria
+                    ? { backdrop: 'static', keyboard: false }
+                    : {};
+                bootstrap.Modal.getOrCreateInstance(modalSenhaEl, opcoesModalSenha).show();
             }
         } else if (mensagemErroAgendamento || (document.getElementById('agendamentoErroAviso') && document.getElementById('agendamentoErroAviso').dataset.erroMsg)) {
             abrirAvisoErroAgendamento();
@@ -2544,12 +2596,12 @@
         });
 
         var pagamentoModalEl = document.getElementById('pagamentoPosAgendamentoModal');
-        if (pagamentoModalEl) {
+        if (pagamentoModalEl && !exibirModalTrocarSenhaObrigatoria) {
             bootstrap.Modal.getOrCreateInstance(pagamentoModalEl).show();
         }
 
         var pixConfirmadoModalEl = document.getElementById('pixConfirmadoModal');
-        if (pixConfirmadoModalEl) {
+        if (pixConfirmadoModalEl && !exibirModalTrocarSenhaObrigatoria) {
             bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
         }
 

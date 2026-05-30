@@ -58,9 +58,9 @@ public class AuthService {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }
 
-    /** Cadastro, senhas e periodicidade de pagamento — exclusivo da dona da clinica (Polyana). */
+    /** Cadastro, senhas e periodicidade de pagamento — dona da clinica e administracao. */
     public boolean podeAcessarCentralProfissionais(Usuario usuario) {
-        return isDonaClinica(usuario);
+        return podeGerenciarEquipe(usuario);
     }
 
     /** Layout caderno (Avulso / Fixo / Quinzenal) para profissionais e dona da clinica; admin mantem a grade completa. */

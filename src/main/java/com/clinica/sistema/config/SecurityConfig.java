@@ -1,5 +1,6 @@
 package com.clinica.sistema.config;
 
+import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
 import com.clinica.sistema.security.ClinicaAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            ClinicaAuthenticationProvider clinicaAuthenticationProvider
+            ClinicaAuthenticationProvider clinicaAuthenticationProvider,
+            ClinicaAuthenticationSuccessHandler authenticationSuccessHandler
     ) throws Exception {
         http
                 .authenticationProvider(clinicaAuthenticationProvider)
@@ -32,7 +34,7 @@ public class SecurityConfig {
                         .loginProcessingUrl("/login")
                         .usernameParameter("login")
                         .passwordParameter("senha")
-                        .defaultSuccessUrl("/agendamentos/dashboard", true)
+                        .successHandler(authenticationSuccessHandler)
                         .failureUrl("/login?erro=1")
                         .permitAll()
                 )

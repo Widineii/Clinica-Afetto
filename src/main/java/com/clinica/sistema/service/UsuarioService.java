@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
@@ -8,6 +9,8 @@ import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,19 +24,22 @@ public class UsuarioService {
     private final AuthService authService;
     private final PasswordEncoder passwordEncoder;
     private final PagamentoConsultaService pagamentoConsultaService;
+    private final SegurancaProperties segurancaProperties;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
             AgendamentoRepository agendamentoRepository,
             AuthService authService,
             PasswordEncoder passwordEncoder,
-            PagamentoConsultaService pagamentoConsultaService
+            PagamentoConsultaService pagamentoConsultaService,
+            SegurancaProperties segurancaProperties
     ) {
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
         this.authService = authService;
         this.passwordEncoder = passwordEncoder;
         this.pagamentoConsultaService = pagamentoConsultaService;
+        this.segurancaProperties = segurancaProperties;
     }
 
     public List<Usuario> listarProfissionaisDaEquipe() {
@@ -78,7 +84,46 @@ public class UsuarioService {
         usuario.setPeriodicidadePagamento(
                 form.getPeriodicidade() != null ? form.getPeriodicidade() : PeriodicidadePagamento.DIARIO
         );
+        if (segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
+            usuario.setDeveTrocarSenha(true);
+        }
         return usuarioRepository.save(usuario);
+    }
+
+    public boolean usuarioLogadoDeveTrocarSenha() {
+        if (!segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
+            return false;
+        }
+        return authService.buscarUsuarioLogado()
+                .map(this::deveTrocarSenha)
+                .orElse(false);
+    }
+
+    private boolean deveTrocarSenha(Usuario usuarioLogado) {
+        if (authService.isAdmin(usuarioLogado)) {
+            return false;
+        }
+        Usuario atualizado = usuarioRepository.findById(usuarioLogado.getId()).orElse(usuarioLogado);
+        return Boolean.TRUE.equals(atualizado.getDeveTrocarSenha());
+    }
+
+    public boolean exibirModalTrocaSenhaPrimeiroAcesso(HttpSession session, boolean reabrirAposErro) {
+        if (!usuarioLogadoDeveTrocarSenha()) {
+            return false;
+        }
+        if (reabrirAposErro) {
+            return true;
+        }
+        if (session == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_TROCA_SENHA));
+    }
+
+    public void confirmarExibicaoModalTrocaSenha(HttpSession session) {
+        if (session != null) {
+            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_TROCA_SENHA);
+        }
     }
 
     @Transactional
@@ -126,6 +171,7 @@ public class UsuarioService {
             throw new RuntimeException("Senha atual incorreta.");
         }
         aplicarNovaSenha(usuario, novaSenha, confirmarSenha, true, senhaAtual);
+        usuario.setDeveTrocarSenha(false);
         usuarioRepository.save(usuario);
     }
 
@@ -143,6 +189,9 @@ public class UsuarioService {
         String novaSenha = normalizarSenha(form.getNovaSenha());
         String confirmarSenha = normalizarSenha(form.getConfirmarSenha());
         aplicarNovaSenha(alvo, novaSenha, confirmarSenha, false, null);
+        if (segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
+            alvo.setDeveTrocarSenha(true);
+        }
         usuarioRepository.save(alvo);
     }
 
@@ -202,7 +251,7 @@ public class UsuarioService {
 
     private void validarGerenciamentoEquipe(Usuario usuarioLogado) {
         if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
-            throw new RuntimeException("Somente a dona da clínica pode acessar a central dos profissionais.");
+            throw new RuntimeException("Acesso negado à central dos profissionais.");
         }
     }
 

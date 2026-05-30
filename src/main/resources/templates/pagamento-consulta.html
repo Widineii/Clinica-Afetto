@@ -23,7 +23,12 @@
     <div class="card shadow-sm border-0">
         <div class="card-body p-4 text-center">
             <h1 class="h4 mb-2">Pagamento da consulta</h1>
-            <p class="text-muted small mb-3">Modo teste local — InfinitePay</p>
+            <p th:if="${pagamentoService.modoTestePagamento()}" class="text-muted small mb-3">
+                Demonstração local — fluxo igual ao da clínica
+            </p>
+            <p th:unless="${pagamentoService.modoTestePagamento()}" class="text-muted small mb-3">
+                InfinitePay · PIX
+            </p>
 
             <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
             <p class="small text-muted"
@@ -43,13 +48,6 @@
                 </p>
                 <div th:replace="~{fragments/pagamento-consulta :: bloco-pagamento-qr(agendamento=${agendamento}, imgWidth=260)}"></div>
                 <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
-                <div class="d-grid gap-2">
-                    <form th:if="${pagamentoService.modoTestePagamento()}"
-                          th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
-                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                        <button type="submit" class="btn btn-outline-success w-100">Simular pagamento (teste)</button>
-                    </form>
-                </div>
             </div>
 
             <div th:if="${agendamento.pagamentoPago}" class="alert alert-success mb-0">

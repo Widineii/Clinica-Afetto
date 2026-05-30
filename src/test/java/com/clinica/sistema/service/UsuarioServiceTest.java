@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
@@ -42,6 +43,9 @@ class UsuarioServiceTest {
     @Mock
     private PagamentoConsultaService pagamentoConsultaService;
 
+    @Mock
+    private SegurancaProperties segurancaProperties;
+
     @InjectMocks
     private UsuarioService usuarioService;
 
@@ -76,6 +80,7 @@ class UsuarioServiceTest {
         dona.setDonaClinica(true);
 
         when(authService.podeAcessarCentralProfissionais(dona)).thenReturn(true);
+        when(segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()).thenReturn(true);
         when(usuarioRepository.findByLogin("novoprof")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("1234")).thenReturn("hash-1234");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -86,17 +91,22 @@ class UsuarioServiceTest {
         assertEquals("novoprof", usuarioSalvo.getLogin());
         assertEquals("hash-1234", usuarioSalvo.getSenha());
         assertEquals("ROLE_PROFISSIONAL", usuarioSalvo.getCargo());
+        assertEquals(Boolean.TRUE, usuarioSalvo.getDeveTrocarSenha());
         verify(usuarioRepository).save(any(Usuario.class));
     }
 
     @Test
-    void adminNaoDeveCadastrarProfissionalNaCentral() {
-        when(authService.podeAcessarCentralProfissionais(admin)).thenReturn(false);
+    void adminDeveCadastrarProfissionalNaCentral() {
+        when(authService.podeAcessarCentralProfissionais(admin)).thenReturn(true);
+        when(segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()).thenReturn(true);
+        when(usuarioRepository.findByLogin("novoprof")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("1234")).thenReturn("hash-1234");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> usuarioService.cadastrarProfissional(form, admin));
+        Usuario usuarioSalvo = usuarioService.cadastrarProfissional(form, admin);
 
-        assertEquals("Somente a dona da clínica pode acessar a central dos profissionais.", exception.getMessage());
+        assertEquals("novoprof", usuarioSalvo.getLogin());
+        verify(usuarioRepository).save(any(Usuario.class));
     }
 
     @Test
@@ -106,7 +116,7 @@ class UsuarioServiceTest {
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> usuarioService.cadastrarProfissional(form, profissional));
 
-        assertEquals("Somente a dona da clínica pode acessar a central dos profissionais.", exception.getMessage());
+        assertEquals("Acesso negado à central dos profissionais.", exception.getMessage());
     }
 
     @Test
@@ -125,6 +135,7 @@ class UsuarioServiceTest {
         usuarioService.trocarSenha(formSenha, profissional);
 
         assertEquals("hash-nova", profissional.getSenha());
+        assertEquals(Boolean.FALSE, profissional.getDeveTrocarSenha());
         verify(usuarioRepository).save(profissional);
     }
 

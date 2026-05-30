@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<style th:fragment="checkout-demo-css">
+    .demo-checkout-page {
+        min-height: 100vh;
+        background: linear-gradient(160deg, #f0f4ff 0%, #eef9f4 55%, #f8fafc 100%);
+        padding: 1.5rem 1rem 2.5rem;
+    }
+    .demo-checkout-card {
+        max-width: 420px;
+        margin: 0 auto;
+        border: 0;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    }
+    .demo-checkout-top {
+        background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);
+        color: #fff;
+        padding: 1.25rem 1.5rem 1.5rem;
+        text-align: center;
+    }
+    .demo-checkout-top .marca {
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-size: 1.05rem;
+    }
+    .demo-checkout-top .sub {
+        opacity: 0.88;
+        font-size: 0.82rem;
+        margin-top: 0.25rem;
+    }
+    .demo-checkout-body {
+        background: #fff;
+        padding: 1.5rem;
+    }
+    .demo-checkout-valor {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0f766e;
+        line-height: 1.1;
+    }
+    .demo-pix-box {
+        border: 2px dashed #cbd5e1;
+        border-radius: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        text-align: center;
+    }
+    .demo-pix-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #dcfce7;
+        color: #15803d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    .demo-btn-pix {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border: 0;
+        font-weight: 600;
+        padding: 0.85rem 1rem;
+    }
+    .demo-btn-pix:hover {
+        filter: brightness(1.05);
+    }
+    .demo-badge-demo {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+</style>
+
+<div th:fragment="instrucao-demo-local"
+     class="alert alert-success small text-start mb-3">
+    <strong>Demonstração local</strong> — mesmo fluxo da clínica:
+    toque em <strong>Abrir pagamento PIX</strong>, confirme na tela seguinte e a agenda marca como pago.
+</div>
+
+<div th:fragment="banner-demo-agenda"
+     th:if="${pagamentoService != null and pagamentoService.modoTestePagamento()}"
+     class="alert alert-info shell-card mb-0 border-0"
+     style="background: linear-gradient(90deg, #eef2ff 0%, #ecfdf5 100%);">
+    <strong>Modo demonstração</strong> — pagamento PIX simulado no seu computador.
+    Ideal para mostrar o fluxo antes de usar a InfinitePay de verdade.
+</div>
+
+</body>
+</html>

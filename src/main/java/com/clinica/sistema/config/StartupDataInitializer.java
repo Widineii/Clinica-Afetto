@@ -44,6 +44,7 @@ public class StartupDataInitializer implements CommandLineRunner {
     private final AgendamentoRepository agendamentoRepository;
     private final RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SegurancaProperties segurancaProperties;
 
     @Value("${app.seed-demo-data:false}")
     private boolean seedDemoData;
@@ -65,13 +66,15 @@ public class StartupDataInitializer implements CommandLineRunner {
             UsuarioRepository usuarioRepository,
             AgendamentoRepository agendamentoRepository,
             RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SegurancaProperties segurancaProperties
     ) {
         this.salaRepository = salaRepository;
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
         this.relatorioMensalArquivadoRepository = relatorioMensalArquivadoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.segurancaProperties = segurancaProperties;
     }
 
     @Override
@@ -316,6 +319,11 @@ public class StartupDataInitializer implements CommandLineRunner {
         profissional.setDonaClinica(usuarioPadrao.donaClinica());
         if (novo || (seedDemoData && "ROLE_ADMIN".equals(usuarioPadrao.cargo()))) {
             profissional.setSenha(passwordEncoder.encode(usuarioPadrao.senha()));
+        }
+        if (novo
+                && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()
+                && !"ROLE_ADMIN".equals(usuarioPadrao.cargo())) {
+            profissional.setDeveTrocarSenha(true);
         }
         usuarioRepository.save(profissional);
     }

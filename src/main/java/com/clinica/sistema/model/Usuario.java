@@ -21,4 +21,7 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     @Column(name = "periodicidade_pagamento", length = 20)
     private PeriodicidadePagamento periodicidadePagamento = PeriodicidadePagamento.DIARIO;
+
+    @Column(name = "deve_trocar_senha")
+    private Boolean deveTrocarSenha = false;
 }

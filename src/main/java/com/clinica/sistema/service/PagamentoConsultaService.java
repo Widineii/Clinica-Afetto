@@ -1179,6 +1179,17 @@ public class PagamentoConsultaService {
         return pagamentoProperties.getPrazoConfirmacaoMinutos();
     }
 
+    public boolean abrirCheckoutMesmaAba() {
+        return infinitePayProperties.isModoTeste();
+    }
+
+    public String rotuloBotaoCopiarPagamento(Agendamento agendamento) {
+        if (modoTestePagamento()) {
+            return "Copiar link da demonstração";
+        }
+        return exibirQrPixEmbutido(agendamento) ? "Copiar PIX copia e cola" : "Copiar link de pagamento";
+    }
+
     public boolean exibirCheckoutInfinitePay(Agendamento agendamento) {
         if (agendamento == null || agendamento.getPagamentoLink() == null) {
             return false;
@@ -1195,10 +1206,6 @@ public class PagamentoConsultaService {
 
     public boolean exibirQrPixEmbutido(Agendamento agendamento) {
         return agendamento != null && ehPixCopiaCola(agendamento.getPagamentoLink());
-    }
-
-    public String rotuloBotaoCopiarPagamento(Agendamento agendamento) {
-        return exibirQrPixEmbutido(agendamento) ? "Copiar PIX copia e cola" : "Copiar link de pagamento";
     }
 
     private boolean ehPixCopiaCola(String link) {
