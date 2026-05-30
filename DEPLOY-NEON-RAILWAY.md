@@ -118,11 +118,15 @@ Serviço do app → **Variables** → adicione:
 
 **Não use** `DATABASE_URL` se o Neon mostrar senha mascarada (`****`).
 
-Opcional (pagamentos InfinitePay em produção):
+Pagamentos InfinitePay em produção (obrigatório para PIX real):
 
 | NAME | VALUE |
 |------|--------|
-| `PAGAMENTO_WEBHOOK_SECRET` | segredo do webhook, se usar |
+| `APP_INFINITEPAY_HANDLE` | InfiniteTag sem `@` (ex.: `afettopsicologia`) |
+| `APP_INFINITEPAY_BASE_URL` | URL publica do Railway (ex.: `https://clinica-agenda-production-e992.up.railway.app`) |
+| `PAGAMENTO_WEBHOOK_SECRET` | segredo forte (mesmo valor se configurar header na InfinitePay) |
+
+Se `APP_INFINITEPAY_HANDLE` nao estiver definido, o sistema usa `afettopsicologia` por padrao em prod.
 
 ### 3.6 Domínio público
 
