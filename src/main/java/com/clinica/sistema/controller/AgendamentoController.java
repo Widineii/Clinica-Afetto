@@ -135,8 +135,7 @@ public class AgendamentoController {
         }
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
 
-        service.renovarSeriesRecorrentesAtivas();
-        pagamentoConsultaService.processarPagamentosPendentes();
+        service.renovarSeriesRecorrentesAtivasSeNecessario();
 
         boolean isAdmin = authService.isAdmin(usuarioLogado);
 
@@ -238,11 +237,11 @@ public class AgendamentoController {
                 : List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         LocalDate referenciaSemana = agendaDataSugerida(semana);
-        Long salaIdGrade = service.resolverSalaIdParaGrade(salaId, referenciaSemana);
+        java.util.Map<Long, Integer> salasOcupadasNaSemana = service.contarAgendamentosPorSalaNaSemana(referenciaSemana);
+        Long salaIdGrade = service.resolverSalaIdParaGrade(salaId, referenciaSemana, salasOcupadasNaSemana);
         var agendaSala = service.montarAgendaSala(salaIdGrade, referenciaSemana);
         Map<Long, String> gradeAcoesPorId = service.montarAcoesGradePorId(agendaSala, usuarioLogado);
-        java.util.Map<Long, Integer> salasOcupadasNaSemana = service.contarAgendamentosPorSalaNaSemana(referenciaSemana);
-        service.mensagemAgendamentosEmOutraSala(agendaSala.getSala().getId(), referenciaSemana)
+        service.mensagemAgendamentosEmOutraSala(agendaSala.getSala().getId(), salasOcupadasNaSemana)
                 .ifPresent(msg -> model.addAttribute("avisoAgendamentoOutraSala", msg));
         model.addAttribute("salasOcupadasNaSemana", salasOcupadasNaSemana);
         List<com.clinica.sistema.model.Agendamento> agendamentosDoDia =

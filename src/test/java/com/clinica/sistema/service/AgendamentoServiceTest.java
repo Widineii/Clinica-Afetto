@@ -588,10 +588,10 @@ class AgendamentoServiceTest {
         agendamento.setSala(sala2);
         agendamento.setDataHoraInicio(LocalDateTime.of(2026, 5, 23, 17, 0));
 
-        when(agendamentoRepository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+        when(agendamentoRepository.contarAgendamentosPorSalaNoPeriodo(
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
-        )).thenReturn(List.of(agendamento));
+        )).thenReturn(List.<Object[]>of(new Object[]{2L, 1L}));
 
         Long salaResolvida = agendamentoService.resolverSalaIdParaGrade(null, sabado);
 

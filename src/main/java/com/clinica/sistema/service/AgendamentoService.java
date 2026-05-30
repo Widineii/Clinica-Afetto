@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -53,6 +55,9 @@ public class AgendamentoService {
     private static final String RECORRENCIA_AVULSO = "AVULSO";
     private static final String RECORRENCIA_SEMANAL = "SEMANAL";
     private static final String RECORRENCIA_QUINZENAL = "QUINZENAL";
+    /** Evita carregar anos de fixos antigos nas listas do dashboard. */
+    private static final int MESES_HISTORICO_AGENDA = 4;
+    private static final Duration INTERVALO_RENOVACAO_SERIES = Duration.ofMinutes(10);
 
     private final AgendamentoRepository repository;
     private final UsuarioRepository usuarioRepository;
@@ -80,8 +85,10 @@ public class AgendamentoService {
         this.encerramentoSerieRegistroRepository = encerramentoSerieRegistroRepository;
     }
 
+    private volatile Instant ultimaRenovacaoSeries = Instant.EPOCH;
+
     public List<Agendamento> buscarParaUsuario(Usuario usuarioLogado) {
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId());
+        return buscarPorProfissional(usuarioLogado.getId());
     }
 
     public Optional<Agendamento> buscarPorId(Long id) {
@@ -89,7 +96,11 @@ public class AgendamentoService {
     }
 
     public List<Agendamento> buscarPorProfissional(Long profissionalId) {
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissionalId);
+        LocalDateTime desde = LocalDateTime.now().minusMonths(MESES_HISTORICO_AGENDA);
+        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                profissionalId,
+                desde
+        );
     }
 
     public ProfissionalAgendamentosResumo montarResumoAgendamentos(Usuario profissional) {
@@ -845,6 +856,24 @@ public class AgendamentoService {
      * Mantem ocorrencias futuras por serie: 12 no fixo semanal, 6 no quinzenal.
      * Quando um dia passa ou e cancelado, a renovacao cria a proxima na sequencia.
      */
+    /**
+     * Renova series no maximo a cada {@link #INTERVALO_RENOVACAO_SERIES} (ex.: abrir o dashboard).
+     * O {@link com.clinica.sistema.config.SerieRecorrenteScheduler} garante renovacao periodica em background.
+     */
+    public void renovarSeriesRecorrentesAtivasSeNecessario() {
+        Instant agora = Instant.now();
+        if (Duration.between(ultimaRenovacaoSeries, agora).compareTo(INTERVALO_RENOVACAO_SERIES) < 0) {
+            return;
+        }
+        synchronized (this) {
+            if (Duration.between(ultimaRenovacaoSeries, agora).compareTo(INTERVALO_RENOVACAO_SERIES) < 0) {
+                return;
+            }
+            renovarSeriesRecorrentesAtivas();
+            ultimaRenovacaoSeries = Instant.now();
+        }
+    }
+
     @Transactional
     public void renovarSeriesRecorrentesAtivas() {
         LocalDateTime agora = LocalDateTime.now();
@@ -1397,11 +1426,15 @@ public class AgendamentoService {
     }
 
     public Long resolverSalaIdParaGrade(Long salaId, LocalDate referencia) {
+        return resolverSalaIdParaGrade(salaId, referencia, contarAgendamentosPorSalaNaSemana(referencia));
+    }
+
+    public Long resolverSalaIdParaGrade(Long salaId, LocalDate referencia, Map<Long, Integer> contagemSemana) {
         if (salaId != null) {
             return salaId;
         }
 
-        Map<Long, Integer> contagem = contarAgendamentosPorSalaNaSemana(referencia);
+        Map<Long, Integer> contagem = contagemSemana != null ? contagemSemana : contarAgendamentosPorSalaNaSemana(referencia);
         for (Sala sala : listarSalas()) {
             if (contagem.getOrDefault(sala.getId(), 0) > 0) {
                 return sala.getId();
@@ -1421,24 +1454,20 @@ public class AgendamentoService {
         LocalDateTime inicioConsulta = inicioSemana.atTime(HORA_ABERTURA);
         LocalDateTime fimConsulta = fimSemana.plusDays(1).atStartOfDay();
 
-        List<Agendamento> agendamentosSemana =
-                repository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
-                        inicioConsulta,
-                        fimConsulta
-                );
-
         Map<Long, Integer> contagem = new LinkedHashMap<>();
-        for (Agendamento agendamento : agendamentosSemana) {
-            if (agendamento.getSala() == null) {
-                continue;
-            }
-            contagem.merge(agendamento.getSala().getId(), 1, Integer::sum);
+        for (Object[] linha : repository.contarAgendamentosPorSalaNoPeriodo(inicioConsulta, fimConsulta)) {
+            Long salaId = (Long) linha[0];
+            Number total = (Number) linha[1];
+            contagem.put(salaId, total.intValue());
         }
         return contagem;
     }
 
     public Optional<String> mensagemAgendamentosEmOutraSala(Long salaIdAtual, LocalDate referencia) {
-        Map<Long, Integer> contagem = contarAgendamentosPorSalaNaSemana(referencia);
+        return mensagemAgendamentosEmOutraSala(salaIdAtual, contarAgendamentosPorSalaNaSemana(referencia));
+    }
+
+    public Optional<String> mensagemAgendamentosEmOutraSala(Long salaIdAtual, Map<Long, Integer> contagem) {
         if (contagem.isEmpty() || contagem.getOrDefault(salaIdAtual, 0) > 0) {
             return Optional.empty();
         }

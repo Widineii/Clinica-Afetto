@@ -12,7 +12,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 @Entity
-@Table(name = "agendamentos")
+@Table(
+        name = "agendamentos",
+        indexes = {
+                @Index(name = "idx_agendamento_data_inicio", columnList = "data_hora_inicio"),
+                @Index(name = "idx_agendamento_profissional_data", columnList = "id_usuario, data_hora_inicio"),
+                @Index(name = "idx_agendamento_sala_data", columnList = "id_sala, data_hora_inicio")
+        }
+)
 @Data
 public class Agendamento {
 

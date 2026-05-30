@@ -65,12 +65,25 @@ public class UsoBancoService {
         LocalDateTime inicioHoje = LocalDate.now().atStartOfDay();
         LocalDateTime fimHoje = inicioHoje.plusDays(1);
 
-        long totalAgendamentos = agendamentoRepository.count();
-        long avulsos = agendamentoRepository.countAvulsos();
-        long fixos = agendamentoRepository.countFixosOuQuinzenais();
-        long encerrados = agendamentoRepository.countComDataHoraFimAntesDe(agora);
-        long noMes = agendamentoRepository.countNoPeriodo(inicioMes, fimMes);
-        long hoje = agendamentoRepository.countNoPeriodo(inicioHoje, fimHoje);
+        long totalAgendamentos;
+        long avulsos;
+        long fixos;
+        long encerrados;
+        long noMes;
+        long hoje;
+        Object[] contagensAgendamentos = agendamentoRepository.buscarResumoContagensPainel(
+                agora,
+                inicioMes,
+                fimMes,
+                inicioHoje,
+                fimHoje
+        );
+        totalAgendamentos = extrairContagem(contagensAgendamentos, 0);
+        avulsos = extrairContagem(contagensAgendamentos, 1);
+        fixos = extrairContagem(contagensAgendamentos, 2);
+        encerrados = extrairContagem(contagensAgendamentos, 3);
+        noMes = extrairContagem(contagensAgendamentos, 4);
+        hoje = extrairContagem(contagensAgendamentos, 5);
 
         long relatorios = relatorioMensalArquivadoRepository.count();
         long relatoriosComPdf = relatorioMensalArquivadoRepository.countComPdfLegado();
@@ -114,6 +127,16 @@ public class UsoBancoService {
                 classificarAlerta(percentual),
                 bytesBancoReal != null
         );
+    }
+
+    private static long extrairContagem(Object[] linha, int indice) {
+        if (linha == null || indice >= linha.length || linha[indice] == null) {
+            return 0L;
+        }
+        if (linha[indice] instanceof Number number) {
+            return number.longValue();
+        }
+        return 0L;
     }
 
     private long somarBytesJsonRelatorios() {

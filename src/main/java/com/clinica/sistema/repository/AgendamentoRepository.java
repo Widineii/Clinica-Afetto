@@ -21,6 +21,12 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findByProfissionalIdOrderByDataHoraInicioAsc(Long profissionalId);
 
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByProfissionalIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+            Long profissionalId,
+            LocalDateTime dataHoraInicio
+    );
+
     boolean existsByProfissionalId(Long profissionalId);
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
@@ -149,6 +155,19 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     @Query("""
+            SELECT a.sala.id, COUNT(a)
+            FROM Agendamento a
+            WHERE a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+              AND a.sala IS NOT NULL
+            GROUP BY a.sala.id
+            """)
+    List<Object[]> contarAgendamentosPorSalaNoPeriodo(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
+
+    @Query("""
             SELECT COUNT(a)
             FROM Agendamento a
             WHERE (a.fixo IS NULL OR a.fixo = false)
@@ -180,6 +199,31 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     long countNoPeriodo(
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
+    );
+
+    /**
+     * Uma unica ida ao banco para o painel admin de uso (em vez de 6 contagens separadas).
+     */
+    @Query("""
+            SELECT
+              COUNT(a),
+              SUM(CASE WHEN (a.fixo IS NULL OR a.fixo = false)
+                        AND (a.tipoRecorrencia IS NULL OR UPPER(a.tipoRecorrencia) NOT IN ('SEMANAL', 'QUINZENAL'))
+                   THEN 1 ELSE 0 END),
+              SUM(CASE WHEN a.fixo = true
+                        OR UPPER(COALESCE(a.tipoRecorrencia, '')) IN ('SEMANAL', 'QUINZENAL')
+                   THEN 1 ELSE 0 END),
+              SUM(CASE WHEN a.dataHoraFim < :agora THEN 1 ELSE 0 END),
+              SUM(CASE WHEN a.dataHoraInicio >= :inicioMes AND a.dataHoraInicio < :fimMes THEN 1 ELSE 0 END),
+              SUM(CASE WHEN a.dataHoraInicio >= :inicioHoje AND a.dataHoraInicio < :fimHoje THEN 1 ELSE 0 END)
+            FROM Agendamento a
+            """)
+    Object[] buscarResumoContagensPainel(
+            @Param("agora") LocalDateTime agora,
+            @Param("inicioMes") LocalDateTime inicioMes,
+            @Param("fimMes") LocalDateTime fimMes,
+            @Param("inicioHoje") LocalDateTime inicioHoje,
+            @Param("fimHoje") LocalDateTime fimHoje
     );
 
     @Query("""

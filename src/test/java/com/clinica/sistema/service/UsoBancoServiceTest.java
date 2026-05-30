@@ -58,11 +58,8 @@ class UsoBancoServiceTest {
         when(connection.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("H2");
 
-        when(agendamentoRepository.count()).thenReturn(12_500L);
-        when(agendamentoRepository.countAvulsos()).thenReturn(3_000L);
-        when(agendamentoRepository.countFixosOuQuinzenais()).thenReturn(9_500L);
-        when(agendamentoRepository.countComDataHoraFimAntesDe(any())).thenReturn(8_000L);
-        when(agendamentoRepository.countNoPeriodo(any(), any())).thenReturn(1_100L, 52L);
+        when(agendamentoRepository.buscarResumoContagensPainel(any(), any(), any(), any(), any()))
+                .thenReturn(new Object[]{12_500L, 3_000L, 9_500L, 8_000L, 1_100L, 52L});
         when(relatorioMensalArquivadoRepository.count()).thenReturn(8L);
         when(relatorioMensalArquivadoRepository.countComPdfLegado()).thenReturn(0L);
         when(relatorioMensalArquivadoRepository.somaBytesJson()).thenReturn(120_000L);
