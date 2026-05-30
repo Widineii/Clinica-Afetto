@@ -3,6 +3,6 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-healthcheckPath = "/actuator/health"
-healthcheckTimeout = 120
+healthcheckPath = "/login"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
