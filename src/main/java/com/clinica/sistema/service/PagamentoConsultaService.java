@@ -292,9 +292,18 @@ public class PagamentoConsultaService {
             throw new RuntimeException("order_nsu obrigatorio no webhook InfinitePay.");
         }
         if (!infinitePayProperties.isModoTeste()) {
-            String slug = extrairCampoTexto(payload, "slug", "invoice_slug", "invoiceSlug");
+            String slugPayload = extrairCampoTexto(payload, "slug", "invoice_slug", "invoiceSlug");
             String transactionNsu = extrairCampoTexto(payload, "transaction_nsu", "transactionNsu");
-            if (!infinitePayService.consultarPagamentoConfirmado(orderNsu, slug, transactionNsu)) {
+            String slugBanco = buscarSlugPagamentoPorOrderNsu(orderNsu);
+            String slug = slugPayload != null ? slugPayload : slugBanco;
+            String link = buscarLinkPagamentoPorOrderNsu(orderNsu);
+            boolean confirmado = infinitePayService.consultarPagamentoConfirmado(
+                    orderNsu,
+                    slug,
+                    link,
+                    transactionNsu
+            );
+            if (!confirmado && !payloadIndicaPagamentoAprovado(payload)) {
                 throw new RuntimeException("Pagamento ainda nao confirmado na InfinitePay.");
             }
         }
@@ -317,13 +326,22 @@ public class PagamentoConsultaService {
         if (infinitePayProperties.isModoTeste()) {
             throw new RuntimeException("Use \"Simular pagamento\" no modo teste local.");
         }
+        String slugResolvido = infinitePayService.resolverSlugPagamento(
+                agendamento.getPagamentoSlug(),
+                agendamento.getPagamentoLink()
+        );
+        if (slugResolvido != null && !slugResolvido.equals(agendamento.getPagamentoSlug())) {
+            agendamento.setPagamentoSlug(slugResolvido);
+            repository.save(agendamento);
+        }
         if (!infinitePayService.consultarPagamentoConfirmado(
                 orderNsu,
-                agendamento.getPagamentoSlug(),
-                null
+                slugResolvido,
+                agendamento.getPagamentoLink()
         )) {
             throw new RuntimeException(
-                    "InfinitePay ainda nao confirmou este pagamento. Aguarde alguns segundos e tente novamente."
+                    "InfinitePay ainda nao confirmou este pagamento. "
+                            + "Confira se o PIX caiu na conta certa e aguarde alguns segundos antes de tentar de novo."
             );
         }
         return confirmarPagamentoPorWebhook(orderNsu);
@@ -379,6 +397,40 @@ public class PagamentoConsultaService {
             }
         }
         return null;
+    }
+
+    private boolean payloadIndicaPagamentoAprovado(Map<String, Object> payload) {
+        if (payload == null || payload.isEmpty()) {
+            return false;
+        }
+        if (extrairCampoTexto(payload, "receipt_url", "receiptUrl") != null) {
+            return true;
+        }
+        Object paidAmount = payload.get("paid_amount");
+        if (paidAmount == null) {
+            paidAmount = payload.get("paidAmount");
+        }
+        if (paidAmount == null) {
+            return false;
+        }
+        String captureMethod = extrairCampoTexto(payload, "capture_method", "captureMethod");
+        return captureMethod != null && !captureMethod.isBlank();
+    }
+
+    private String buscarSlugPagamentoPorOrderNsu(String orderNsu) {
+        return repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu).stream()
+                .map(Agendamento::getPagamentoSlug)
+                .filter(slug -> slug != null && !slug.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String buscarLinkPagamentoPorOrderNsu(String orderNsu) {
+        return repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu).stream()
+                .map(Agendamento::getPagamentoLink)
+                .filter(link -> link != null && !link.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     @Transactional

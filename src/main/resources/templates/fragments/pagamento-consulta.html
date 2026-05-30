@@ -90,7 +90,7 @@
             Copiar link
         </button>
 
-        <form th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null and !pagamentoService.modoTestePagamento()}"
+        <form th:if="${agendamento.esperandoConfirmacaoPagamento and agendamento.id != null and !pagamentoService.modoTestePagamento()}"
               th:action="@{/pagamentos/{id}/verificar(id=${agendamento.id})}"
               method="post"
               class="d-inline">
@@ -182,6 +182,12 @@
                                 th:text="${pagamentoService.rotuloBotaoCopiarPagamento(item)}">
                             Copiar link
                         </button>
+                        <form th:if="${item.esperandoConfirmacaoPagamento and item.id != null and !pagamentoService.modoTestePagamento()}"
+                              th:action="@{/pagamentos/{id}/verificar(id=${item.id})}"
+                              method="post">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <button type="submit" class="btn btn-sm btn-success w-100">Ja paguei</button>
+                        </form>
                     </div>
                 </div>
             </div>

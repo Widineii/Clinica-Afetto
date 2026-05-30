@@ -60,6 +60,23 @@ class InfinitePayServiceTest {
     }
 
     @Test
+    void deveExtrairSlugDoCheckoutUrl() {
+        com.clinica.sistema.config.InfinitePayProperties props =
+                new com.clinica.sistema.config.InfinitePayProperties();
+        props.setHandle("afettopsicologia");
+        InfinitePayService svc = new InfinitePayService(props, new ValorConsultaService());
+
+        assertEquals(
+                "1RxANX7tdF",
+                svc.extrairSlugDoCheckoutUrl("https://checkout.infinitepay.io/afettopsicologia/1RxANX7tdF")
+        );
+        assertEquals(
+                "abcdef123",
+                svc.extrairSlugDoCheckoutUrl("https://checkout.infinitepay.io/pay/abcdef123")
+        );
+    }
+
+    @Test
     void indicacaoDeveUsarTrintaPorCentoNoPix() {
         Agendamento agendamento = agendamentoBase();
         agendamento.setIndicacaoDona(true);

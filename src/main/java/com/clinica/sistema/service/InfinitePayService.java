@@ -3,6 +3,8 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.config.InfinitePayProperties;
 import com.clinica.sistema.dto.LinkPagamentoGerado;
 import com.clinica.sistema.model.Agendamento;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -12,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +23,8 @@ import java.util.UUID;
 
 @Service
 public class InfinitePayService {
+
+    private static final Logger log = LoggerFactory.getLogger(InfinitePayService.class);
 
     private static final String API_LINKS = "https://api.checkout.infinitepay.io/links";
     private static final String API_PAYMENT_CHECK_CHECKOUT = "https://api.checkout.infinitepay.io/payment_check";
@@ -134,13 +139,20 @@ public class InfinitePayService {
                 url = resposta.get("link");
             }
             Object slug = resposta.get("slug");
+            if (slug == null || slug.toString().isBlank()) {
+                slug = resposta.get("invoice_slug");
+            }
             if (url == null || url.toString().isBlank()) {
                 throw new RuntimeException("InfinitePay nao retornou link de pagamento.");
             }
+            String urlCheckout = url.toString();
+            String slugFinal = slug != null && !slug.toString().isBlank()
+                    ? slug.toString().trim()
+                    : extrairSlugDoCheckoutUrl(urlCheckout);
             return new LinkPagamentoGerado(
                     orderNsu,
-                    url.toString(),
-                    slug != null ? slug.toString() : null
+                    urlCheckout,
+                    slugFinal
             );
         } catch (RestClientException ex) {
             throw new RuntimeException("Falha ao gerar link InfinitePay: " + ex.getMessage());
@@ -154,10 +166,84 @@ public class InfinitePayService {
     /**
      * Consulta na InfinitePay se o pedido foi pago (PIX ou cartao).
      */
-    public boolean consultarPagamentoConfirmado(String orderNsu, String slug, String transactionNsu) {
+    public boolean consultarPagamentoConfirmado(String orderNsu, String slugSalvo, String linkPagamento) {
+        return consultarPagamentoConfirmado(orderNsu, slugSalvo, linkPagamento, null);
+    }
+
+    public boolean consultarPagamentoConfirmado(
+            String orderNsu,
+            String slugSalvo,
+            String linkPagamento,
+            String transactionNsu
+    ) {
         if (orderNsu == null || orderNsu.isBlank()) {
             return false;
         }
+        String slug = resolverSlugPagamento(slugSalvo, linkPagamento);
+        Map<String, Object> body = montarCorpoPaymentCheck(orderNsu, slug, transactionNsu);
+
+        for (String endpoint : List.of(API_PAYMENT_CHECK_CHECKOUT, API_PAYMENT_CHECK_LEGACY)) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resposta = postPaymentCheck(endpoint, body);
+                if (respostaPagamentoConfirmado(resposta)) {
+                    return true;
+                }
+                log.warn(
+                        "InfinitePay payment_check nao confirmou em {}: order_nsu={} slug={} resposta={}",
+                        endpoint,
+                        orderNsu,
+                        slug,
+                        resposta
+                );
+            } catch (RestClientException ex) {
+                log.warn(
+                        "Falha ao consultar InfinitePay em {}: order_nsu={} slug={} erro={}",
+                        endpoint,
+                        orderNsu,
+                        slug,
+                        ex.getMessage()
+                );
+            }
+        }
+        return false;
+    }
+
+    public String resolverSlugPagamento(String slugSalvo, String linkPagamento) {
+        if (slugSalvo != null && !slugSalvo.isBlank()) {
+            return slugSalvo.trim();
+        }
+        return extrairSlugDoCheckoutUrl(linkPagamento);
+    }
+
+    public String extrairSlugDoCheckoutUrl(String linkPagamento) {
+        if (linkPagamento == null || linkPagamento.isBlank()) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(linkPagamento.trim());
+            String path = uri.getPath();
+            if (path == null || path.isBlank()) {
+                return null;
+            }
+            String[] partes = path.split("/");
+            for (int i = partes.length - 1; i >= 0; i--) {
+                String parte = partes[i] == null ? "" : partes[i].trim();
+                if (parte.isBlank() || "pay".equalsIgnoreCase(parte)) {
+                    continue;
+                }
+                if (parte.equalsIgnoreCase(properties.getHandle())) {
+                    continue;
+                }
+                return parte;
+            }
+        } catch (IllegalArgumentException ex) {
+            log.warn("Nao foi possivel extrair slug do checkout InfinitePay: {}", linkPagamento);
+        }
+        return null;
+    }
+
+    private Map<String, Object> montarCorpoPaymentCheck(String orderNsu, String slug, String transactionNsu) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("handle", properties.getHandle());
         body.put("order_nsu", orderNsu.trim());
@@ -167,23 +253,16 @@ public class InfinitePayService {
         if (transactionNsu != null && !transactionNsu.isBlank()) {
             body.put("transaction_nsu", transactionNsu.trim());
         }
+        return body;
+    }
 
+    private Map<String, Object> postPaymentCheck(String endpoint, Map<String, Object> body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-        for (String endpoint : List.of(API_PAYMENT_CHECK_CHECKOUT, API_PAYMENT_CHECK_LEGACY)) {
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> resposta = restTemplate.postForObject(endpoint, request, Map.class);
-                if (respostaPagamentoConfirmado(resposta)) {
-                    return true;
-                }
-            } catch (RestClientException ignored) {
-                // tenta endpoint alternativo
-            }
-        }
-        return false;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resposta = restTemplate.postForObject(endpoint, request, Map.class);
+        return resposta;
     }
 
     private boolean respostaPagamentoConfirmado(Map<String, Object> resposta) {
