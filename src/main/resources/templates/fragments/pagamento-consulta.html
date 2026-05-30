@@ -145,7 +145,8 @@
                 <span th:text="${pagamentoService.prazoConfirmacaoMinutos() + ' minutos'}">8 minutos</span>
                 — depois o horário é liberado automaticamente.
             </p>
-            <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border">
+            <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border"
+                 th:attr="data-sincronizar-pagamento-id=${item.esperandoConfirmacaoPagamento ? item.id : null}">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                     <div>
                         <strong th:text="${item.nomeCliente}">Cliente</strong>
@@ -273,7 +274,8 @@
          class="modal fade admin-modal"
          id="pagamentoPosAgendamentoModal"
          tabindex="-1"
-         aria-hidden="true">
+         aria-hidden="true"
+         th:attr="data-sincronizar-pagamento-id=${agendamento.id}">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header px-4 py-3">
@@ -362,6 +364,80 @@
                 window.alert('Não foi possível copiar. Toque em Abrir pagamento PIX ou copie manualmente.');
             });
         });
+    })();
+</script>
+
+<script th:fragment="auto-sincronizar-pix-script">
+    (function () {
+        if (window.__pixAutoSyncBound) {
+            return;
+        }
+        window.__pixAutoSyncBound = true;
+
+        if (document.body.getAttribute('data-pagamento-auto-sync') !== 'true') {
+            return;
+        }
+
+        function tokenCsrf() {
+            var input = document.querySelector('input[name="_csrf"]');
+            if (!input) {
+                return null;
+            }
+            return { nome: input.getAttribute('name') || '_csrf', valor: input.value };
+        }
+
+        function idsAguardandoPix() {
+            var ids = new Set();
+            document.querySelectorAll('[data-sincronizar-pagamento-id]').forEach(function (el) {
+                var id = el.getAttribute('data-sincronizar-pagamento-id');
+                if (id) {
+                    ids.add(id);
+                }
+            });
+            return Array.from(ids);
+        }
+
+        function consultarPagamento(id) {
+            var csrf = tokenCsrf();
+            if (!csrf) {
+                return Promise.resolve({ pago: false });
+            }
+            var headers = {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+            headers[csrf.nome] = csrf.valor;
+            return fetch('/pagamentos/' + id + '/sincronizar-automatico', {
+                method: 'POST',
+                headers: headers,
+                credentials: 'same-origin',
+                body: csrf.nome + '=' + encodeURIComponent(csrf.valor)
+            }).then(function (resposta) {
+                if (!resposta.ok) {
+                    return { pago: false };
+                }
+                return resposta.json();
+            }).catch(function () {
+                return { pago: false };
+            });
+        }
+
+        function cicloSincronizacao() {
+            var ids = idsAguardandoPix();
+            if (!ids.length) {
+                return;
+            }
+            ids.forEach(function (id) {
+                consultarPagamento(id).then(function (resultado) {
+                    if (resultado && resultado.pago) {
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+
+        window.setTimeout(cicloSincronizacao, 4000);
+        window.setInterval(cicloSincronizacao, 5000);
     })();
 </script>
 

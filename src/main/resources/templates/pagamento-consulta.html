@@ -15,7 +15,10 @@
         }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light"
+      th:attr="data-pagamento-auto-sync=${!pagamentoService.modoTestePagamento()},
+               data-sincronizar-pagamento-id=${agendamento.esperandoConfirmacaoPagamento ? agendamento.id : null}">
+<input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 <div class="container py-5" style="max-width: 520px;">
     <div class="card shadow-sm border-0">
         <div class="card-body p-4 text-center">
@@ -123,5 +126,6 @@
         });
     })();
 </script>
+<th:block th:replace="~{fragments/pagamento-consulta :: auto-sincronizar-pix-script}"></th:block>
 </body>
 </html>

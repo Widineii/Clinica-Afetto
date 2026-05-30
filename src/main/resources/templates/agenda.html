@@ -1210,7 +1210,8 @@
     }
     </style>
 </head>
-<body>
+<body th:attr="data-pagamento-auto-sync=${pagamentoService != null and !pagamentoService.modoTestePagamento()}">
+<input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 <div class="app-shell">
     <div class="hero-band mb-4">
         <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 afetto-hero-stack">
@@ -1635,7 +1636,8 @@
                              th:text="${podeGerenciarEquipe ? 'Nenhum agendamento cadastrado para hoje.' : 'Você não tem atendimentos hoje.'}">
                             Nenhum atendimento hoje.
                         </div>
-                        <article th:each="registro : ${agendamentosDoDia}" class="agenda-dia-card">
+                        <article th:each="registro : ${agendamentosDoDia}" class="agenda-dia-card"
+                                 th:attr="data-sincronizar-pagamento-id=${registro.esperandoConfirmacaoPagamento ? registro.id : null}">
                             <div class="agenda-dia-card__head">
                                 <span class="agenda-dia-card__hora"
                                       th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' – ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 – 09:00</span>
@@ -1696,7 +1698,8 @@
                                     Nenhum atendimento hoje.
                                 </td>
                             </tr>
-                            <tr th:each="registro : ${agendamentosDoDia}">
+                            <tr th:each="registro : ${agendamentosDoDia}"
+                                th:attr="data-sincronizar-pagamento-id=${registro.esperandoConfirmacaoPagamento ? registro.id : null}">
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' - ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 - 09:00</td>
                                 <td th:text="${registro.sala != null ? registro.sala.nome : '-'}">Sala 2</td>
@@ -2631,5 +2634,6 @@
         window.setInterval(atualizarCountdownsPagamento, 1000);
     });
 </script>
+<th:block th:replace="~{fragments/pagamento-consulta :: auto-sincronizar-pix-script}"></th:block>
 </body>
 </html>

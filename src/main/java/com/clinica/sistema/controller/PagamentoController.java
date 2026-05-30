@@ -308,6 +308,21 @@ public class PagamentoController {
         return "redirect:/agendamentos/dashboard";
     }
 
+    @PostMapping("/{id}/sincronizar-automatico")
+    @ResponseBody
+    public Map<String, Object> sincronizarAutomatico(@PathVariable Long id) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        try {
+            Agendamento agendamento = pagamentoConsultaService.sincronizarPagamentoComInfinitePay(id, usuarioLogado);
+            return Map.of(
+                    "pago", agendamento.isPagamentoPago(),
+                    "status", agendamento.getStatusPagamento() != null ? agendamento.getStatusPagamento().name() : ""
+            );
+        } catch (RuntimeException ex) {
+            return Map.of("pago", false);
+        }
+    }
+
     @PostMapping("/{id}/simular")
     public String simularPagamento(
             @PathVariable Long id,
