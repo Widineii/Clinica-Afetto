@@ -359,7 +359,7 @@ public class AgendamentoController {
         model.addAttribute("pagamentoSemanal", periodicidadePagamento == PeriodicidadePagamento.SEMANAL);
         model.addAttribute("pagamentoMensal", periodicidadePagamento == PeriodicidadePagamento.MENSAL);
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
-        model.addAttribute("manualVideoUrl", manualProperties.getVideoUrl());
+        model.addAttribute("manualVideoUrl", manualProperties.getVideoUrlNormalizada());
         model.addAttribute("manualVideoTitulo", manualProperties.getVideoTitulo());
         model.addAttribute("manualVideoDescricao", manualProperties.getVideoDescricao());
         model.addAttribute("manualVideoAtivo", manualProperties.temVideoConfigurado());

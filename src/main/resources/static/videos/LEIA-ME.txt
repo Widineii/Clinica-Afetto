@@ -1,8 +1,20 @@
-Coloque aqui o video de demonstracao da clinica, por exemplo:
-  manual-amostra.mp4
+VIDEO NO MANUAL — Agenda Afetto
+================================
 
-Depois configure em application-local.properties ou no servidor:
-  app.manual.video-url=/videos/manual-amostra.mp4
+Sem configuracao, o manual exibe um TUTORIAL ANIMADO (passo a passo automatico).
 
-Ou use um link embed do YouTube:
-  app.manual.video-url=https://www.youtube.com/embed/ID_DO_VIDEO
+Para usar video gravado pela clinica:
+
+1) Arquivo MP4 nesta pasta (ex.: manual-clinica.mp4)
+   app.manual.video-url=/videos/manual-clinica.mp4
+
+2) Link do YouTube (aceita link normal ou embed):
+   app.manual.video-url=https://www.youtube.com/watch?v=ID_DO_VIDEO
+   app.manual.video-url=https://youtu.be/ID_DO_VIDEO
+
+No Railway, use variavel de ambiente:
+   APP_MANUAL_VIDEO_URL=https://www.youtube.com/watch?v=...
+
+Titulo e descricao (opcional):
+   APP_MANUAL_VIDEO_TITULO=...
+   APP_MANUAL_VIDEO_DESCRICAO=...
