@@ -22,9 +22,8 @@
 
 <div th:fragment="instrucao-checkout-infinitepay"
      class="alert alert-info small text-start mb-3">
-    O pagamento abre na <strong>InfinitePay</strong>. Toque em <strong>Abrir pagamento</strong>,
-    escolha <strong>PIX</strong> e use o QR ou o copia e cola que aparecem <strong>na tela da InfinitePay</strong>.
-    O app do banco não lê o QR desta página quando é link de site.
+    Escaneie o <strong>QR abaixo</strong> no celular ou toque em <strong>Abrir pagamento</strong>.
+    Na <strong>InfinitePay</strong>, escolha <strong>PIX</strong> e pague com o QR ou copia e cola que aparecem lá.
 </div>
 
 <div th:fragment="bloco-pagamento-qr (agendamento, imgWidth)">
@@ -38,9 +37,9 @@
            class="btn btn-primary btn-lg w-100 mb-3">
             Abrir pagamento PIX
         </a>
-        <img th:if="${pagamentoService.exibirQrPixEmbutido(agendamento) and agendamento.id != null}"
+        <img th:if="${agendamento.id != null}"
              th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
-             alt="QR Code PIX"
+             alt="QR Code de pagamento"
              class="img-fluid rounded border mb-3"
              th:width="${imgWidth != null ? imgWidth : 260}"
              th:height="${imgWidth != null ? imgWidth : 260}">
@@ -67,10 +66,10 @@
             Abrir pagamento
         </a>
 
-        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null and pagamentoService.exibirQrPixEmbutido(agendamento)}"
+        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
            th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
            class="btn btn-sm btn-primary">
-            Ver QR PIX
+            Ver QR
         </a>
 
         <button type="button"
@@ -141,18 +140,21 @@
                           th:text="${item.tempoRestantePagamentoFormatado}">4:59</span>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-3">
+                    <img th:if="${item.id != null}"
+                         th:src="@{/pagamentos/{id}/qr.png(id=${item.id})}"
+                         alt="QR Code de pagamento"
+                         class="rounded border flex-shrink-0"
+                         width="120"
+                         height="120">
                     <div class="d-grid gap-2 flex-grow-1" style="min-width: 180px;">
                         <a th:if="${pagamentoService.exibirCheckoutInfinitePay(item)}"
                            th:href="${item.pagamentoLink}"
                            target="_blank"
                            rel="noopener noreferrer"
                            class="btn btn-sm btn-primary">Abrir pagamento PIX</a>
-                        <a th:if="${pagamentoService.exibirQrPixEmbutido(item)}"
+                        <a th:if="${item.id != null}"
                            th:href="@{/pagamentos/{id}(id=${item.id})}"
-                           class="btn btn-sm btn-primary">Ver QR PIX</a>
-                        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(item)}"
-                           th:href="@{/pagamentos/{id}(id=${item.id})}"
-                           class="btn btn-sm btn-outline-secondary">Detalhes</a>
+                           class="btn btn-sm btn-outline-secondary">Ver detalhes</a>
                         <button type="button"
                                 th:if="${item.pagamentoLink != null}"
                                 class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
