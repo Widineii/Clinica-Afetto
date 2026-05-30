@@ -51,6 +51,15 @@
                 th:text="${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}">
             Copiar link de pagamento
         </button>
+        <form th:if="${agendamento.id != null and !pagamentoService.modoTestePagamento()}"
+              th:action="@{/pagamentos/{id}/verificar(id=${agendamento.id})}"
+              method="post"
+              class="mb-2">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-success w-100">
+                Ja paguei — verificar pagamento
+            </button>
+        </form>
     </th:block>
 </div>
 
@@ -80,6 +89,14 @@
                 th:text="${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}">
             Copiar link
         </button>
+
+        <form th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null and !pagamentoService.modoTestePagamento()}"
+              th:action="@{/pagamentos/{id}/verificar(id=${agendamento.id})}"
+              method="post"
+              class="d-inline">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-sm btn-success">Ja paguei</button>
+        </form>
 
         <span th:if="${pagamentoService.vagaPreenchidaPorOutroProfissional(agendamento)}"
               class="small text-danger fw-semibold">
@@ -124,7 +141,9 @@
                 <span class="badge rounded-pill text-bg-warning">Aguardando PIX</span>
             </h2>
             <p class="small text-muted mb-3">
-                Consultas reservadas aguardando pagamento. Tempo restante: 5 minutos — depois o horário é liberado automaticamente.
+                Consultas reservadas aguardando pagamento. Tempo restante:
+                <span th:text="${pagamentoService.prazoConfirmacaoMinutos() + ' minutos'}">8 minutos</span>
+                — depois o horário é liberado automaticamente.
             </p>
             <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">

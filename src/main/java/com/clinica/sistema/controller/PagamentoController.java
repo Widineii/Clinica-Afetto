@@ -96,7 +96,9 @@ public class PagamentoController {
             if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
                 redirectAttributes.addFlashAttribute(
                         "sucesso",
-                        "Pagamento gerado. Escaneie o QR ou abra o link PIX (5 min para confirmar)."
+                        "Pagamento gerado. Escaneie o QR ou abra o link PIX ("
+                                + pagamentoConsultaService.prazoConfirmacaoMinutos()
+                                + " min para confirmar)."
                 );
             }
             return "redirect:/pagamentos/" + agendamento.getId();
@@ -281,6 +283,29 @@ public class PagamentoController {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         }
         return "redirect:/agendamentos/meus-pagamentos";
+    }
+
+    @PostMapping("/{id}/verificar")
+    public String verificarPagamento(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            pagamentoConsultaService.sincronizarPagamentoComInfinitePay(id, usuarioLogado);
+            redirectAttributes.addFlashAttribute("exibirModalPixConfirmado", true);
+            redirectAttributes.addFlashAttribute("pixConfirmadoAgendamentoId", id);
+            redirectAttributes.addFlashAttribute("sucesso", "Pagamento confirmado pela InfinitePay.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            String referer = request.getHeader("Referer");
+            if (referer != null && referer.contains("/pagamentos/")) {
+                return "redirect:/pagamentos/" + id;
+            }
+            return "redirect:/agendamentos/dashboard";
+        }
+        return "redirect:/agendamentos/dashboard";
     }
 
     @PostMapping("/{id}/simular")

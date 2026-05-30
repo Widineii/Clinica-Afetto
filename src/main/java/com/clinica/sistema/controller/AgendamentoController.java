@@ -499,7 +499,9 @@ public class AgendamentoController {
             if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(criado.getStatusPagamento())) {
                 redirectAttributes.addFlashAttribute(
                         "sucesso",
-                        "Agendamento reservado na agenda. Esperando confirmação do pagamento (5 min). "
+                        "Agendamento reservado na agenda. Esperando confirmação do pagamento ("
+                                + pagamentoConsultaService.prazoConfirmacaoMinutos()
+                                + " min). "
                                 + "Se fechar o QR, use a aba Pagamentos pendentes para voltar."
                 );
                 redirectAttributes.addFlashAttribute("pagamentoAgendamentoId", criado.getId());

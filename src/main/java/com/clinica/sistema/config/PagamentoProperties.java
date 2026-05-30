@@ -7,13 +7,13 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.pagamento")
 public class PagamentoProperties {
 
-    private int prazoConfirmacaoMinutos = 5;
+    private int prazoConfirmacaoMinutos = 8;
     /** Hora limite no dia anterior a consulta (padrao 23:59). */
     private String horaLimitePagamentoVespera = "23:59";
 
     /**
-     * Segredo do header {@code X-Webhook-Secret} para confirmar pagamentos via InfinitePay.
-     * Em producao deve ser definido; em local pode ficar vazio apenas com modo teste ativo.
+     * Segredo opcional do header {@code X-Webhook-Secret}. A InfinitePay nao envia esse header;
+     * a confirmacao em producao usa a API payment_check da InfinitePay.
      */
     private String webhookSecret = "";
 

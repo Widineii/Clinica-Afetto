@@ -22,6 +22,9 @@ import java.util.UUID;
 public class InfinitePayService {
 
     private static final String API_LINKS = "https://api.checkout.infinitepay.io/links";
+    private static final String API_PAYMENT_CHECK_CHECKOUT = "https://api.checkout.infinitepay.io/payment_check";
+    private static final String API_PAYMENT_CHECK_LEGACY =
+            "https://api.infinitepay.io/invoices/public/checkout/payment_check";
 
     private final InfinitePayProperties properties;
     private final ValorConsultaService valorConsultaService;
@@ -146,6 +149,53 @@ public class InfinitePayService {
 
     public BigDecimal valorPagamento(Agendamento agendamento) {
         return resolverValorTaxaClinica(agendamento);
+    }
+
+    /**
+     * Consulta na InfinitePay se o pedido foi pago (PIX ou cartao).
+     */
+    public boolean consultarPagamentoConfirmado(String orderNsu, String slug, String transactionNsu) {
+        if (orderNsu == null || orderNsu.isBlank()) {
+            return false;
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("handle", properties.getHandle());
+        body.put("order_nsu", orderNsu.trim());
+        if (slug != null && !slug.isBlank()) {
+            body.put("slug", slug.trim());
+        }
+        if (transactionNsu != null && !transactionNsu.isBlank()) {
+            body.put("transaction_nsu", transactionNsu.trim());
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        for (String endpoint : List.of(API_PAYMENT_CHECK_CHECKOUT, API_PAYMENT_CHECK_LEGACY)) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resposta = restTemplate.postForObject(endpoint, request, Map.class);
+                if (respostaPagamentoConfirmado(resposta)) {
+                    return true;
+                }
+            } catch (RestClientException ignored) {
+                // tenta endpoint alternativo
+            }
+        }
+        return false;
+    }
+
+    private boolean respostaPagamentoConfirmado(Map<String, Object> resposta) {
+        if (resposta == null) {
+            return false;
+        }
+        Object paid = resposta.get("paid");
+        if (Boolean.TRUE.equals(paid)) {
+            return true;
+        }
+        Object success = resposta.get("success");
+        return Boolean.TRUE.equals(success) && Boolean.TRUE.equals(paid);
     }
 
     /**

@@ -360,13 +360,38 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void webhookRejeitaSemSegredoQuandoProducao() {
+    void webhookAceitaSemHeaderQuandoSegredoConfigurado() {
+        when(pagamentoProperties.getWebhookSecret()).thenReturn("segredo-prod");
+
+        pagamentoConsultaService.validarAutenticacaoWebhook(null);
+    }
+
+    @Test
+    void webhookRejeitaHeaderIncorreto() {
         when(pagamentoProperties.getWebhookSecret()).thenReturn("segredo-prod");
 
         assertThrows(
                 PagamentoWebhookNaoAutorizadoException.class,
-                () -> pagamentoConsultaService.validarAutenticacaoWebhook(null)
+                () -> pagamentoConsultaService.validarAutenticacaoWebhook("outro-segredo")
         );
+    }
+
+    @Test
+    void confirmarPagamentoWebhookAceitaQrExpirado() {
+        Agendamento consulta = new Agendamento();
+        consulta.setId(1L);
+        consulta.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        consulta.setPagamentoOrderNsu("ag-1-teste");
+        consulta.setPagamentoLink("https://checkout.infinitepay.io/pay/x");
+        consulta.setPagamentoExpiraEm(LocalDateTime.now().minusMinutes(1));
+
+        when(repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc("ag-1-teste"))
+                .thenReturn(java.util.List.of(consulta));
+        when(repository.save(any(Agendamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        pagamentoConsultaService.confirmarPagamentoPorWebhook("ag-1-teste");
+
+        assertEquals(PagamentoStatus.PAGO, consulta.getStatusPagamento());
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.clinica.sistema.controller;
 
 import com.clinica.sistema.service.PagamentoConsultaService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +16,8 @@ import java.util.Map;
 @RequestMapping("/api/webhooks")
 public class InfinitePayWebhookController {
 
+    private static final Logger log = LoggerFactory.getLogger(InfinitePayWebhookController.class);
+
     private final PagamentoConsultaService pagamentoConsultaService;
 
     public InfinitePayWebhookController(PagamentoConsultaService pagamentoConsultaService) {
@@ -25,12 +29,8 @@ public class InfinitePayWebhookController {
             @RequestBody Map<String, Object> payload,
             @RequestHeader(value = "X-Webhook-Secret", required = false) String webhookSecret
     ) {
-        pagamentoConsultaService.validarAutenticacaoWebhook(webhookSecret);
-        Object orderNsu = payload.get("order_nsu");
-        if (orderNsu == null || orderNsu.toString().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("status", "order_nsu obrigatorio"));
-        }
-        pagamentoConsultaService.confirmarPagamentoPorOrderNsu(orderNsu.toString());
+        log.info("Webhook InfinitePay recebido: order_nsu={}", payload.get("order_nsu"));
+        pagamentoConsultaService.processarNotificacaoInfinitePay(payload, webhookSecret);
         return ResponseEntity.ok(Map.of("status", "ok"));
     }
 }

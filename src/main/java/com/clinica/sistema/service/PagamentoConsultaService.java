@@ -28,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -273,28 +274,78 @@ public class PagamentoConsultaService {
     public void validarAutenticacaoWebhook(String secretRecebido) {
         String secretConfigurado = pagamentoProperties.getWebhookSecret();
         if (secretConfigurado == null || secretConfigurado.isBlank()) {
-            if (infinitePayProperties.isModoTeste()) {
-                return;
+            return;
+        }
+        if (secretRecebido == null || secretRecebido.isBlank()) {
+            // InfinitePay nao envia header customizado; confirmacao via payment_check.
+            return;
+        }
+        if (!secretConfigurado.equals(secretRecebido.trim())) {
+            throw new PagamentoWebhookNaoAutorizadoException();
+        }
+    }
+
+    public void processarNotificacaoInfinitePay(Map<String, Object> payload, String webhookSecret) {
+        validarAutenticacaoWebhook(webhookSecret);
+        String orderNsu = extrairCampoTexto(payload, "order_nsu", "orderNSU", "orderNsu");
+        if (orderNsu == null) {
+            throw new RuntimeException("order_nsu obrigatorio no webhook InfinitePay.");
+        }
+        if (!infinitePayProperties.isModoTeste()) {
+            String slug = extrairCampoTexto(payload, "slug", "invoice_slug", "invoiceSlug");
+            String transactionNsu = extrairCampoTexto(payload, "transaction_nsu", "transactionNsu");
+            if (!infinitePayService.consultarPagamentoConfirmado(orderNsu, slug, transactionNsu)) {
+                throw new RuntimeException("Pagamento ainda nao confirmado na InfinitePay.");
             }
-            throw new PagamentoWebhookNaoAutorizadoException();
         }
-        if (secretRecebido == null || !secretConfigurado.equals(secretRecebido.trim())) {
-            throw new PagamentoWebhookNaoAutorizadoException();
+        confirmarPagamentoPorWebhook(orderNsu);
+    }
+
+    @Transactional
+    public Agendamento sincronizarPagamentoComInfinitePay(Long agendamentoId, Usuario usuarioLogado) {
+        Agendamento agendamento = buscarComPermissao(agendamentoId, usuarioLogado);
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return agendamento;
         }
+        if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
+            throw new RuntimeException("Nao ha pagamento aguardando confirmacao.");
+        }
+        String orderNsu = agendamento.getPagamentoOrderNsu();
+        if (orderNsu == null || orderNsu.isBlank()) {
+            throw new RuntimeException("Pedido de pagamento nao encontrado.");
+        }
+        if (infinitePayProperties.isModoTeste()) {
+            throw new RuntimeException("Use \"Simular pagamento\" no modo teste local.");
+        }
+        if (!infinitePayService.consultarPagamentoConfirmado(
+                orderNsu,
+                agendamento.getPagamentoSlug(),
+                null
+        )) {
+            throw new RuntimeException(
+                    "InfinitePay ainda nao confirmou este pagamento. Aguarde alguns segundos e tente novamente."
+            );
+        }
+        return confirmarPagamentoPorWebhook(orderNsu);
     }
 
     @Transactional
     public Agendamento confirmarPagamentoPorOrderNsu(String orderNsu) {
-        return confirmarPagamentoPorOrderNsu(orderNsu, false);
+        return confirmarPagamentoPorOrderNsu(orderNsu, false, false);
     }
 
     @Transactional
     public Agendamento confirmarPagamentoPorOrderNsuModoTeste(String orderNsu) {
-        return confirmarPagamentoPorOrderNsu(orderNsu, true);
+        return confirmarPagamentoPorOrderNsu(orderNsu, true, false);
     }
 
     @Transactional
-    private Agendamento confirmarPagamentoPorOrderNsu(String orderNsu, boolean modoTeste) {
+    public Agendamento confirmarPagamentoPorWebhook(String orderNsu) {
+        return confirmarPagamentoPorOrderNsu(orderNsu, false, true);
+    }
+
+    @Transactional
+    private Agendamento confirmarPagamentoPorOrderNsu(String orderNsu, boolean modoTeste, boolean viaWebhook) {
         if (orderNsu == null || orderNsu.isBlank()) {
             throw new RuntimeException("Pedido de pagamento inválido.");
         }
@@ -308,13 +359,26 @@ public class PagamentoConsultaService {
                 ultimoPago = agendamento;
                 continue;
             }
-            validarAntesConfirmarPagamento(agendamento, orderNsu, modoTeste);
+            validarAntesConfirmarPagamento(agendamento, orderNsu, modoTeste, viaWebhook);
             ultimoPago = marcarComoPago(agendamento);
         }
         if (ultimoPago == null) {
             throw new RuntimeException("Nenhuma consulta pendente para confirmar neste pedido.");
         }
         return ultimoPago;
+    }
+
+    private String extrairCampoTexto(Map<String, Object> payload, String... chaves) {
+        if (payload == null || chaves == null) {
+            return null;
+        }
+        for (String chave : chaves) {
+            Object valor = payload.get(chave);
+            if (valor != null && !valor.toString().isBlank()) {
+                return valor.toString().trim();
+            }
+        }
+        return null;
     }
 
     @Transactional
@@ -1059,6 +1123,10 @@ public class PagamentoConsultaService {
         return infinitePayProperties.isModoTeste();
     }
 
+    public int prazoConfirmacaoMinutos() {
+        return pagamentoProperties.getPrazoConfirmacaoMinutos();
+    }
+
     public boolean exibirCheckoutInfinitePay(Agendamento agendamento) {
         if (agendamento == null || agendamento.getPagamentoLink() == null) {
             return false;
@@ -1637,7 +1705,12 @@ public class PagamentoConsultaService {
         return LocalDateTime.of(diaAnterior, resolverHoraLimiteVespera());
     }
 
-    private void validarAntesConfirmarPagamento(Agendamento agendamento, String orderNsu, boolean modoTeste) {
+    private void validarAntesConfirmarPagamento(
+            Agendamento agendamento,
+            String orderNsu,
+            boolean modoTeste,
+            boolean viaWebhook
+    ) {
         if (agendamento.getPagamentoOrderNsu() == null
                 || !agendamento.getPagamentoOrderNsu().equals(orderNsu)) {
             throw new RuntimeException("Pedido de pagamento não confere com a consulta.");
@@ -1648,10 +1721,13 @@ public class PagamentoConsultaService {
             }
             return;
         }
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return;
+        }
         if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
             throw new RuntimeException("Pagamento não está aguardando confirmação.");
         }
-        if (!agendamento.possuiQrPagamentoAtivo()) {
+        if (!viaWebhook && !agendamento.possuiQrPagamentoAtivo()) {
             throw new RuntimeException("Pagamento expirado ou inválido.");
         }
     }
