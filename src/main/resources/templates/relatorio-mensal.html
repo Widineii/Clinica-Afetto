@@ -2,7 +2,7 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Clinica Afetto - Relatorio Mensal</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -201,7 +201,8 @@
         .table-container {
             border: 1px solid #E2E8F0;
             border-radius: 12px;
-            overflow: hidden;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             margin-bottom: 24px;
         }
 
@@ -518,6 +519,7 @@
             }
         }
     </style>
+    <th:block th:replace="~{fragments/relatorio-tabela-responsiva :: css}"></th:block>
 </head>
 <body>
 
@@ -631,13 +633,13 @@
                     </thead>
                     <tbody>
                     <tr th:each="linha : ${linhas}">
-                        <td>
+                        <td data-label="Profissional">
                             <div class="prof-cell">
                                 <span class="prof-icon"><i class="fa-solid fa-user"></i></span>
                                 <span th:text="${linha.profissionalNome}">Profissional</span>
                             </div>
                         </td>
-                        <td>
+                        <td data-label="Distribuicao por Sala">
                             <div class="tags-container">
                                 <span th:class="${linha.sala1 > 0} ? 'tag sala-1' : 'tag disabled'">
                                     Sala 1:
@@ -661,7 +663,7 @@
                                 </span>
                             </div>
                         </td>
-                        <td>
+                        <td data-label="Total de sala usada">
                             <span class="total-badge" th:text="${linha.totalSalasUsadasLabel}">1 sala usada</span>
                         </td>
                     </tr>

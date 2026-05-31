@@ -2,7 +2,7 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Receita PIX - Clinica Afetto</title>
     <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
 </head>
@@ -376,17 +376,22 @@
         });
     }
 
+    function telaEstreita() {
+        return window.matchMedia('(max-width: 991px)').matches;
+    }
+
     function opcoesCircular(tipo, legendaTitulo) {
+        var estreita = telaEstreita();
         return {
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { top: 8, right: 24, bottom: 8, left: 8 } },
+            layout: { padding: estreita ? { top: 4, right: 4, bottom: 4, left: 4 } : { top: 8, right: 24, bottom: 8, left: 8 } },
             plugins: {
                 legend: {
-                    position: 'right',
+                    position: estreita ? 'bottom' : 'right',
                     align: 'center',
                     title: {
-                        display: true,
+                        display: !estreita,
                         text: legendaTitulo,
                         color: '#605e5c',
                         font: { size: 11, weight: '600' },
@@ -395,8 +400,9 @@
                     labels: {
                         boxWidth: 10,
                         boxHeight: 10,
-                        font: { size: 11 },
+                        font: { size: estreita ? 10 : 11 },
                         color: '#252423',
+                        padding: estreita ? 10 : 8,
                         generateLabels: legendaComPercentual
                     }
                 },
@@ -410,6 +416,7 @@
                     }
                 },
                 datalabels: {
+                    display: function () { return !estreita; },
                     color: '#252423',
                     font: { size: 10, weight: '600' },
                     anchor: 'end',
@@ -431,9 +438,9 @@
     }
 
     function alturaGraficoProfissionais(quantidade) {
-        var porBarra = 42;
-        var minimo = 320;
-        return Math.max(minimo, quantidade * porBarra + 96);
+        var porBarra = 54;
+        var minimo = 360;
+        return Math.max(minimo, quantidade * porBarra + 112);
     }
 
     function corBarraProfissional(context) {
@@ -478,7 +485,7 @@
                 duration: 650,
                 easing: 'easeOutQuart'
             },
-            layout: { padding: { left: 4, right: 12, top: 8, bottom: 8 } },
+            layout: { padding: { left: 4, right: 16, top: 12, bottom: 12 } },
             plugins: {
                 legend: { display: false },
                 datalabels: {
@@ -538,7 +545,7 @@
                         includeBounds: true,
                         color: '#334155',
                         font: { size: 12, weight: '600' },
-                        padding: 12
+                        padding: 16
                     },
                     afterFit: function (scale) {
                         scale.width = Math.max(scale.width, 118);
@@ -618,7 +625,9 @@
         if (canvasProf && porProfissional.length > 0) {
             var wrapProf = canvasProf.closest('.fin-grafico-wrap--bar');
             if (wrapProf) {
-                wrapProf.style.height = alturaGraficoProfissionais(porProfissional.length) + 'px';
+                var alturaProf = alturaGraficoProfissionais(porProfissional.length);
+                wrapProf.style.minHeight = alturaProf + 'px';
+                wrapProf.style.height = alturaProf + 'px';
             }
             atualizarMetaGraficoProfissional(porProfissional);
             graficoProfissional = new Chart(canvasProf, {
@@ -639,9 +648,9 @@
                             bottomRight: 10
                         },
                         borderSkipped: false,
-                        maxBarThickness: 22,
-                        barPercentage: 0.62,
-                        categoryPercentage: 0.78
+                        maxBarThickness: 28,
+                        barPercentage: 0.72,
+                        categoryPercentage: 0.58
                     }]
                 },
                 options: opcoesGraficoProfissional(porProfissional)
@@ -700,6 +709,12 @@
     });
 
     renderizarPainel();
+
+    var redimensionamentoTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(redimensionamentoTimer);
+        redimensionamentoTimer = setTimeout(renderizarPainel, 180);
+    });
 })();
 </script>
 </body>

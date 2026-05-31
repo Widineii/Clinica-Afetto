@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:fragment="css">
+        <style>
+            @media (max-width: 991px) {
+                .table-container {
+                    overflow-x: visible !important;
+                    border: none;
+                    background: transparent;
+                    margin-bottom: 16px;
+                }
+
+                .table-scroll {
+                    overflow-x: visible !important;
+                }
+
+                .table-container table {
+                    min-width: 0 !important;
+                    width: 100% !important;
+                    display: block;
+                }
+
+                .table-container thead {
+                    display: none;
+                }
+
+                .table-container tbody {
+                    display: block;
+                }
+
+                .table-container tbody tr {
+                    display: block;
+                    margin-bottom: 12px;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    background: #fff;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+                }
+
+                .table-container tbody td {
+                    display: block;
+                    padding: 12px 14px;
+                    border-bottom: 1px solid #F1F5F9;
+                }
+
+                .table-container tbody td:last-child {
+                    border-bottom: none;
+                }
+
+                .table-container tbody td::before {
+                    content: attr(data-label);
+                    display: block;
+                    font-size: 11px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                    color: #64748B;
+                    margin-bottom: 8px;
+                }
+
+                .table-container .prof-cell {
+                    white-space: normal;
+                }
+
+                .table-container .tags-container {
+                    gap: 6px;
+                }
+
+                .table-container .tag {
+                    white-space: normal;
+                    flex: 1 1 calc(50% - 6px);
+                }
+
+                .btn-container .btn-export {
+                    width: 100%;
+                    justify-content: center;
+                    box-sizing: border-box;
+                }
+
+                .relatorio-tipo-nav {
+                    overflow-x: auto;
+                    flex-wrap: nowrap;
+                    -webkit-overflow-scrolling: touch;
+                    padding-bottom: 4px;
+                }
+
+                .relatorio-tipo-nav a {
+                    flex-shrink: 0;
+                    font-size: 14px;
+                    padding: 10px 16px;
+                }
+
+                .relatorio-graficos {
+                    grid-template-columns: 1fr !important;
+                }
+
+                .relatorio-grafico-card--full {
+                    grid-column: auto !important;
+                }
+
+                .relatorio-grafico-wrap {
+                    height: auto;
+                    min-height: 260px;
+                }
+            }
+        </style>
+    </th:block>
+</head>
+<body></body>
+</html>

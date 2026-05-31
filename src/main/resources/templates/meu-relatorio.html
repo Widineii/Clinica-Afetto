@@ -2,10 +2,21 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Meu relatorio - Clinica Afetto</title>
     <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
     <style>
+        @media (max-width: 991px) {
+            .fin-dashboard-graficos {
+                grid-template-columns: 1fr !important;
+            }
+
+            .fin-grafico-wrap {
+                height: auto !important;
+                min-height: 320px;
+            }
+        }
+
         .meu-relatorio-tabela-scroll {
             display: block;
             max-height: 260px;
@@ -252,6 +263,13 @@
         }
     }
 
+    function telaEstreita() {
+        return window.matchMedia('(max-width: 991px)').matches;
+    }
+
+    var graficoSalaInst;
+    var graficoTipoInst;
+
     function montarGrafico(canvasId, vazioId, dados, cores, tipo) {
         if (typeof Chart === 'undefined') {
             alternarVazio(vazioId, true);
@@ -267,6 +285,7 @@
             return null;
         }
         canvas.style.display = 'block';
+        var estreita = telaEstreita();
         return new Chart(canvas, {
             type: tipo === 'doughnut' ? 'doughnut' : 'pie',
             data: {
@@ -283,15 +302,39 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                    legend: {
+                        position: estreita ? 'bottom' : 'right',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: estreita ? 11 : 12 },
+                            padding: estreita ? 14 : 8,
+                            boxPadding: 4
+                        }
+                    }
                 },
                 cutout: tipo === 'doughnut' ? '58%' : 0
             }
         });
     }
 
-    montarGrafico('graficoSala', 'vazioSala', lerJson('grafico-salas-json'), CORES_SALA, 'pie');
-    montarGrafico('graficoTipo', 'vazioTipo', lerJson('grafico-tipos-json'), CORES_TIPO, 'doughnut');
+    function renderizarGraficos() {
+        if (graficoSalaInst) {
+            graficoSalaInst.destroy();
+        }
+        if (graficoTipoInst) {
+            graficoTipoInst.destroy();
+        }
+        graficoSalaInst = montarGrafico('graficoSala', 'vazioSala', lerJson('grafico-salas-json'), CORES_SALA, 'pie');
+        graficoTipoInst = montarGrafico('graficoTipo', 'vazioTipo', lerJson('grafico-tipos-json'), CORES_TIPO, 'doughnut');
+    }
+
+    renderizarGraficos();
+
+    var redimensionamentoTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(redimensionamentoTimer);
+        redimensionamentoTimer = setTimeout(renderizarGraficos, 180);
+    });
 })();
 </script>
 </body>
