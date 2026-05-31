@@ -1,8 +1,10 @@
 package com.clinica.sistema.controller;
 
 import com.clinica.sistema.config.ManualProperties;
+import com.clinica.sistema.config.SiteProperties;
 import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
+import com.clinica.sistema.dto.NovidadeSiteView;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
@@ -14,6 +16,7 @@ import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
+import com.clinica.sistema.service.NovidadeSiteService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import com.clinica.sistema.service.RelatorioSemanalService;
@@ -49,6 +52,8 @@ public class AgendamentoController {
     private final PagamentoConsultaService pagamentoConsultaService;
     private final FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService;
     private final ManualProperties manualProperties;
+    private final SiteProperties siteProperties;
+    private final NovidadeSiteService novidadeSiteService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -60,7 +65,9 @@ public class AgendamentoController {
             EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService,
             PagamentoConsultaService pagamentoConsultaService,
             FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService,
-            ManualProperties manualProperties
+            ManualProperties manualProperties,
+            SiteProperties siteProperties,
+            NovidadeSiteService novidadeSiteService
     ) {
         this.service = service;
         this.authService = authService;
@@ -72,6 +79,8 @@ public class AgendamentoController {
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
         this.manualProperties = manualProperties;
+        this.siteProperties = siteProperties;
+        this.novidadeSiteService = novidadeSiteService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -83,6 +92,8 @@ public class AgendamentoController {
     public void prepararAjudaSuporte(Model model) {
         model.addAttribute("manualWhatsappAtivo", manualProperties.temWhatsappSuporte());
         model.addAttribute("manualWhatsappUrl", manualProperties.resolverLinkWhatsapp());
+        model.addAttribute("versaoSite", siteProperties.getVersion());
+        model.addAttribute("versaoSiteRotulo", siteProperties.getRotuloExibicao());
     }
 
     @ModelAttribute
@@ -138,6 +149,8 @@ public class AgendamentoController {
         service.renovarSeriesRecorrentesAtivasSeNecessario();
 
         boolean isAdmin = authService.isAdmin(usuarioLogado);
+        boolean isDonaClinica = authService.isDonaClinica(usuarioLogado);
+        boolean podeTrocarPropriaSenha = authService.podeTrocarPropriaSenha(usuarioLogado);
 
         if (!model.containsAttribute("agendamentoForm")) {
             AgendamentoForm form = new AgendamentoForm();
@@ -148,7 +161,7 @@ public class AgendamentoController {
             model.addAttribute("agendamentoForm", form);
         }
         boolean podeGerenciarEquipe = authService.podeGerenciarEquipe(usuarioLogado);
-        if (!isAdmin && !model.containsAttribute("trocarSenhaForm")) {
+        if (podeTrocarPropriaSenha && !model.containsAttribute("trocarSenhaForm")) {
             model.addAttribute("trocarSenhaForm", new com.clinica.sistema.dto.TrocarSenhaForm());
         }
         if (model.containsAttribute("trocarSenhaForm")) {
@@ -170,23 +183,28 @@ public class AgendamentoController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", isAdmin);
         boolean reabrirModalTrocarSenha = model.containsAttribute("reabrirModalTrocarSenha");
-        boolean exibirModalTrocarSenhaObrigatoria = usuarioService.exibirModalTrocaSenhaPrimeiroAcesso(
+        boolean exibirModalTrocarSenhaObrigatoria = podeTrocarPropriaSenha
+                && usuarioService.exibirModalTrocaSenhaPrimeiroAcesso(
                 session,
                 reabrirModalTrocarSenha
         );
-        boolean trocaSenhaAindaPendente = usuarioService.usuarioLogadoDeveTrocarSenha()
+        boolean trocaSenhaAindaPendente = podeTrocarPropriaSenha
+                && usuarioService.usuarioLogadoDeveTrocarSenha()
                 && !exibirModalTrocarSenhaObrigatoria;
         if (exibirModalTrocarSenhaObrigatoria) {
             usuarioService.confirmarExibicaoModalTrocaSenha(session);
         }
         model.addAttribute("exibirModalTrocarSenhaObrigatoria", exibirModalTrocarSenhaObrigatoria);
         model.addAttribute("trocaSenhaAindaPendente", trocaSenhaAindaPendente);
-        model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
+        model.addAttribute("isDonaClinica", isDonaClinica);
+        model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuarioLogado));
+        model.addAttribute("podeTrocarPropriaSenha", podeTrocarPropriaSenha);
         model.addAttribute(
                 "podeAcessarGestaoFinanceira",
                 financeiroPolyanaAcessoService.podeAcessarGestaoFinanceira(usuarioLogado)
         );
         model.addAttribute("podeGerenciarEquipe", podeGerenciarEquipe);
+        model.addAttribute("podeVerRelatorioProprio", authService.podeVerRelatorioProprio(usuarioLogado));
         model.addAttribute("podeVerValoresDeTodos", podeGerenciarEquipe);
         model.addAttribute(
                 "exibirPainelValoresConsulta",
@@ -257,7 +275,7 @@ public class AgendamentoController {
                 .ifPresent(msg -> model.addAttribute("avisoAgendamentoOutraSala", msg));
         model.addAttribute("salasOcupadasNaSemana", salasOcupadasNaSemana);
         List<com.clinica.sistema.model.Agendamento> agendamentosDoDia =
-                service.listarAgendamentosDoDia(usuarioLogado, podeGerenciarEquipe);
+                service.listarAgendamentosDoDia(usuarioLogado, isAdmin);
         model.addAttribute("agendaSala", agendaSala);
         model.addAttribute("agendamentosDoDia", agendamentosDoDia);
         model.addAttribute("dataAgendaDia", LocalDate.now());
@@ -266,6 +284,8 @@ public class AgendamentoController {
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("agendamentoService", service);
         model.addAttribute("periodicidadePagamento", pagamentoConsultaService.resolverPeriodicidade(usuarioLogado));
+        model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
+        popularControlePeriodicidadePropria(model, usuarioLogado);
         var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
         model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
         model.addAttribute(
@@ -292,7 +312,50 @@ public class AgendamentoController {
             service.buscarPorId(pagamentoSelecionadoId).ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
         }
         aplicarModalPixConfirmadoSeNecessario(model);
+        popularNovidades(model, usuarioLogado, session);
         return "agenda";
+    }
+
+    private void popularNovidades(Model model, Usuario usuarioLogado, HttpSession session) {
+        List<NovidadeSiteView> novidadesVisiveis = novidadeSiteService.listarVisiveisParaUsuario(usuarioLogado);
+        boolean modalFechadoNaSessao = Boolean.TRUE.equals(session.getAttribute("novidadesModalFechado"));
+        model.addAttribute("novidadesVisiveis", novidadesVisiveis);
+        model.addAttribute("totalNovidadesVisiveis", novidadesVisiveis.size());
+        model.addAttribute("exibirModalNovidades", !novidadesVisiveis.isEmpty() && !modalFechadoNaSessao);
+        model.addAttribute("novidadesDiasExibicao", NovidadeSiteService.DIAS_EXIBICAO_SEM_MARCAR);
+    }
+
+    @PostMapping("/novidades/dispensar")
+    public String dispensarNovidades(
+            @RequestParam(required = false) List<Long> novidadeIds,
+            @RequestParam(defaultValue = "false") boolean naoMostrarMais,
+            @RequestParam(defaultValue = "/agendamentos/dashboard") String retorno,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            if (novidadeIds != null && !novidadeIds.isEmpty()) {
+                novidadeSiteService.dispensarNovidades(usuarioLogado, novidadeIds, naoMostrarMais);
+            }
+            session.setAttribute("novidadesModalFechado", Boolean.TRUE);
+            if (naoMostrarMais) {
+                redirectAttributes.addFlashAttribute("sucesso", "Novidades ocultadas.");
+            }
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:" + normalizarRetornoNovidades(retorno);
+    }
+
+    private String normalizarRetornoNovidades(String retorno) {
+        if (retorno == null || retorno.isBlank()) {
+            return "/agendamentos/dashboard";
+        }
+        if (retorno.startsWith("/agendamentos/")) {
+            return retorno;
+        }
+        return "/agendamentos/dashboard";
     }
 
     private void aplicarModalPixConfirmadoSeNecessario(Model model) {
@@ -383,6 +446,8 @@ public class AgendamentoController {
         model.addAttribute("pagamentoSemanal", periodicidadePagamento == PeriodicidadePagamento.SEMANAL);
         model.addAttribute("pagamentoMensal", periodicidadePagamento == PeriodicidadePagamento.MENSAL);
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
+        model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuarioLogado));
+        model.addAttribute("podeAcessarCentralProfissionais", authService.podeAcessarCentralProfissionais(usuarioLogado));
         model.addAttribute("manualVideoUrl", manualProperties.getVideoUrlNormalizada());
         model.addAttribute("manualVideoTitulo", manualProperties.getVideoTitulo());
         model.addAttribute("manualVideoDescricao", manualProperties.getVideoDescricao());
@@ -408,7 +473,10 @@ public class AgendamentoController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", false);
         model.addAttribute("isDonaClinica", false);
+        model.addAttribute("podeEscolherFormaPagamento", true);
         model.addAttribute("periodicidadePagamento", periodicidade);
+        model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
+        popularControlePeriodicidadePropria(model, usuarioLogado);
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
         model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
@@ -498,6 +566,32 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
         return "redirect:/agendamentos/central-profissionais";
+    }
+
+    @PostMapping("/minha-periodicidade-pagamento")
+    public String atualizarMinhaPeriodicidadePagamento(
+            @RequestParam PeriodicidadePagamento periodicidade,
+            @RequestParam(defaultValue = "/agendamentos/meus-pagamentos") String retorno,
+            RedirectAttributes redirectAttributes
+    ) {
+        String destino = normalizarRetornoPeriodicidade(retorno);
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            int agendamentosMigrados = usuarioService.atualizarPeriodicidadePropria(periodicidade, usuarioLogado);
+            if (agendamentosMigrados > 0) {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Forma de pagamento atualizada. "
+                                + agendamentosMigrados
+                                + " agendamento(s) futuro(s) ajustado(s) para a nova regra."
+                );
+            } else {
+                redirectAttributes.addFlashAttribute("sucesso", "Forma de pagamento atualizada.");
+            }
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:" + destino;
     }
 
     @PostMapping
@@ -705,5 +799,23 @@ public class AgendamentoController {
             base = base.with(TemporalAdjusters.next(java.time.DayOfWeek.MONDAY));
         }
         return base;
+    }
+
+    private void popularControlePeriodicidadePropria(Model model, Usuario usuarioLogado) {
+        if (!authService.podeEscolherFormaPagamento(usuarioLogado)) {
+            return;
+        }
+        model.addAttribute("podeAlterarPeriodicidadePropria", usuarioService.podeAlterarPeriodicidadePropria(usuarioLogado));
+        model.addAttribute("mensagemBloqueioPeriodicidade", usuarioService.mensagemBloqueioPeriodicidade(usuarioLogado));
+    }
+
+    private String normalizarRetornoPeriodicidade(String retorno) {
+        if (retorno == null || retorno.isBlank()) {
+            return "/agendamentos/meus-pagamentos";
+        }
+        if (!retorno.startsWith("/agendamentos/")) {
+            return "/agendamentos/meus-pagamentos";
+        }
+        return retorno;
     }
 }

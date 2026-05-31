@@ -40,6 +40,7 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaSeNecessario("pagamento_expira_em", "TIMESTAMP");
             adicionarColunaSeNecessario("liberado_em", "TIMESTAMP");
             adicionarColunaUsuariosSeNecessario("periodicidade_pagamento", "VARCHAR(20) DEFAULT 'DIARIO'");
+            adicionarColunaUsuariosSeNecessario("periodicidade_alterada_em", "TIMESTAMP");
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");
             adicionarColunaSeNecessario("data_referencia_mes_pagamento", "DATE");
             preencherReferenciasCobranca();

@@ -46,12 +46,36 @@ public class AuthService {
         return "ROLE_ADMIN".equals(usuario.getCargo());
     }
 
+    private static final String LOGIN_DONA_CLINICA = "polyana";
+
     public boolean isDonaClinica(Usuario usuario) {
-        return usuario != null && Boolean.TRUE.equals(usuario.getDonaClinica());
+        if (usuario == null) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(usuario.getDonaClinica())) {
+            return true;
+        }
+        String login = usuario.getLogin();
+        return login != null && LOGIN_DONA_CLINICA.equalsIgnoreCase(login.trim());
+    }
+
+    /** Profissionais comuns trocam a propria senha na agenda; admin e dona da clinica nao. */
+    public boolean podeTrocarPropriaSenha(Usuario usuario) {
+        return usuario != null
+                && !isAdmin(usuario)
+                && !isDonaClinica(usuario);
     }
 
     public boolean profissionalIgnoraValoresEPagamento(Usuario profissional) {
         return isDonaClinica(profissional);
+    }
+
+    /** Profissionais comuns escolhem Diario/Semanal/Mensal na agenda; dona e admin nao. */
+    public boolean podeEscolherFormaPagamento(Usuario usuario) {
+        if (usuario == null || isAdmin(usuario) || isDonaClinica(usuario)) {
+            return false;
+        }
+        return "ROLE_PROFISSIONAL".equals(usuario.getCargo());
     }
 
     public boolean podeGerenciarEquipe(Usuario usuario) {
@@ -66,5 +90,12 @@ public class AuthService {
     /** Layout caderno (Avulso / Fixo / Quinzenal) para profissionais e dona da clinica; admin mantem a grade completa. */
     public boolean deveUsarMeusAgendamentosResumido(Usuario usuario) {
         return usuario != null && !isAdmin(usuario);
+    }
+
+    /** Relatorio individual: cada profissional ve apenas os proprios dados. */
+    public boolean podeVerRelatorioProprio(Usuario usuario) {
+        return usuario != null
+                && !isAdmin(usuario)
+                && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
     }
 }

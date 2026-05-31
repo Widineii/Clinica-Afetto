@@ -12,6 +12,7 @@ public class SerieAgendamentoOcorrencia {
     private final boolean exibirBotaoPagar;
     private final boolean pagamentoPago;
     private final boolean podeRealocar;
+    private final boolean podeCancelar;
 
     public SerieAgendamentoOcorrencia(
             Long agendamentoId,
@@ -19,7 +20,8 @@ public class SerieAgendamentoOcorrencia {
             PagamentoStatus statusPagamento,
             boolean exibirBotaoPagar,
             boolean pagamentoPago,
-            boolean podeRealocar
+            boolean podeRealocar,
+            boolean podeCancelar
     ) {
         this.agendamentoId = agendamentoId;
         this.dataRotulo = dataRotulo;
@@ -27,5 +29,6 @@ public class SerieAgendamentoOcorrencia {
         this.exibirBotaoPagar = exibirBotaoPagar;
         this.pagamentoPago = pagamentoPago;
         this.podeRealocar = podeRealocar;
+        this.podeCancelar = podeCancelar;
     }
 }

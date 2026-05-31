@@ -45,6 +45,12 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             jdbcTemplate.execute(
                     """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS periodicidade_alterada_em TIMESTAMP
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
                     ALTER TABLE agendamentos
                     ADD COLUMN IF NOT EXISTS data_referencia_semana_pagamento DATE
                     """

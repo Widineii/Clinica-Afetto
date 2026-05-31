@@ -35,7 +35,7 @@ public class RelatorioMensalService {
     @Value("${app.relatorio-mensal.dia-fechamento:3}")
     private int diaFechamento;
 
-    @Value("${app.relatorio-mensal.dia-remocao-pdf:10}")
+    @Value("${app.relatorio-mensal.dia-remocao-pdf:15}")
     private int diaRemocaoPdf;
 
     public RelatorioMensalService(
@@ -242,14 +242,8 @@ public class RelatorioMensalService {
             org.springframework.ui.Model model,
             jakarta.servlet.http.HttpSession session
     ) {
-        Optional<RelatorioMensalNotificacaoView> notificacao =
-                avaliarNotificacaoMensal(LocalDate.now());
-        YearMonth mesPassado = mesPassadoReferencia();
-        boolean exibirBolinha = notificacao.isPresent()
-                && !notificacaoMensalJaFoiAtendida(session, mesPassado);
-
-        model.addAttribute("notificacaoRelatorioMensal", exibirBolinha ? notificacao.orElse(null) : null);
-        model.addAttribute("exibirBolinhaNotificacaoRelatorio", exibirBolinha);
+        model.addAttribute("notificacaoRelatorioMensal", null);
+        model.addAttribute("exibirBolinhaNotificacaoRelatorio", false);
     }
 
     public int getDiaRemocaoPdf() {
@@ -261,17 +255,12 @@ public class RelatorioMensalService {
     }
 
     public boolean podeExportarPdf(YearMonth mesReferencia) {
-        return relatorioMensalVisivelNaTela(mesReferencia);
+        return false;
     }
 
     /** Pode baixar se o relatorio foi arquivado e ainda esta no periodo visivel na tela. */
     public boolean podeExportarPdf(RelatorioMensalArquivado arquivado) {
-        if (arquivado == null
-                || arquivado.getDadosJson() == null
-                || arquivado.getDadosJson().isBlank()) {
-            return false;
-        }
-        return relatorioMensalVisivelNaTela(YearMonth.of(arquivado.getAno(), arquivado.getMes()));
+        return false;
     }
 
     public boolean pdfRemovidoDoBanco(RelatorioMensalArquivado arquivado) {
@@ -308,7 +297,7 @@ public class RelatorioMensalService {
 
     /**
      * PDF do relatorio de um mes fica disponivel ate o dia anterior ao diaRemocaoPdf
-     * do mes seguinte (ex.: abril some no dia 10 de maio).
+     * do mes seguinte (ex.: abril some no dia 15 de maio).
      */
     boolean pdfExpiradoParaRelatorio(int ano, int mes, LocalDate referencia) {
         LocalDate inicioRemocao = YearMonth.of(ano, mes).plusMonths(1).atDay(diaRemocaoPdf);

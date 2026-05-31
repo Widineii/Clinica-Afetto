@@ -226,20 +226,6 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("fimHoje") LocalDateTime fimHoje
     );
 
-    @Query("""
-            SELECT DISTINCT a.profissional
-            FROM Agendamento a
-            WHERE a.profissional IS NOT NULL
-              AND a.profissional.cargo = 'ROLE_PROFISSIONAL'
-              AND a.dataHoraInicio >= :inicio
-              AND a.dataHoraInicio < :fim
-            ORDER BY a.profissional.nome ASC
-            """)
-    List<Usuario> findProfissionaisComAgendamentoNoPeriodo(
-            @Param("inicio") LocalDateTime inicio,
-            @Param("fim") LocalDateTime fim
-    );
-
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -261,6 +247,18 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             WHERE a.nomeCliente LIKE :prefixo
             """)
     int deleteByNomeClienteLike(@Param("prefixo") String prefixo);
+
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.nomeCliente LIKE :prefixo
+            """)
+    int deleteByProfissionalIdAndNomeClienteLike(
+            @Param("profissionalId") Long profissionalId,
+            @Param("prefixo") String prefixo
+    );
 
     List<Agendamento> findByStatusPagamentoAndDataHoraInicioGreaterThanEqual(
             PagamentoStatus statusPagamento,
@@ -327,6 +325,40 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.statusPagamento = com.clinica.sistema.model.PagamentoStatus.PAGO
+              AND a.dataPagamento >= :inicio
+              AND a.dataPagamento < :fim
+            ORDER BY a.dataPagamento DESC, a.id DESC
+            """)
+    List<Agendamento> findPagosPorProfissionalEDataPagamentoNoPeriodo(
+            @Param("profissionalId") Long profissionalId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.statusPagamento = com.clinica.sistema.model.PagamentoStatus.PAGO
+              AND a.dataPagamento IS NOT NULL
+            ORDER BY a.dataPagamento DESC, a.id DESC
+            """)
+    List<Agendamento> findPagosPorProfissionalComDataPagamento(@Param("profissionalId") Long profissionalId);
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.statusPagamento = com.clinica.sistema.model.PagamentoStatus.PAGO
+              AND a.dataPagamento IS NOT NULL
+            ORDER BY a.dataPagamento DESC, a.id DESC
+            """)
+    List<Agendamento> findTodosPagosComDataPagamento();
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
     @Query("""

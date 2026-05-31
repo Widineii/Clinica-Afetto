@@ -15,10 +15,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -69,6 +73,7 @@ class UsuarioServiceTest {
         profissional.setId(2L);
         profissional.setNome("Profissional");
         profissional.setCargo("ROLE_PROFISSIONAL");
+        profissional.setDonaClinica(false);
     }
 
     @Test
@@ -205,5 +210,68 @@ class UsuarioServiceTest {
                 PeriodicidadePagamento.DIARIO,
                 PeriodicidadePagamento.MENSAL
         );
+    }
+
+    @Test
+    void profissionalDeveAlterarPropriaPeriodicidadeQuandoNuncaAlterou() {
+        when(authService.podeEscolherFormaPagamento(profissional)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(pagamentoConsultaService.resolverPeriodicidade(profissional)).thenReturn(PeriodicidadePagamento.DIARIO);
+        when(usuarioRepository.save(profissional)).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                profissional,
+                PeriodicidadePagamento.DIARIO,
+                PeriodicidadePagamento.SEMANAL
+        )).thenReturn(2);
+
+        int migrados = usuarioService.atualizarPeriodicidadePropria(PeriodicidadePagamento.SEMANAL, profissional);
+
+        assertEquals(2, migrados);
+        assertEquals(PeriodicidadePagamento.SEMANAL, profissional.getPeriodicidadePagamento());
+        assertTrue(profissional.getPeriodicidadeAlteradaEm() != null);
+    }
+
+    @Test
+    void profissionalNaoDeveAlterarPeriodicidadeAntesDe24Horas() {
+        profissional.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+        profissional.setPeriodicidadeAlteradaEm(LocalDateTime.now().minusHours(2));
+
+        when(authService.podeEscolherFormaPagamento(profissional)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(pagamentoConsultaService.resolverPeriodicidade(profissional)).thenReturn(PeriodicidadePagamento.SEMANAL);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> usuarioService.atualizarPeriodicidadePropria(PeriodicidadePagamento.MENSAL, profissional));
+
+        assertTrue(exception.getMessage().contains("24 horas"));
+    }
+
+    @Test
+    void profissionalPodeAlterarPeriodicidadeApos24Horas() {
+        profissional.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+        profissional.setPeriodicidadeAlteradaEm(LocalDateTime.now().minusHours(25));
+
+        when(authService.podeEscolherFormaPagamento(profissional)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(pagamentoConsultaService.resolverPeriodicidade(profissional)).thenReturn(PeriodicidadePagamento.SEMANAL);
+        when(usuarioRepository.save(profissional)).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(
+                profissional,
+                PeriodicidadePagamento.SEMANAL,
+                PeriodicidadePagamento.MENSAL
+        )).thenReturn(1);
+
+        int migrados = usuarioService.atualizarPeriodicidadePropria(PeriodicidadePagamento.MENSAL, profissional);
+
+        assertEquals(1, migrados);
+        assertFalse(usuarioService.podeAlterarPeriodicidadePropria(profissional));
+    }
+
+    @Test
+    void mensagemBloqueioPeriodicidadeDeveSerNulaQuandoPodeAlterar() {
+        profissional.setPeriodicidadeAlteradaEm(LocalDateTime.now().minusHours(30));
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+
+        assertNull(usuarioService.mensagemBloqueioPeriodicidade(profissional));
     }
 }

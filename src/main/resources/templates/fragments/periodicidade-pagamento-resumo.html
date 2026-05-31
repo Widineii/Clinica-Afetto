@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="bloco (periodicidadeAtual, retornoUrl)">
+    <div class="periodicidade-resumo-card" th:if="${podeEscolherFormaPagamento and periodicidadeAtual != null and periodicidadesPagamento != null}">
+        <style>
+            .periodicidade-resumo-card {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 14px;
+                padding: 1.15rem 1.25rem;
+                margin-bottom: 1.35rem;
+                box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+            }
+
+            .periodicidade-resumo-card__titulo {
+                font-size: 0.68rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: #64748b;
+                margin: 0 0 0.55rem;
+            }
+
+            .periodicidade-resumo-card__hint {
+                font-size: 0.82rem;
+                color: #64748b;
+                line-height: 1.45;
+                margin: 0 0 0.85rem;
+            }
+
+            .periodicidade-resumo-opcoes {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .periodicidade-resumo-btn {
+                border: 1px solid #cbd5e1;
+                background: #fff;
+                color: #64748b;
+                font-size: 0.78rem;
+                font-weight: 700;
+                padding: 8px 16px;
+                border-radius: 999px;
+                line-height: 1.1;
+                cursor: pointer;
+                transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+            }
+
+            .periodicidade-resumo-btn:hover:not(:disabled):not(.active) {
+                border-color: var(--afetto-teal-dark);
+                color: var(--afetto-teal-dark);
+            }
+
+            .periodicidade-resumo-btn.active {
+                border-color: var(--afetto-teal-dark);
+                background: var(--afetto-gradient-hero);
+                color: #fff;
+                box-shadow: 0 2px 8px rgba(10, 135, 133, 0.2);
+                cursor: default;
+            }
+
+            .periodicidade-resumo-btn:disabled:not(.active) {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+
+            .periodicidade-resumo-card__descricao {
+                font-size: 0.82rem;
+                color: #475569;
+                margin: 0.85rem 0 0;
+                line-height: 1.4;
+            }
+
+            .periodicidade-resumo-card__bloqueio {
+                font-size: 0.78rem;
+                color: #b45309;
+                margin: 0.65rem 0 0;
+            }
+        </style>
+
+        <div class="periodicidade-resumo-card__titulo">Forma de pagamento</div>
+        <p class="periodicidade-resumo-card__hint mb-0">
+            Escolha como prefere pagar. Após trocar, aguarde 24 horas para mudar de novo.
+        </p>
+
+        <form th:action="@{/agendamentos/minha-periodicidade-pagamento}" method="post" class="mt-0">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <input type="hidden" name="retorno" th:value="${retornoUrl}">
+            <div class="periodicidade-resumo-opcoes" role="group" aria-label="Forma de pagamento">
+                <button th:each="opt : ${periodicidadesPagamento}"
+                        type="submit"
+                        name="periodicidade"
+                        th:value="${opt.name()}"
+                        class="periodicidade-resumo-btn"
+                        th:classappend="${periodicidadeAtual == opt} ? ' active' : ''"
+                        th:disabled="${periodicidadeAtual == opt or (podeAlterarPeriodicidadePropria != null and !podeAlterarPeriodicidadePropria)}"
+                        th:attr="aria-pressed=${periodicidadeAtual == opt}"
+                        th:text="${opt.rotulo}">Diário</button>
+            </div>
+        </form>
+
+        <p class="periodicidade-resumo-card__bloqueio mb-0"
+           th:if="${mensagemBloqueioPeriodicidade != null and !#strings.isEmpty(mensagemBloqueioPeriodicidade)}"
+           th:text="${mensagemBloqueioPeriodicidade}">
+            Voce podera alterar novamente em 30/05 as 14:00.
+        </p>
+
+        <p class="periodicidade-resumo-card__descricao mb-0" th:text="${periodicidadeAtual.descricao}">
+            Paga na véspera de cada consulta (D-1)
+        </p>
+    </div>
+</div>
+</body>
+</html>

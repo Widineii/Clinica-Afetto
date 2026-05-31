@@ -203,7 +203,7 @@ class DemonstracaoRegrasIntegracaoTest {
         System.out.println("  - Cliente: " + PREFIXO + "LIBERAR");
         System.out.println("  - Status: LIBERADO_FALTA_PAGAMENTO (nao ocupa celula)");
         System.out.println("  - Grade Sala 1: http://localhost:8081/agendamentos/dashboard");
-        System.out.println("  - Conferencia taxas: http://localhost:8081/agendamentos/financeiro/configuracao-taxas");
+        System.out.println("  - Gestao financeira: http://localhost:8081/agendamentos/financeiro");
         System.out.println("==========================================================");
         System.out.println();
     }

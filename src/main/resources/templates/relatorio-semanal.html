@@ -454,14 +454,10 @@
             <a th:href="@{/agendamentos/relatorio/semanal}" class="active">
                 <i class="fa-solid fa-calendar-week"></i> Relatorio semanal
             </a>
-            <a th:href="@{/agendamentos/relatorio/mensal}">
-                <i class="fa-solid fa-calendar-days"></i> Relatorio mensal
-            </a>
         </nav>
 
-        <div class="alert-box alert-warning" style="margin-bottom: 12px;">
-            Este é o <strong>relatório semanal</strong>. Ele não remove o ponto laranja do sino.
-            Para o sino sumir, baixe o <strong>PDF do relatório mensal</strong> (mês passado).
+        <div class="alert-box alert-info" style="margin-bottom: 12px;">
+            Relatorio da semana atual (segunda a sabado), com consultas ja passadas e regra das 24h.
         </div>
 
         <div th:if="${sucesso}" class="alert-box alert-success" th:text="${sucesso}">Dados de teste criados.</div>

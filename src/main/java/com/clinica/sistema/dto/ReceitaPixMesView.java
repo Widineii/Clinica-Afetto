@@ -25,12 +25,35 @@ public class ReceitaPixMesView {
     private final int quantidadePagamentos;
     private final BigDecimal totalRecebido;
     private final String totalRecebidoFormatado;
+    private final List<ReceitaPixFatiaView> receitaPorSala;
+    private final List<ReceitaPixFatiaView> receitaPorProfissional;
+    private final List<ReceitaPixFatiaView> receitaPorTipo;
+    private final List<String> salasFiltro;
+    private final List<String> profissionaisFiltro;
+    private final String pagamentosGraficoJson;
+    private final List<ProfissionalReceitaPainelView> profissionaisPainel;
+    private final String profissionaisPainelJson;
 
     public static ReceitaPixMesView vazio(YearMonth mesSelecionado) {
-        return new ReceitaPixMesView(mesSelecionado, Collections.emptyList(), BigDecimal.ZERO);
+        return new ReceitaPixMesView(mesSelecionado, Collections.emptyList(), BigDecimal.ZERO, Collections.emptyList());
     }
 
-    public ReceitaPixMesView(YearMonth mesSelecionado, List<ReceitaPixLinhaView> pagamentos, BigDecimal totalRecebido) {
+    public ReceitaPixMesView(
+            YearMonth mesSelecionado,
+            List<ReceitaPixLinhaView> pagamentos,
+            BigDecimal totalRecebido,
+            List<ProfissionalReceitaPainelView> profissionaisPainel
+    ) {
+        this(mesSelecionado, pagamentos, totalRecebido, profissionaisPainel, null);
+    }
+
+    public ReceitaPixMesView(
+            YearMonth mesSelecionado,
+            List<ReceitaPixLinhaView> pagamentos,
+            BigDecimal totalRecebido,
+            List<ProfissionalReceitaPainelView> profissionaisPainel,
+            List<String> salasFiltro
+    ) {
         this.mesSelecionado = mesSelecionado;
         this.mesAnoLabel = capitalize(mesSelecionado.format(MES_ANO_LABEL));
         this.mesAnoInput = mesSelecionado.toString();
@@ -40,6 +63,16 @@ public class ReceitaPixMesView {
         this.quantidadePagamentos = pagamentos.size();
         this.totalRecebido = totalRecebido;
         this.totalRecebidoFormatado = MoedaBrasilUtil.formatar(totalRecebido);
+        this.receitaPorSala = ReceitaPixAgregador.porSala(pagamentos, totalRecebido);
+        this.receitaPorProfissional = ReceitaPixAgregador.porProfissional(pagamentos, totalRecebido);
+        this.receitaPorTipo = ReceitaPixAgregador.porTipo(pagamentos, totalRecebido);
+        this.salasFiltro = salasFiltro != null && !salasFiltro.isEmpty()
+                ? salasFiltro
+                : ReceitaPixAgregador.chavesDistintas(pagamentos, ReceitaPixLinhaView::getSalaChave);
+        this.profissionaisFiltro = ReceitaPixAgregador.chavesDistintas(pagamentos, ReceitaPixLinhaView::getProfissionalChave);
+        this.pagamentosGraficoJson = GraficoJsonUtil.serializarPagamentosPix(pagamentos);
+        this.profissionaisPainel = profissionaisPainel != null ? profissionaisPainel : Collections.emptyList();
+        this.profissionaisPainelJson = GraficoJsonUtil.serializarProfissionaisPainel(this.profissionaisPainel);
     }
 
     private static String capitalize(String texto) {

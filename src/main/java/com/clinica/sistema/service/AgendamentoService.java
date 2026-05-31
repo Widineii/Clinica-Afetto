@@ -4,7 +4,6 @@ import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
-import com.clinica.sistema.dto.ConfiguracaoTaxasAtendimentosView;
 import com.clinica.sistema.dto.ProfissionalAgendamentosResumo;
 import com.clinica.sistema.dto.SerieAgendamentoLinha;
 import com.clinica.sistema.dto.SerieAgendamentoOcorrencia;
@@ -58,6 +57,7 @@ public class AgendamentoService {
     /** Evita carregar anos de fixos antigos nas listas do dashboard. */
     private static final int MESES_HISTORICO_AGENDA = 4;
     private static final Duration INTERVALO_RENOVACAO_SERIES = Duration.ofMinutes(10);
+    private static final int ANTECEDENCIA_MINIMA_CANCELAMENTO_HORAS = 24;
 
     private final AgendamentoRepository repository;
     private final UsuarioRepository usuarioRepository;
@@ -208,7 +208,8 @@ public class AgendamentoService {
                         agendamento.getStatusPagamento(),
                         pagamentoConsultaService.exibirBotaoPagar(agendamento),
                         agendamento.isPagamentoPago(),
-                        podeRealocar(agendamento, usuarioLogado)
+                        podeRealocar(agendamento, usuarioLogado),
+                        podeCancelarAgendamento(agendamento, usuarioLogado)
                 ))
                 .limit(obterLimiteOcorrenciasFuturas(recorrenciaDoAgendamento(representante)))
                 .toList();
@@ -282,14 +283,6 @@ public class AgendamentoService {
                 .toList();
     }
 
-    public List<Usuario> listarProfissionaisComAgendamentoNoMes(YearMonth mesReferencia) {
-        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
-        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
-        return repository.findProfissionaisComAgendamentoNoPeriodo(inicio, fim).stream()
-                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
-                .toList();
-    }
-
     public List<Agendamento> listarAtendimentosProfissionalNoMes(Long profissionalId, YearMonth mesReferencia) {
         if (profissionalId == null) {
             return List.of();
@@ -301,63 +294,6 @@ public class AgendamentoService {
                 inicio,
                 fim
         );
-    }
-
-    public ConfiguracaoTaxasAtendimentosView montarAtendimentosConfiguracaoTaxas(
-            Long profissionalId,
-            YearMonth mesReferencia
-    ) {
-        if (profissionalId == null) {
-            return ConfiguracaoTaxasAtendimentosView.vazio();
-        }
-
-        List<Agendamento> todos = repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissionalId);
-        LocalDateTime inicioMes = mesReferencia.atDay(1).atStartOfDay();
-        LocalDateTime fimMes = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
-
-        List<Agendamento> avulsos = todos.stream()
-                .filter(Agendamento::isAvulso)
-                .filter(agendamento -> estaNoPeriodo(agendamento, inicioMes, fimMes))
-                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
-                .toList();
-
-        List<SerieAgendamentoLinha> seriesFixas = agruparSeriesAtivas(todos, Agendamento::isFixoSemanal).stream()
-                .filter(serie -> serieTemOcorrenciaNoMes(serie.getAgendamentoReferenciaId(), todos, inicioMes, fimMes))
-                .toList();
-
-        List<SerieAgendamentoLinha> seriesQuinzenais = agruparSeriesAtivas(todos, Agendamento::isQuinzenal).stream()
-                .filter(serie -> serieTemOcorrenciaNoMes(serie.getAgendamentoReferenciaId(), todos, inicioMes, fimMes))
-                .toList();
-
-        int totalNoMes = listarAtendimentosProfissionalNoMes(profissionalId, mesReferencia).size();
-        return new ConfiguracaoTaxasAtendimentosView(avulsos, seriesFixas, seriesQuinzenais, totalNoMes);
-    }
-
-    private boolean estaNoPeriodo(Agendamento agendamento, LocalDateTime inicio, LocalDateTime fim) {
-        if (agendamento.getDataHoraInicio() == null) {
-            return false;
-        }
-        return !agendamento.getDataHoraInicio().isBefore(inicio)
-                && agendamento.getDataHoraInicio().isBefore(fim);
-    }
-
-    private boolean serieTemOcorrenciaNoMes(
-            Long agendamentoReferenciaId,
-            List<Agendamento> agendamentos,
-            LocalDateTime inicioMes,
-            LocalDateTime fimMes
-    ) {
-        Agendamento referencia = agendamentos.stream()
-                .filter(agendamento -> agendamentoReferenciaId.equals(agendamento.getId()))
-                .findFirst()
-                .orElse(null);
-        if (referencia == null) {
-            return false;
-        }
-        String chaveSerie = chaveSerie(referencia);
-        return agendamentos.stream()
-                .filter(agendamento -> chaveSerie(agendamento).equals(chaveSerie))
-                .anyMatch(agendamento -> estaNoPeriodo(agendamento, inicioMes, fimMes));
     }
 
     public List<LocalTime> listarHorariosDisponiveis() {
@@ -984,14 +920,27 @@ public class AgendamentoService {
         if (agendamento == null || usuarioLogado == null) {
             return false;
         }
-        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
-            return false;
-        }
         if (agendamento.getDataHoraInicio() == null
                 || !agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
             return false;
         }
-        return agendamento.getProfissional() != null;
+        if (agendamento.getProfissional() == null) {
+            return false;
+        }
+        if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
+            return true;
+        }
+        if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
+            return false;
+        }
+        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)
+                && RECORRENCIA_AVULSO.equals(recorrenciaDoAgendamento(agendamento))) {
+            return false;
+        }
+        if (pagamentoConsultaService.consultaJaFoiPaga(agendamento)) {
+            return false;
+        }
+        return respeitaAntecedenciaMinimaCancelamento(agendamento);
     }
 
     public boolean podeEncerrarSerieFixa(Agendamento agendamento, Usuario usuarioLogado) {
@@ -1224,12 +1173,37 @@ public class AgendamentoService {
     }
 
     private void validarPermissaoCancelamento(Agendamento agendamento, Usuario usuarioLogado) {
-        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
+        if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
+            validarAgendamentoParaAcaoGestao(agendamento);
+            return;
+        }
+        if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
+            throw new RuntimeException("Você só pode cancelar os seus próprios agendamentos.");
+        }
+        if (RECORRENCIA_AVULSO.equals(recorrenciaDoAgendamento(agendamento))) {
             throw new RuntimeException(
-                    "Somente a administração ou a dona da clínica podem cancelar locações de sala."
+                    "Agendamentos avulsos não podem ser cancelados pelo app. O pagamento é feito na hora da marcação."
+            );
+        }
+        if (pagamentoConsultaService.consultaJaFoiPaga(agendamento)) {
+            throw new RuntimeException(
+                    "Não é possível cancelar um horário já pago. Locação de sala sem reembolso."
+            );
+        }
+        if (!respeitaAntecedenciaMinimaCancelamento(agendamento)) {
+            throw new RuntimeException(
+                    "Cancelamento permitido somente com mais de 24 horas de antecedência."
             );
         }
         validarAgendamentoParaAcaoGestao(agendamento);
+    }
+
+    private boolean respeitaAntecedenciaMinimaCancelamento(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return false;
+        }
+        LocalDateTime limite = LocalDateTime.now().plusHours(ANTECEDENCIA_MINIMA_CANCELAMENTO_HORAS);
+        return agendamento.getDataHoraInicio().isAfter(limite);
     }
 
     private void validarPermissaoEncerramentoSerie(Agendamento agendamento, Usuario usuarioLogado) {

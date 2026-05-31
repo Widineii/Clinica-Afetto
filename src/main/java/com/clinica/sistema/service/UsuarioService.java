@@ -15,10 +15,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 public class UsuarioService {
+    private static final Duration BLOQUEIO_ALTERACAO_PERIODICIDADE = Duration.ofHours(24);
+    private static final DateTimeFormatter FORMATO_PROXIMA_ALTERACAO =
+            DateTimeFormatter.ofPattern("dd/MM 'as' HH:mm");
+
     private final UsuarioRepository usuarioRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final AuthService authService;
@@ -149,10 +156,92 @@ public class UsuarioService {
 
         PeriodicidadePagamento anterior = pagamentoConsultaService.resolverPeriodicidade(alvo);
         PeriodicidadePagamento nova = form.getPeriodicidade();
-        alvo.setPeriodicidadePagamento(nova);
-        usuarioRepository.save(alvo);
+        return aplicarAlteracaoPeriodicidade(alvo, anterior, nova, false);
+    }
 
+    public boolean podeAlterarPeriodicidadePropria(Usuario profissional) {
+        Usuario atual = recarregarProfissional(profissional);
+        return calcularProximaAlteracaoPeriodicidadePermitida(atual) == null;
+    }
+
+    public String mensagemBloqueioPeriodicidade(Usuario profissional) {
+        Usuario atual = recarregarProfissional(profissional);
+        LocalDateTime proxima = calcularProximaAlteracaoPeriodicidadePermitida(atual);
+        if (proxima == null) {
+            return null;
+        }
+        return "Voce podera alterar novamente em " + proxima.format(FORMATO_PROXIMA_ALTERACAO) + ".";
+    }
+
+    @Transactional
+    public int atualizarPeriodicidadePropria(PeriodicidadePagamento nova, Usuario profissionalLogado) {
+        validarProfissionalComPeriodicidade(profissionalLogado);
+
+        Usuario alvo = recarregarProfissional(profissionalLogado);
+        PeriodicidadePagamento atual = pagamentoConsultaService.resolverPeriodicidade(alvo);
+        if (nova == atual) {
+            return 0;
+        }
+        if (nova == null) {
+            throw new RuntimeException("Selecione a forma de pagamento.");
+        }
+
+        LocalDateTime proximaAlteracao = calcularProximaAlteracaoPeriodicidadePermitida(alvo);
+        if (proximaAlteracao != null) {
+            throw new RuntimeException(
+                    "A forma de pagamento so pode ser alterada uma vez a cada 24 horas. "
+                            + "Voce podera alterar novamente em "
+                            + proximaAlteracao.format(FORMATO_PROXIMA_ALTERACAO)
+                            + "."
+            );
+        }
+
+        return aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
+    }
+
+    private int aplicarAlteracaoPeriodicidade(
+            Usuario alvo,
+            PeriodicidadePagamento anterior,
+            PeriodicidadePagamento nova,
+            boolean registrarBloqueioProprio
+    ) {
+        if (nova == anterior) {
+            return 0;
+        }
+        alvo.setPeriodicidadePagamento(nova);
+        if (registrarBloqueioProprio) {
+            alvo.setPeriodicidadeAlteradaEm(LocalDateTime.now());
+        }
+        usuarioRepository.save(alvo);
         return pagamentoConsultaService.migrarAgendamentosAoAlterarPeriodicidade(alvo, anterior, nova);
+    }
+
+    private LocalDateTime calcularProximaAlteracaoPeriodicidadePermitida(Usuario profissional) {
+        if (profissional.getPeriodicidadeAlteradaEm() == null) {
+            return null;
+        }
+        LocalDateTime libera = profissional.getPeriodicidadeAlteradaEm().plus(BLOQUEIO_ALTERACAO_PERIODICIDADE);
+        if (!libera.isAfter(LocalDateTime.now())) {
+            return null;
+        }
+        return libera;
+    }
+
+    private Usuario recarregarProfissional(Usuario profissional) {
+        if (profissional == null || profissional.getId() == null) {
+            throw new RuntimeException("Usuario nao encontrado.");
+        }
+        return usuarioRepository.findById(profissional.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
+    }
+
+    private void validarProfissionalComPeriodicidade(Usuario usuario) {
+        if (usuario == null) {
+            throw new RuntimeException("Sessao expirada. Faca login novamente.");
+        }
+        if (!authService.podeEscolherFormaPagamento(usuario)) {
+            throw new RuntimeException("A dona da clinica nao usa cobranca por periodicidade.");
+        }
     }
 
     @Transactional

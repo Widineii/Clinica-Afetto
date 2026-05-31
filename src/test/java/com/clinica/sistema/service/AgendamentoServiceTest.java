@@ -508,23 +508,114 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void profissionalNaoPodeCancelarLocacao() {
+    void profissionalPodeCancelarProprioAgendamentoComMaisDe24Horas() {
+        Agendamento agendamento = agendamentoSerieSemanal(profissional);
+        agendamento.setId(1L);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusHours(30));
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(pagamentoConsultaService.consultaJaFoiPaga(agendamento)).thenReturn(false);
+        when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
+
+        assertTrue(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
+        assertDoesNotThrow(() -> agendamentoService.cancelar(1L, profissional));
+        verify(agendamentoRepository).deleteById(1L);
+    }
+
+    @Test
+    void profissionalNaoPodeCancelarAgendamentoAvulso() {
         Agendamento agendamento = new Agendamento();
         agendamento.setId(1L);
         agendamento.setProfissional(profissional);
-        agendamento.setDataHoraInicio(LocalDateTime.now().plusHours(10));
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
+        agendamento.setTipoRecorrencia("AVULSO");
+        agendamento.setFixo(false);
 
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
 
+        assertFalse(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
+
         RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.cancelar(1L, profissional));
 
-        assertEquals(
-                "Somente a administração ou a dona da clínica podem cancelar locações de sala.",
-                exception.getMessage()
-        );
+        assertTrue(exception.getMessage().contains("avulsos"));
         verify(agendamentoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void profissionalNaoPodeCancelarAgendamentoJaPago() {
+        Agendamento agendamento = agendamentoSerieSemanal(profissional);
+        agendamento.setId(1L);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(pagamentoConsultaService.consultaJaFoiPaga(agendamento)).thenReturn(true);
+        when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
+
+        assertFalse(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.cancelar(1L, profissional));
+
+        assertTrue(exception.getMessage().contains("já pago"));
+        verify(agendamentoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void profissionalNaoPodeCancelarAgendamentoComMenosDe24Horas() {
+        Agendamento agendamento = agendamentoSerieSemanal(profissional);
+        agendamento.setId(1L);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusHours(10));
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(pagamentoConsultaService.consultaJaFoiPaga(agendamento)).thenReturn(false);
+        when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
+
+        assertFalse(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.cancelar(1L, profissional));
+
+        assertTrue(exception.getMessage().contains("24 horas"));
+        verify(agendamentoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void profissionalNaoPodeCancelarAgendamentoDeOutroProfissional() {
+        Agendamento agendamento = agendamentoSerieSemanal(outroProfissional());
+        agendamento.setId(1L);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
+
+        assertFalse(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.cancelar(1L, profissional));
+
+        assertTrue(exception.getMessage().contains("próprios"));
+        verify(agendamentoRepository, never()).deleteById(any());
+    }
+
+    private Usuario outroProfissional() {
+        Usuario outro = new Usuario();
+        outro.setId(99L);
+        outro.setCargo("ROLE_PROFISSIONAL");
+        return outro;
+    }
+
+    private Agendamento agendamentoSerieSemanal(Usuario profissionalDono) {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setProfissional(profissionalDono);
+        agendamento.setFixo(true);
+        agendamento.setTipoRecorrencia("SEMANAL");
+        agendamento.setSerieFixaId("serie-teste");
+        return agendamento;
     }
 
     @Test
@@ -652,6 +743,45 @@ class AgendamentoServiceTest {
 
         assertEquals(1, lista.size());
         assertEquals("Cliente do dia", lista.get(0).getNomeCliente());
+    }
+
+    @Test
+    void donaClinicaDeveVerSomenteAgendaDoDiaDelas() {
+        Usuario polyana = new Usuario();
+        polyana.setId(3L);
+        polyana.setNome("Polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        when(agendamentoRepository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                eq(polyana.getId()),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of());
+
+        List<Agendamento> lista = agendamentoService.listarAgendamentosDoDia(polyana, false);
+
+        assertEquals(0, lista.size());
+    }
+
+    @Test
+    void adminDeveVerAgendaDoDiaDeTodosProfissionais() {
+        Usuario admin = new Usuario();
+        admin.setId(1L);
+        admin.setCargo("ROLE_ADMIN");
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(71L);
+        agendamento.setNomeCliente("Cliente geral");
+
+        when(agendamentoRepository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(agendamento));
+
+        List<Agendamento> lista = agendamentoService.listarAgendamentosDoDia(admin, true);
+
+        assertEquals(1, lista.size());
     }
 
     @Test

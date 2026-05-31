@@ -97,6 +97,40 @@
         .btn-header-action--primary:hover { background: #133842; color: #fff; }
         .btn-container { display: flex; justify-content: center; margin-bottom: 8px; }
         .empty-state { text-align: center; padding: 40px 20px; color: #64748B; }
+        .relatorio-graficos {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .relatorio-grafico-card {
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 16px;
+            background: #fff;
+        }
+        .relatorio-grafico-card h4 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: var(--primary-teal);
+        }
+        .relatorio-grafico-wrap { position: relative; height: 260px; overflow: hidden; }
+        .relatorio-grafico-card--full { grid-column: 1 / -1; }
+        .relatorio-grafico-wrap--bar {
+            min-height: 220px;
+            max-height: 70vh;
+            height: 280px;
+            overflow: auto;
+            background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+            border-radius: 10px;
+            padding: 0.5rem 0.65rem;
+        }
+        .relatorio-grafico-wrap--bar canvas { display: block; width: 100% !important; }
+        @media (max-width: 768px) {
+            .relatorio-graficos { grid-template-columns: 1fr; }
+            .relatorio-grafico-card--full { grid-column: auto; }
+        }
         .mes-passado-panel {
             border: 2px solid #E2E8F0; border-radius: 16px; overflow: hidden; background: #F8FAFC;
         }
@@ -140,13 +174,11 @@
                 </div>
             </div>
             <div class="title-area">
-                <h2>RELATORIOS DE USO DE SALAS</h2>
-                <p th:if="${abaAtiva == 'semanal'}" th:text="|Semana: ${periodoLabel}|">Semana atual</p>
-                <p th:if="${abaAtiva == 'mensal'}" th:text="|Mes passado: ${mesPassadoLabel}|">Mes passado</p>
+                <h2>RELATORIO SEMANAL DE USO DE SALAS</h2>
+                <p th:text="|Semana: ${periodoLabel}|">Semana atual</p>
             </div>
             <div class="header-actions">
-                <a th:if="${abaAtiva == 'semanal'}"
-                   th:href="@{/agendamentos/relatorio/semanal(v=${versaoDownload})}"
+                <a th:href="@{/agendamentos/relatorio/semanal(v=${versaoDownload})}"
                    class="btn-header-action btn-header-action--primary">
                     <i class="fa-solid fa-rotate"></i> Gerar relatorio
                 </a>
@@ -156,24 +188,9 @@
             </div>
         </div>
 
-        <nav class="relatorio-tabs" aria-label="Tipo de relatorio">
-            <a th:href="@{/agendamentos/relatorio/semanal}"
-               class="relatorio-tab"
-               th:classappend="${abaAtiva == 'semanal'} ? ' active' : ''">
-                <i class="fa-solid fa-calendar-week"></i> Relatorio semanal
-            </a>
-            <a th:href="@{/agendamentos/relatorio/mensal}"
-               class="relatorio-tab"
-               th:classappend="${abaAtiva == 'mensal'} ? ' active' : ''">
-                <i class="fa-solid fa-calendar-days"></i> Relatorio mensal
-                <span th:if="${relatorioGeradoAguardando and !pdfJaBaixado}" class="tab-badge">PDF pronto</span>
-            </a>
-        </nav>
-
         <div th:if="${sucessoNotificacao}" class="alert-box alert-success" th:text="${sucessoNotificacao}"></div>
 
-        <!-- ABA SEMANAL (padrao ao entrar em Relatorio) -->
-        <section class="relatorio-pane" th:classappend="${abaAtiva == 'semanal'} ? ' active' : ''">
+        <section class="relatorio-pane active">
             <div class="alert-box alert-info">
                 Semana atual (segunda a sábado), somente dias já passados e consultas com mais de 24h.
                 Periodo: <strong th:text="${periodoLabel}">semana</strong>.
@@ -196,6 +213,29 @@
                 </div>
             </div>
             <p class="disclaimer">* Cancelados não entram</p>
+
+            <div class="relatorio-graficos" th:if="${!#lists.isEmpty(linhasSemanal)}">
+                <div class="relatorio-grafico-card">
+                    <h4>Uso por sala</h4>
+                    <div class="relatorio-grafico-wrap">
+                        <canvas id="graficoSalasSemanal"></canvas>
+                    </div>
+                </div>
+                <div class="relatorio-grafico-card">
+                    <h4>Distribuição por sala</h4>
+                    <div class="relatorio-grafico-wrap">
+                        <canvas id="graficoSalasRoscaSemanal"></canvas>
+                    </div>
+                </div>
+                <div class="relatorio-grafico-card relatorio-grafico-card--full">
+                    <h4>Horários por profissional</h4>
+                    <div class="relatorio-grafico-wrap relatorio-grafico-wrap--bar" id="wrapGraficoProfissionaisSemanal">
+                        <canvas id="graficoProfissionaisSemanal"></canvas>
+                    </div>
+                </div>
+            </div>
+            <script type="application/json" id="grafico-salas-semanal-json" th:utext="${graficoSalasSemanalJson}">[]</script>
+            <script type="application/json" id="grafico-profissionais-semanal-json" th:utext="${graficoProfissionaisSemanalJson}">[]</script>
 
             <div class="table-container" th:if="${!#lists.isEmpty(linhasSemanal)}">
                 <div class="table-scroll">
@@ -238,69 +278,10 @@
                 </a>
             </div>
         </section>
-
-        <!-- ABA MENSAL: so mensagem do dia 3 OU PDF gerado -->
-        <section class="relatorio-pane" th:classappend="${abaAtiva == 'mensal'} ? ' active' : ''">
-            <div th:if="${mensalErro != null}" class="alert-box alert-danger" th:text="${mensalErro}"></div>
-
-            <section th:if="${mensalErro == null}"
-                     class="mes-passado-panel"
-                     th:classappend="${relatorioGeradoAguardando} ? 'mes-passado-panel--ready' : ''">
-                <div class="mes-passado-panel__tab">
-                    <i class="fa-solid fa-file-pdf"></i>
-                    <span>Relatório do mês passado — <span th:text="${mesPassadoLabel}">Mês</span></span>
-                    <span th:if="${relatorioGeradoAguardando and !pdfJaBaixado}" class="badge-aguardando">Aguardando download</span>
-                    <span th:if="${pdfJaBaixado}" class="badge-baixado">PDF baixado</span>
-                </div>
-                <div class="mes-passado-panel__body">
-                    <p class="mes-passado-status" th:if="${aguardandoDia3}">
-                        O PDF do mês passado (<strong th:text="${mesPassadoLabel}">abril</strong>) é gerado automaticamente
-                        todo dia <strong th:text="${diaFechamento}">3</strong> de cada mês.
-                        Ainda não chegou o dia <strong th:text="${diaFechamento}">3</strong> de
-                        <strong th:text="${mesAtualLabel}">maio</strong> — volte depois para ver o arquivo aqui.
-                    </p>
-
-                    <p class="mes-passado-status" th:if="${aguardandoProcessamentoAutomatico}">
-                        Já passou do dia <strong th:text="${diaFechamento}">3</strong>.
-                        O sistema vai gerar o PDF de <strong th:text="${mesPassadoLabel}">abril</strong> em breve
-                        (ao abrir esta aba ou no próximo processamento automático).
-                    </p>
-
-                    <p class="mes-passado-status" th:if="${exibirPdfInline}">
-                        PDF de <strong th:text="${mesPassadoLabel}">abril</strong> gerado no fechamento do dia
-                        <strong th:text="${diaFechamento}">3</strong>.
-                        <span th:if="${geradoEmMensal != null}">
-                            Gerado em <strong th:text="${#temporals.format(geradoEmMensal, 'dd/MM/yyyy HH:mm')}">data</strong>.
-                        </span>
-                        Baixe abaixo para o sino de notificação sumir.
-                    </p>
-
-                    <p class="mes-passado-status" th:if="${relatorioSaiuDaTela}">
-                        O relatório de <strong th:text="${mesPassadoLabel}">abril</strong> saiu da tela no dia
-                        <strong th:text="${diaRemocaoPdf}">10</strong> deste mês.
-                        No dia <strong th:text="${diaFechamento}">3</strong> do próximo mês o novo relatório aparecerá aqui.
-                    </p>
-
-                    <div th:if="${exibirPdfInline}" class="pdf-viewer-wrap">
-                        <div class="pdf-viewer-caption">
-                            <i class="fa-solid fa-eye"></i> Visualização do PDF — <span th:text="${mesPassadoLabel}">Mês passado</span>
-                        </div>
-                        <iframe th:src="@{/agendamentos/relatorio/mensal/visualizar(v=${versaoDownload})}"
-                                title="PDF do relatório mensal"
-                                loading="lazy"></iframe>
-                    </div>
-
-                    <div class="btn-container" th:if="${podeBaixarPdf}" style="margin-top: 20px;">
-                        <a th:href="@{/agendamentos/relatorio/mensal/download(v=${versaoDownload})}" class="btn-export" download>
-                            <i class="fa-solid fa-download"></i> Baixar PDF oficial (mensal)
-                        </a>
-                    </div>
-                </div>
-            </section>
-        </section>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (function () {
     var urlLimpar = /*[[@{/agendamentos/relatorio/semanal/limpar}]]*/ '/agendamentos/relatorio/semanal/limpar';
@@ -326,6 +307,146 @@
         }
         link.addEventListener('click', limparRelatorioSemanal);
     });
+
+    if (typeof Chart !== 'undefined') {
+        var coresSalas = ['#3B82F6', '#10B981', '#A855F7', '#F97316'];
+        var salas = [];
+        var profissionais = [];
+        var salasEl = document.getElementById('grafico-salas-semanal-json');
+        var profEl = document.getElementById('grafico-profissionais-semanal-json');
+        try {
+            if (salasEl) {
+                salas = JSON.parse(salasEl.textContent || '[]');
+            }
+            if (profEl) {
+                profissionais = JSON.parse(profEl.textContent || '[]');
+            }
+        } catch (e) {
+            salas = [];
+            profissionais = [];
+        }
+
+        if (Array.isArray(salas) && salas.some(function (item) { return item.valor > 0; })) {
+            var canvasPizza = document.getElementById('graficoSalasSemanal');
+            if (canvasPizza) {
+                new Chart(canvasPizza, {
+                    type: 'pie',
+                    data: {
+                        labels: salas.map(function (item) { return item.rotulo; }),
+                        datasets: [{
+                            data: salas.map(function (item) { return item.valor; }),
+                            backgroundColor: coresSalas
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+            }
+
+            var canvasRosca = document.getElementById('graficoSalasRoscaSemanal');
+            if (canvasRosca) {
+                new Chart(canvasRosca, {
+                    type: 'doughnut',
+                    data: {
+                        labels: salas.map(function (item) { return item.rotulo; }),
+                        datasets: [{
+                            data: salas.map(function (item) { return item.valor; }),
+                            backgroundColor: coresSalas
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '58%',
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+            }
+        }
+
+        if (Array.isArray(profissionais) && profissionais.length > 0) {
+            var canvasBar = document.getElementById('graficoProfissionaisSemanal');
+            var wrapBar = document.getElementById('wrapGraficoProfissionaisSemanal');
+            if (canvasBar) {
+                var alturaBarra = Math.max(240, profissionais.length * 42 + 72);
+                if (wrapBar) {
+                    wrapBar.style.height = Math.min(alturaBarra, Math.round(window.innerHeight * 0.7)) + 'px';
+                }
+                var coresProf = ['#1B4D5C', '#0f766e', '#0369a1', '#4338ca', '#0e7490', '#047857', '#2563eb', '#134e4a'];
+                var maxValor = profissionais.reduce(function (acc, item) {
+                    return Math.max(acc, Number(item.valor) || 0);
+                }, 0);
+                new Chart(canvasBar, {
+                    type: 'bar',
+                    data: {
+                        labels: profissionais.map(function (item) { return item.rotulo; }),
+                        datasets: [{
+                            label: 'Horários',
+                            data: profissionais.map(function (item) { return item.valor; }),
+                            backgroundColor: profissionais.map(function (_, i) { return coresProf[i % coresProf.length]; }),
+                            borderRadius: 8,
+                            maxBarThickness: 22,
+                            barPercentage: 0.68,
+                            categoryPercentage: 0.78
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: { padding: { left: 4, right: 16, top: 8, bottom: 8 } },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (ctx) {
+                                        var v = Number(ctx.raw) || 0;
+                                        return ' ' + v + (v === 1 ? ' horário' : ' horários');
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                suggestedMax: Math.max(maxValor + 0.5, 1),
+                                border: { display: false },
+                                grid: { color: 'rgba(148, 163, 184, 0.25)' },
+                                ticks: {
+                                    stepSize: 1,
+                                    precision: 0,
+                                    color: '#64748B',
+                                    font: { size: 11 }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Quantidade de horários',
+                                    color: '#64748B',
+                                    font: { size: 11, weight: '600' }
+                                }
+                            },
+                            y: {
+                                border: { display: false },
+                                grid: { display: false },
+                                ticks: {
+                                    autoSkip: false,
+                                    color: '#334155',
+                                    font: { size: 12, weight: '600' },
+                                    padding: 10
+                                },
+                                afterFit: function (scale) {
+                                    scale.width = Math.max(scale.width, 110);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
 })();
 </script>
 </body>

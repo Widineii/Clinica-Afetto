@@ -15,8 +15,12 @@ public class ReceitaPixLinhaView {
 
     private final Long agendamentoId;
     private final String profissionalNome;
+    private final String profissionalChave;
     private final String nomeCliente;
     private final String salaNome;
+    private final String salaChave;
+    private final String tipoRecorrencia;
+    private final String tipoRecorrenciaRotulo;
     private final String dataPagamentoRotulo;
     private final String consultaRotulo;
     private final BigDecimal valorTaxa;
@@ -27,8 +31,12 @@ public class ReceitaPixLinhaView {
         this.profissionalNome = agendamento.getProfissional() != null
                 ? agendamento.getProfissional().getNome()
                 : "—";
+        this.profissionalChave = normalizarChave(this.profissionalNome);
         this.nomeCliente = agendamento.getNomeCliente() != null ? agendamento.getNomeCliente() : "—";
         this.salaNome = agendamento.getSala() != null ? agendamento.getSala().getNome() : "—";
+        this.salaChave = normalizarChave(this.salaNome);
+        this.tipoRecorrencia = resolverTipoRecorrencia(agendamento);
+        this.tipoRecorrenciaRotulo = rotularTipoRecorrencia(this.tipoRecorrencia);
         this.dataPagamentoRotulo = agendamento.getDataPagamento() != null
                 ? agendamento.getDataPagamento().format(DATA_HORA)
                 : "—";
@@ -37,5 +45,27 @@ public class ReceitaPixLinhaView {
                 : "—";
         this.valorTaxa = valorTaxa;
         this.valorTaxaFormatado = MoedaBrasilUtil.formatar(valorTaxa);
+    }
+
+    private static String resolverTipoRecorrencia(Agendamento agendamento) {
+        if (agendamento.getTipoRecorrencia() != null && !agendamento.getTipoRecorrencia().isBlank()) {
+            return agendamento.getTipoRecorrencia().trim().toUpperCase();
+        }
+        return Boolean.TRUE.equals(agendamento.getFixo()) ? "SEMANAL" : "AVULSO";
+    }
+
+    private static String rotularTipoRecorrencia(String tipo) {
+        return switch (tipo) {
+            case "SEMANAL" -> "Fixo semanal";
+            case "QUINZENAL" -> "Quinzenal";
+            default -> "Avulso";
+        };
+    }
+
+    private static String normalizarChave(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return texto.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

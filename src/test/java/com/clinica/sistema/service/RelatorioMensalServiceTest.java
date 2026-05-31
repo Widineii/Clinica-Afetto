@@ -50,7 +50,7 @@ class RelatorioMensalServiceTest {
                 JsonMapper.builder().build()
         );
         ReflectionTestUtils.setField(relatorioMensalService, "diaFechamento", 3);
-        ReflectionTestUtils.setField(relatorioMensalService, "diaRemocaoPdf", 10);
+        ReflectionTestUtils.setField(relatorioMensalService, "diaRemocaoPdf", 15);
     }
 
     @Test

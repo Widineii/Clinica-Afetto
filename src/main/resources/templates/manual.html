@@ -236,6 +236,7 @@
             <div class="d-flex flex-wrap gap-2 hero-actions">
                 <a th:href="@{/agendamentos/dashboard}" class="btn btn-light btn-sm">Agenda</a>
                 <a th:if="${ehProfissional}" th:href="@{/agendamentos/meus-pagamentos}" class="btn btn-warning btn-sm">Pagamentos</a>
+                <a th:if="${ehProfissional}" th:href="@{/agendamentos/meu-relatorio}" class="btn btn-warning btn-sm">Meu relatório</a>
                 <form th:action="@{/logout}" method="post" class="d-inline">
                     <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                     <button type="submit" class="btn btn-light btn-sm">Sair</button>
@@ -326,22 +327,23 @@
                         <h3 class="manual-demo-video__title">Pagar com PIX</h3>
                         <p class="manual-demo-video__text">
                             Em <strong>Meus pagamentos</strong>, quite semanal ou mensal conforme o prazo da clínica
-                            (fim de semana ou do dia 01 ao 10).
+                            (fim de semana ou do dia 01 ao 15).
                         </p>
                     </div>
                     <div class="manual-demo-video__slide" data-slide th:unless="${ehProfissional}">
                         <span class="manual-demo-video__badge">Passo 3</span>
                         <h3 class="manual-demo-video__title">Relatório e notificações</h3>
                         <p class="manual-demo-video__text">
-                            No dia 3 de cada mês o sistema gera o relatório de uso das salas. O sino na agenda avisa quando o PDF estiver pronto.
+                            No dia 3 de cada mês o sistema fecha o mês anterior e remove agendamentos avulsos da agenda.
                         </p>
                     </div>
                     <div class="manual-demo-video__slide" data-slide>
                         <span class="manual-demo-video__badge">Passo 4</span>
                         <h3 class="manual-demo-video__title">Dúvidas e cancelamentos</h3>
                         <p class="manual-demo-video__text">
-                            Cancelar remove só aquela consulta; encerrar série para as futuras. Em caso de dúvida,
-                            use o WhatsApp de suporte ou fale com a Polyana.
+                            Em <strong>Meus agendamentos</strong>, cancele uma data de série fixa/quinzenal
+                            (24h de antecedência, sem pagamento). Avulso paga na hora e não cancela pelo app.
+                            Encerrar série remove todas as datas futuras.
                         </p>
                     </div>
                     <div class="manual-demo-video__bar" aria-hidden="true"><span data-demo-progress></span></div>
@@ -375,11 +377,11 @@
             </div>
             <div class="passo-amostra" th:unless="${ehProfissional}">
                 <span class="num">3</span>
-                <div><strong>Acompanhar</strong> — status na grade · sino do relatório mensal (dia 3).</div>
+                <div><strong>Acompanhar</strong> — status na grade · pagamentos pendentes no sino.</div>
             </div>
             <div class="passo-amostra">
                 <span class="num">4</span>
-                <div><strong>Dúvida ou cancelamento?</strong> — fale com a Polyana ou use este manual.</div>
+                <div><strong>Cancelar ou encerrar</strong> — Meus agendamentos (séries) · avulso não cancela pelo app.</div>
             </div>
         </div>
     </div>
@@ -410,7 +412,7 @@
                             Sua agenda fica liberada até <strong>domingo</strong>; o PIX da semana é no <strong>sábado ou domingo</strong>.
                         </li>
                         <li th:if="${ehProfissional and pagamentoMensal}">
-                            Você agenda o mês todo; o PIX do mês anterior fica disponível do <strong>dia 01 ao 10</strong>.
+                            Você agenda o mês todo; o PIX do mês anterior fica disponível do <strong>dia 01 ao 15</strong>.
                         </li>
                         <li th:unless="${ehProfissional}">Cada profissional segue o prazo de pagamento definido pela Polyana na Central.</li>
                     </ul>
@@ -422,7 +424,7 @@
                         Se passar de <strong>domingo</strong> sem pagar a semana, a agenda <strong>bloqueia na segunda-feira</strong> até quitar.
                     </div>
                     <div class="manual-nota mb-0" th:if="${ehProfissional and pagamentoMensal}">
-                        Se passar do <strong>dia 10</strong> sem pagar o mês anterior, a agenda <strong>bloqueia</strong> até quitar.
+                        Se passar do <strong>dia 15</strong> sem pagar o mês anterior, a agenda <strong>bloqueia</strong> até quitar.
                     </div>
                     <div class="manual-nota mb-0" th:unless="${ehProfissional}">
                         Profissionais com pagamento <strong>diário</strong> ainda podem recuperar no mesmo dia, até o horário da consulta.
@@ -447,15 +449,23 @@
                     <ul class="lista-curta">
                         <li><strong>Grade semanal</strong> — visão geral de quem está em cada sala e horário.</li>
                         <li th:if="${ehProfissional}"><strong>Novo agendamento</strong> — formulário para marcar avulso, fixo ou quinzenal.</li>
-                        <li th:if="${ehProfissional}"><strong>Meus agendamentos</strong> — lista (caderno) dos seus horários, com opções de encerrar série ou realocar.</li>
-                        <li th:if="${podeGerenciarEquipe}"><strong>Central dos profissionais</strong> — cadastro da equipe (dona da clínica).</li>
+                        <li th:if="${ehProfissional}"><strong>Meus agendamentos</strong> — caderno com suas séries e avulsos; cancelar data, pagar, realocar ou encerrar série.</li>
+                        <li th:if="${ehProfissional}"><strong>Agenda do dia</strong> — só os seus atendimentos de hoje, em todas as salas.</li>
+                        <li th:if="${ehProfissional}"><strong>Meu relatório</strong> — resumo mensal dos seus atendimentos e taxas PIX pagas (filtro por sala).</li>
+                        <li th:if="${ehProfissional and podeEscolherFormaPagamento}"><strong>Forma de pagamento</strong> — no topo da agenda: Diário, Semanal ou Mensal (trava de 24h para trocar).</li>
+                        <li th:if="${podeAcessarCentralProfissionais}"><strong>Central dos profissionais</strong> — cadastro da equipe e forma de pagamento inicial (dona da clínica).</li>
                         <li><strong>Manual</strong> — este guia, sempre acessível pelo botão no topo.</li>
                     </ul>
                     <p class="manual-subtitulo">Dois cliques na grade</p>
                     <ul class="lista-curta mb-0">
-                        <li th:if="${podeGerenciarEquipe}">Polyana e a administração podem <strong>cancelar</strong> uma data ou <strong>encerrar</strong> série semanal/quinzenal.</li>
-                        <li th:unless="${podeGerenciarEquipe}">Profissionais podem <strong>encerrar</strong> as próprias séries semanal ou quinzenal (dois cliques no horário na grade).</li>
-                        <li th:unless="${podeGerenciarEquipe}">Para <strong>cancelar</strong> uma data já paga, fale com a <strong>Polyana</strong>.</li>
+                        <li th:if="${podeAcessarCentralProfissionais}">Polyana pode <strong>cancelar</strong> uma data ou <strong>encerrar</strong> série de qualquer profissional.</li>
+                        <li th:if="${isAdmin and !isDonaClinica}">Administração pode <strong>cancelar</strong> ou <strong>encerrar série</strong> na grade (dois cliques).</li>
+                        <li th:if="${ehProfissional}">Profissionais <strong>não cancelam</strong> pela grade — use <strong>Meus agendamentos → Cancelar data</strong>.</li>
+                        <li th:if="${ehProfissional}">Profissionais podem <strong>encerrar</strong> as próprias séries (Meus agendamentos ou dois cliques no próprio horário).</li>
+                        <li>Cancelamento de datas (séries fixa/quinzenal) só com mais de <strong>24 horas</strong> de antecedência e sem pagamento confirmado.</li>
+                        <li>Data cancelada em pagamento <strong>semanal ou mensal</strong> <strong>não entra</strong> na fatura daquela semana/mês.</li>
+                        <li><strong>Avulso</strong> não entra nessa regra: o pagamento é na hora da marcação.</li>
+                        <li>Horário <strong>já pago</strong> = locação de sala, <strong>sem reembolso</strong>.</li>
                     </ul>
                 </div>
             </div>
@@ -502,12 +512,104 @@
                     <p class="manual-subtitulo">Cancelar x encerrar série</p>
                     <ul class="lista-curta">
                         <li><strong>Encerrar série</strong> — remove <strong>todos</strong> os horários da recorrência (sem precisar escolher data).</li>
-                        <li><strong>Cancelar data</strong> — remove um horário específico; somente Polyana e a administração fazem isso na grade.</li>
-                        <li>Horário <strong>já pago</strong> = locação de sala, <strong>sem reembolso</strong>. Para cancelar, fale com a <strong>Polyana</strong>.</li>
+                        <li><strong>Cancelar data</strong> — remove um horário de série fixa ou quinzenal em <strong>Meus agendamentos</strong> (selecione a data → Cancelar data).</li>
+                        <li>Cancelamento permitido só com mais de <strong>24 horas</strong> de antecedência e sem pagamento confirmado na data.</li>
+                        <li>Em pagamento <strong>semanal ou mensal</strong>, o dia cancelado <strong>não é cobrado</strong> na fatura.</li>
+                        <li><strong>Avulso</strong> não pode ser cancelado pelo app — pagamento na marcação.</li>
+                        <li>Horário <strong>já pago</strong> = locação de sala, <strong>sem reembolso</strong>.</li>
                     </ul>
                     <div class="manual-nota mb-0">
                         Séries fixas se renovam sozinhas: quando uma data passa, o sistema mantém até
                         <strong>12 semanas</strong> (fixo) ou <strong>6 ocorrências</strong> (quinzenal) sempre à frente.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:if="${ehProfissional}" id="meu-relatorio-manual">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-relatorio">
+                    Meu relatório
+                </button>
+            </h2>
+            <div id="acc-relatorio" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        O botão <strong>Meu relatório</strong> (amarelo, no topo da agenda) abre um resumo
+                        <strong>só dos seus</strong> atendimentos e taxas PIX pagas no mês escolhido.
+                    </p>
+                    <p class="manual-subtitulo">O que aparece</p>
+                    <ul class="lista-curta">
+                        <li>Total de atendimentos no mês e valor líquido estimado (profissional).</li>
+                        <li>Lista de atendimentos: data, sala, cliente, tipo (avulso / fixo / quinzenal) e valores.</li>
+                        <li>Lista de PIX pagos no período (taxas de locação quitadas).</li>
+                    </ul>
+                    <p class="manual-subtitulo">Filtros</p>
+                    <ul class="lista-curta">
+                        <li><strong>Mês de referência</strong> — escolha o mês no seletor; a página atualiza sozinha.</li>
+                        <li><strong>Salas</strong> — chips para ver todas ou filtrar por Sala 1, 2, 3 ou 4.</li>
+                    </ul>
+                    <div class="manual-nota mb-3">
+                        O relatório é para conferência pessoal. O fechamento oficial da clínica fica com a Polyana no Financeiro.
+                    </div>
+                    <a th:href="@{/agendamentos/meu-relatorio}" class="btn btn-warning btn-sm">Abrir Meu relatório</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:if="${ehProfissional and podeEscolherFormaPagamento}" id="forma-pagamento-manual">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-forma-pag">
+                    Escolher forma de pagamento
+                </button>
+            </h2>
+            <div id="acc-forma-pag" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        No topo da agenda há o card <strong>Forma de pagamento</strong> com três opções:
+                        <strong>Diário</strong>, <strong>Semanal</strong> e <strong>Mensal</strong>.
+                        Você escolhe como prefere pagar a locação das salas.
+                    </p>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4" th:each="opt : ${periodicidadesPagamento}">
+                            <span class="chip" th:text="${opt.rotulo}">Diário</span>
+                            <p class="small mb-0 mt-2" th:text="${opt.descricao}">Descrição</p>
+                        </div>
+                    </div>
+                    <p class="manual-subtitulo">Regras importantes</p>
+                    <ul class="lista-curta">
+                        <li>Depois de trocar, aguarde <strong>24 horas</strong> para mudar de novo (trava só da forma de pagamento).</li>
+                        <li>Isso <strong>não</strong> é a regra de cancelar horário — são coisas diferentes.</li>
+                        <li>A Polyana define a forma inicial na Central; depois você pode ajustar na agenda.</li>
+                        <li>A dona da clínica (Polyana) <strong>não paga</strong> locação — o card não aparece para ela.</li>
+                    </ul>
+                    <div class="manual-nota mb-0">
+                        Ao mudar de Diário para Semanal/Mensal (ou vice-versa), o sistema recalcula os agendamentos futuros
+                        conforme a nova forma. Veja a seção <a href="#acc-pix">Como funciona o seu pagamento</a> para detalhes de cada modo.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:if="${ehProfissional}" id="agenda-dia-manual">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-agenda-dia">
+                    Agenda do dia
+                </button>
+            </h2>
+            <div id="acc-agenda-dia" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        Role até <strong>Agenda do dia</strong> (atalho no topo) para ver
+                        <strong>somente os seus</strong> atendimentos de hoje, em todas as salas.
+                    </p>
+                    <ul class="lista-curta mb-3">
+                        <li>Mostra horário, sala, cliente e tipo (avulso, fixo ou quinzenal).</li>
+                        <li>Status do pagamento e botão <strong>Pagar agora</strong> quando aplicável.</li>
+                        <li>Não lista horários de outros profissionais — só os seus.</li>
+                    </ul>
+                    <div class="manual-nota mb-0">
+                        Administração e Polyana veem todos os profissionais na Agenda do dia.
                     </div>
                 </div>
             </div>
@@ -619,14 +721,14 @@
                         <p class="manual-subtitulo">Quando pagar</p>
                         <p class="manual-lead">
                             As locações do <strong>mês anterior</strong> aparecem para pagamento a partir do
-                            <strong>dia 01</strong>, com prazo até o <strong>dia 10</strong>.
+                            <strong>dia 01</strong>, com prazo até o <strong>dia 15</strong>.
                         </p>
                         <p class="manual-subtitulo">Calendário do pagamento</p>
                         <ul class="lista-curta">
                             <li>Durante o mês, a agenda fica <strong>liberada</strong> para marcar horários.</li>
                             <li>A partir do <strong>dia 01</strong>, aparece em <strong>Meus pagamentos → Pagamento do mês</strong> o total do mês anterior.</li>
-                            <li>Prazo para pagar: do <strong>dia 01 ao dia 10</strong>.</li>
-                            <li>Depois do <strong>dia 10</strong> sem pagar, a agenda <strong>bloqueia</strong> até quitar.</li>
+                            <li>Prazo para pagar: do <strong>dia 01 ao dia 15</strong>.</li>
+                            <li>Depois do <strong>dia 15</strong> sem pagar, a agenda <strong>bloqueia</strong> até quitar.</li>
                             <li>Você pode pagar tudo com <strong>um PIX único</strong> ou gerar QR por consulta.</li>
                         </ul>
                         <p class="manual-subtitulo">Realocar consulta</p>
@@ -635,13 +737,13 @@
                             porque foi quando você agendou originalmente.
                         </p>
                         <div class="manual-nota">
-                            Fora da janela do dia 01 ao 10, a aba mensal pode mostrar que não há cobrança pendente no momento.
+                            Fora da janela do dia 01 ao 15, a aba mensal pode mostrar que não há cobrança pendente no momento.
                         </div>
                     </div>
 
                     <p class="manual-subtitulo">Regras para todos</p>
                     <ul class="lista-curta mb-3">
-                        <li>Horário pago = <strong>locação de sala</strong>, sem reembolso automático. Cancelamento: fale com a <strong>Polyana</strong>.</li>
+                        <li>Horário pago = <strong>locação de sala</strong>, sem reembolso automático. Não pode cancelar data já paga.</li>
                         <li>Depois de gerar o PIX, há <strong>5 minutos</strong> para confirmar.</li>
                     </ul>
                     <a th:href="@{/agendamentos/meus-pagamentos}" class="btn btn-primary btn-sm">Abrir Meus pagamentos</a>
@@ -659,8 +761,9 @@
                 <div class="accordion-body">
                     <p class="manual-lead">
                         Cada profissional (exceto a dona da clínica) paga a locação via <strong>Meus pagamentos</strong>.
-                        A Polyana define na <strong>Central dos profissionais</strong> se a pessoa paga
-                        <strong>por dia</strong>, <strong>por semana</strong> ou <strong>por mês</strong>.
+                        A Polyana define a forma inicial na <strong>Central dos profissionais</strong>;
+                        depois cada profissional pode escolher <strong>Diário, Semanal ou Mensal</strong> no topo da agenda
+                        (com trava de 24h para trocar de novo).
                     </p>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4" th:each="opt : ${periodicidadesPagamento}">
@@ -672,7 +775,7 @@
                     <ul class="lista-curta">
                         <li><strong>Diário:</strong> cobrança na véspera de cada consulta (D-1), até 23:59; recuperação no mesmo dia até o horário.</li>
                         <li><strong>Semanal:</strong> semana liberada até domingo; PIX no sábado ou domingo; bloqueia na segunda se não pagar.</li>
-                        <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 10 paga o mês anterior; bloqueia após o dia 10.</li>
+                        <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 15 paga o mês anterior; bloqueia após o dia 15.</li>
                     </ul>
                     <div class="manual-nota mb-0">
                         No manual, cada profissional vê <strong>só a explicação da forma de pagamento dele</strong>.
@@ -697,9 +800,10 @@
                         Como administração, você apoia a operação da agenda, cancelamentos e relatórios.
                     </p>
                     <ul class="lista-curta mb-3">
-                        <li th:if="${isDonaClinica}"><strong>Central dos profissionais</strong> — cadastrar profissional, resetar senha e escolher se paga <strong>por dia, semana ou mês</strong>.</li>
-                        <li><strong>Grade semanal</strong> — dois cliques em um horário para cancelar data ou encerrar série de qualquer profissional.</li>
-                        <li><strong>Relatório mensal</strong> — no <strong>dia 3</strong> o mês anterior é fechado; PDF disponível até o <strong>dia 10</strong> (ícone de sino).</li>
+                        <li th:if="${podeAcessarCentralProfissionais}"><strong>Central dos profissionais</strong> — cadastrar profissional, resetar senha e definir forma de pagamento inicial (dia, semana ou mês).</li>
+                        <li th:if="${isAdmin and !isDonaClinica}"><strong>Grade semanal</strong> — dois cliques para cancelar data ou encerrar série de qualquer profissional.</li>
+                        <li th:if="${isDonaClinica}"><strong>Grade semanal</strong> — dois cliques para cancelar data ou encerrar série de qualquer profissional.</li>
+                        <li><strong>Fechamento do mês anterior</strong> — no <strong>dia 3</strong> o sistema arquiva o mês passado e remove agendamentos avulsos da agenda (sem PDF para download).</li>
                         <li th:if="${podeAcessarGestaoFinanceira}"><strong>Financeiro</strong> — receita PIX por mês, conferência de atendimentos e exportação.</li>
                         <li th:if="${isAdmin}"><strong>Uso do banco</strong> — monitorar espaço usado no servidor.</li>
                     </ul>
@@ -759,15 +863,20 @@
                                 <td>Segunda bloqueada</td><td>Quitar a semana anterior que venceu no domingo</td>
                             </tr>
                             <tr th:if="${ehProfissional and pagamentoMensal}">
-                                <td>PIX do mês</td><td>Meus pagamentos → Pagamento do mês (do dia 01 ao 10)</td>
+                                <td>PIX do mês</td><td>Meus pagamentos → Pagamento do mês (do dia 01 ao 15)</td>
                             </tr>
                             <tr th:if="${ehProfissional and pagamentoMensal}">
-                                <td>Passou do dia 10</td><td>Quitar o mês anterior para liberar a agenda</td>
+                                <td>Passou do dia 15</td><td>Quitar o mês anterior para liberar a agenda</td>
                             </tr>
                             <tr th:if="${ehProfissional}"><td>Agenda bloqueada</td><td>Quitar pendência em Meus pagamentos</td></tr>
                             <tr th:if="${ehProfissional}"><td>Quer mudar sala/data</td><td><strong>Meus agendamentos</strong> → Realocar (antes do horário)</td></tr>
-                            <tr th:if="${ehProfissional}"><td>Cliente saiu da série fixa</td><td>Meus agendamentos ou grade → <strong>Encerrar série</strong></td></tr>
-                            <tr th:if="${podeGerenciarEquipe}"><td>Cancelar horário pago</td><td>Dois cliques na grade (Polyana/admin)</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Cancelar uma data da série</td><td><strong>Meus agendamentos</strong> → selecionar data → Cancelar data (24h, não pago)</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Ver atendimentos de hoje</td><td>Agenda → <strong>Agenda do dia</strong></td></tr>
+                            <tr th:if="${ehProfissional}"><td>Conferir mês passado</td><td><strong>Meu relatório</strong> → escolher mês e sala</td></tr>
+                            <tr th:if="${ehProfissional and podeEscolherFormaPagamento}"><td>Trocar Diário/Semanal/Mensal</td><td>Card <strong>Forma de pagamento</strong> no topo (1x a cada 24h)</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Cliente saiu da série fixa</td><td>Meus agendamentos → <strong>Encerrar série</strong></td></tr>
+                            <tr th:if="${podeAcessarCentralProfissionais}"><td>Cancelar horário de alguém</td><td>Dois cliques na grade</td></tr>
+                            <tr th:if="${isAdmin and !isDonaClinica}"><td>Cancelar horário pago</td><td>Dois cliques na grade (admin)</td></tr>
                             <tr><td>Dúvida geral</td><td>Fale com a <strong>Polyana</strong> ou use o WhatsApp de suporte</td></tr>
                             </tbody>
                         </table>
@@ -811,6 +920,9 @@
             '#funcionamento': 'acc-func',
             '#grade': 'acc-grade',
             '#agendamentos': 'acc-agenda',
+            '#meu-relatorio-manual': 'acc-relatorio',
+            '#forma-pagamento-manual': 'acc-forma-pag',
+            '#agenda-dia-manual': 'acc-agenda-dia',
             '#senha': 'acc-senha',
             '#duvidas': 'acc-senha',
             '#video': null

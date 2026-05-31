@@ -1,0 +1,159 @@
+package com.clinica.sistema.config;
+
+import com.clinica.sistema.model.NovidadePublicoAlvo;
+import com.clinica.sistema.model.NovidadeSite;
+import com.clinica.sistema.repository.NovidadeSiteRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Component
+@Order(50)
+public class NovidadeSiteInitializer implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(NovidadeSiteInitializer.class);
+
+    private final NovidadeSiteRepository novidadeSiteRepository;
+
+    public NovidadeSiteInitializer(NovidadeSiteRepository novidadeSiteRepository) {
+        this.novidadeSiteRepository = novidadeSiteRepository;
+    }
+
+    @Override
+    @Transactional
+    public void run(String... args) {
+        List<NovidadeSeed> seeds = List.of(
+                new NovidadeSeed(
+                        "v2.481-novidades-aba",
+                        "2.481",
+                        "Aba Novidades",
+                        "Ao entrar na agenda, confira o que mudou no sistema. Marque \"Não mostrar de novo\" ou aguarde 3 dias para sumir sozinho.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        481,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.481-novidades-polyana",
+                        "2.481",
+                        "Painel de novidades",
+                        "Você vê todas as atualizações — as dos profissionais e as da gestão da clínica.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        481,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.480-aviso-cancelamento",
+                        "2.480",
+                        "Aviso de cancelamento mais claro",
+                        "No formulário de Novo agendamento, as regras de cancelamento ficaram em tópicos separados: série fixa/quinzenal, avulso e horário já pago.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        480,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.479-manual-atualizado",
+                        "2.479",
+                        "Manual de uso atualizado",
+                        "O manual ganhou seções sobre Meu relatório, forma de pagamento, agenda do dia e cancelamento de datas com a regra de 24 horas.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        479,
+                        diasAtras(1)
+                ),
+                new NovidadeSeed(
+                        "v2.478-cancelamento-serie",
+                        "2.478",
+                        "Cancelar data da série",
+                        "Profissionais podem cancelar uma data de série fixa ou quinzenal em Meus agendamentos, com mais de 24 horas de antecedência e sem pagamento na data. Avulso não cancela pelo app.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        478,
+                        diasAtras(2)
+                ),
+                new NovidadeSeed(
+                        "v2.477-meu-relatorio",
+                        "2.477",
+                        "Meu relatório",
+                        "Novo botão Meu relatório: resumo mensal dos seus atendimentos e taxas PIX pagas, com filtro por sala.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        477,
+                        diasAtras(3)
+                ),
+                new NovidadeSeed(
+                        "v2.476-forma-pagamento",
+                        "2.476",
+                        "Escolher forma de pagamento",
+                        "No topo da agenda você escolhe Diário, Semanal ou Mensal. Depois de trocar, aguarde 24 horas para mudar de novo.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        476,
+                        diasAtras(4)
+                ),
+                new NovidadeSeed(
+                        "v2.475-agenda-do-dia",
+                        "2.475",
+                        "Agenda do dia",
+                        "A seção Agenda do dia mostra só os seus atendimentos de hoje, em todas as salas.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        475,
+                        diasAtras(5)
+                ),
+                new NovidadeSeed(
+                        "v2.474-central-polyana",
+                        "2.474",
+                        "Central dos profissionais",
+                        "A Central dos profissionais ficou exclusiva da Polyana: cadastro, senhas e forma de pagamento inicial de cada profissional.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        474,
+                        diasAtras(2)
+                ),
+                new NovidadeSeed(
+                        "v2.473-grade-gestao",
+                        "2.473",
+                        "Cancelamento na grade",
+                        "Na grade semanal, dois cliques em um horário permitem cancelar data ou encerrar série de qualquer profissional.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        473,
+                        diasAtras(3)
+                )
+        );
+
+        int inseridas = 0;
+        for (NovidadeSeed seed : seeds) {
+            if (novidadeSiteRepository.findByCodigo(seed.codigo()).isPresent()) {
+                continue;
+            }
+            NovidadeSite novidade = new NovidadeSite();
+            novidade.setCodigo(seed.codigo());
+            novidade.setVersao(seed.versao());
+            novidade.setTitulo(seed.titulo());
+            novidade.setDescricao(seed.descricao());
+            novidade.setPublicoAlvo(seed.publicoAlvo());
+            novidade.setPublicadaEm(seed.publicadaEm());
+            novidade.setOrdemExibicao(seed.ordem());
+            novidadeSiteRepository.save(novidade);
+            inseridas++;
+        }
+        if (inseridas > 0) {
+            log.info("Novidades do site: {} registro(s) inicial(is) inserido(s).", inseridas);
+        }
+    }
+
+    private static LocalDateTime diasAtras(int dias) {
+        return LocalDateTime.now().minusDays(dias);
+    }
+
+    private record NovidadeSeed(
+            String codigo,
+            String versao,
+            String titulo,
+            String descricao,
+            NovidadePublicoAlvo publicoAlvo,
+            int ordem,
+            LocalDateTime publicadaEm
+    ) {
+    }
+}

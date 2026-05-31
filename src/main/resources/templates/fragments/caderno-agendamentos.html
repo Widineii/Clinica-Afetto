@@ -17,7 +17,8 @@
             <div th:replace="~{fragments/caderno-agendamentos :: valores-linha(agendamento=${agendamento})}"></div>
             <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
         </div>
-        <div class="meus-agendamentos-avulso-linha__acoes" th:if="${isAdmin or isDonaClinica}">
+        <div class="meus-agendamentos-avulso-linha__acoes"
+             th:if="${agendamentoService.podeCancelarAgendamento(agendamento, usuarioLogado)}">
             <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                 <button type="submit" class="btn btn-sm btn-outline-danger"
@@ -36,9 +37,9 @@
         <p th:if="${serie.valoresConsultaResumo != null}"
            class="agendamento-valores small text-muted mb-2"
            th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
-        <p class="meus-agendamentos-serie-linha__dica mb-2"
-           th:text="${isAdmin or isDonaClinica ? 'Selecione uma data para cancelar, pagar ou realocar. Encerrar série remove todos os horários de uma vez.' : 'Selecione uma data para pagar ou realocar. Encerrar série remove todos os horários de uma vez. Cancelamento de uma data só com a Polyana.'}">
-            Selecione uma data para pagar.
+        <p class="meus-agendamentos-serie-linha__dica mb-2">
+            Selecione uma data para cancelar, pagar ou realocar. Encerrar série remove todos os horários de uma vez.
+            Cancelar data: mais de 24h de antecedência e sem pagamento na data (só séries fixa/quinzenal).
         </p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
             <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
@@ -48,7 +49,7 @@
                        class="meus-agendamentos-data-radio"
                        th:name="${radioPrefix + serie.agendamentoReferenciaId}"
                        th:value="${ocorrencia.agendamentoId}"
-                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar ? 'true' : 'false'},data-pode-realocar=${ocorrencia.podeRealocar ? 'true' : 'false'},data-aguardando-qr=${ocorrencia.statusPagamento != null and ocorrencia.statusPagamento.name() == 'ESPERANDO_CONFIRMACAO' ? 'true' : 'false'},data-pago=${ocorrencia.pagamentoPago ? 'true' : 'false'}">
+                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar ? 'true' : 'false'},data-pode-realocar=${ocorrencia.podeRealocar ? 'true' : 'false'},data-pode-cancelar=${ocorrencia.podeCancelar ? 'true' : 'false'},data-aguardando-qr=${ocorrencia.statusPagamento != null and ocorrencia.statusPagamento.name() == 'ESPERANDO_CONFIRMACAO' ? 'true' : 'false'},data-pago=${ocorrencia.pagamentoPago ? 'true' : 'false'}">
                 <span th:text="${ocorrencia.dataRotulo}">25/05</span>
                 <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
                 <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
@@ -66,8 +67,7 @@
                aria-disabled="true">
                 Pagar data
             </a>
-            <form th:if="${isAdmin or isDonaClinica}"
-                  class="meus-agendamentos-cancelar-data-form d-inline"
+            <form class="meus-agendamentos-cancelar-data-form d-inline me-2"
                   method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                 <button type="submit"

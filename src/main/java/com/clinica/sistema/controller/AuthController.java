@@ -73,7 +73,11 @@ public class AuthController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            usuarioService.trocarSenha(trocarSenhaForm, authService.buscarUsuarioLogadoObrigatorio());
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            if (!authService.podeTrocarPropriaSenha(usuarioLogado)) {
+                throw new RuntimeException("Troca de senha nao disponivel para este usuario.");
+            }
+            usuarioService.trocarSenha(trocarSenhaForm, usuarioLogado);
             HttpSession sessao = request.getSession(false);
             if (sessao != null) {
                 sessao.invalidate();

@@ -15,9 +15,10 @@
 
 <div th:fragment="status-badge (agendamento)">
     <span th:if="${agendamento != null and agendamento.statusPagamento != null}"
-          class="badge rounded-pill ms-1"
+          class="badge rounded-pill ms-1 pagamento-status-badge"
           th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.esperandoConfirmacaoPagamento ? ' text-bg-warning' : (agendamento.pagamentoPendente ? ' text-bg-secondary' : ' text-bg-light text-dark'))}"
-          th:text="${pagamentoService.rotuloStatusPagamento(agendamento, usuarioLogado)}">Esperando confirmação</span>
+          th:title="${pagamentoService.rotuloStatusPagamento(agendamento, usuarioLogado)}"
+          th:text="${pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado)}">Esperando confirmação</span>
 </div>
 
 <div th:fragment="instrucao-checkout-infinitepay"

@@ -599,11 +599,16 @@ public class PagamentoConsultaService {
 
     public boolean estaEmJanelaPagamentoMensal() {
         int dia = LocalDate.now().getDayOfMonth();
-        return dia >= 1 && dia <= 10;
+        return dia >= 1 && dia <= diaLimitePagamentoMensal();
     }
 
     public String rotuloJanelaPagamentoMensalAtual() {
-        return "01 ao 10/" + LocalDate.now().format(DateTimeFormatter.ofPattern("MM"));
+        return "01 ao " + diaLimitePagamentoMensal() + "/"
+                + LocalDate.now().format(DateTimeFormatter.ofPattern("MM"));
+    }
+
+    public int getDiaLimitePagamentoMensal() {
+        return diaLimitePagamentoMensal();
     }
 
     public BigDecimal calcularTotalTaxaPix(List<Agendamento> agendamentos) {
@@ -902,7 +907,7 @@ public class PagamentoConsultaService {
         return switch (resolverPeriodicidade(usuarioLogado)) {
             case SEMANAL -> "Você precisa quitar a semana anterior (pagamento sábado ou domingo) "
                     + "para voltar a usar a sala e fazer novo agendamento.";
-            case MENSAL -> "Você passou do dia 10 sem pagar o mês anterior. "
+            case MENSAL -> "Você passou do dia " + diaLimitePagamentoMensal() + " sem pagar o mês anterior. "
                     + "Quite o pagamento para voltar a usar a sala e fazer novo agendamento.";
             case DIARIO -> mensagemBloqueioPagamentoDiario(usuarioLogado);
         };
@@ -1008,7 +1013,8 @@ public class PagamentoConsultaService {
         String mesReferencia = rotuloMesPagamentoPendente();
         return Optional.of(new PagamentoProfissionalNotificacaoView(
                 "Pagamento mensal",
-                "Não esqueça de pagar o mês " + mesReferencia + " até o dia 10 para evitar bloqueio.",
+                "Não esqueça de pagar o mês " + mesReferencia + " até o dia "
+                        + diaLimitePagamentoMensal() + " para evitar bloqueio.",
                 mesReferencia,
                 URL_MEUS_PAGAMENTOS_MES
         ));
@@ -1335,6 +1341,70 @@ public class PagamentoConsultaService {
         return agendamento.rotuloPagoNaGrade(podeVerPagamento(agendamento, usuarioLogado));
     }
 
+    public String rotuloPagoNaGradeResumido(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null) {
+            return "";
+        }
+        if (gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
+            return "Confirmado";
+        }
+        return rotuloPagoNaGrade(agendamento, usuarioLogado);
+    }
+
+    public String rotuloEsperandoNaGradeResumido(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || !agendamento.isReservaPendenteNaGrade()) {
+            return "";
+        }
+        if (gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
+            String nome = resolverNomeProfissionalAgendamento(agendamento);
+            PagamentoStatus status = agendamento.getStatusPagamento();
+            if (status == PagamentoStatus.PAGAMENTO_FUTURO) {
+                return nome + ": aguard. pagto";
+            }
+            if (status == PagamentoStatus.ESPERANDO_CONFIRMACAO
+                    || status == PagamentoStatus.AGUARDANDO_PAGAMENTO) {
+                return nome + ": aguard. PIX";
+            }
+            if (status == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO) {
+                return nome + ": vaga livre";
+            }
+            return nome + ": pendente";
+        }
+        String completo = rotuloEsperandoNaGrade(agendamento, usuarioLogado);
+        if ("Vaga liberada — pague para recuperar".equals(completo)) {
+            return "Vaga liberada";
+        }
+        return completo;
+    }
+
+    public String rotuloStatusPagamentoResumido(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null) {
+            return "Sem pagamento";
+        }
+        if (usuarioLogado != null && gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
+            if (agendamento.isPagamentoPago()) {
+                return "Confirmado";
+            }
+            if (agendamento.isReservaPendenteNaGrade()) {
+                return rotuloEsperandoNaGradeResumido(agendamento, usuarioLogado);
+            }
+        }
+        String completo = rotuloStatusPagamento(agendamento, usuarioLogado);
+        if (completo != null && completo.startsWith("Esperando confirmação (")) {
+            return "Esperando PIX";
+        }
+        if ("Não pago — sala bloqueada".equals(completo)) {
+            return "Não pago";
+        }
+        if (completo != null && completo.startsWith("Vaga liberada —")) {
+            return "Vaga liberada";
+        }
+        if ("Vaga preenchida por outro profissional".equals(completo)) {
+            return "Vaga ocupada";
+        }
+        return completo;
+    }
+
     private boolean gestorVisualizandoAgendamentoDeOutro(Agendamento agendamento, Usuario usuarioLogado) {
         if (agendamento == null || usuarioLogado == null) {
             return false;
@@ -1354,12 +1424,12 @@ public class PagamentoConsultaService {
         if (status == PagamentoStatus.PAGAMENTO_FUTURO) {
             if (profissionalUsaPagamentoMensal(agendamento)) {
                 if (cobrancaMensalVencendoNaData(agendamento, LocalDate.now())) {
-                    return nomeProfissional + ": pagamento do dia 01 ao 10";
+                    return nomeProfissional + ": pagamento do dia 01 ao " + diaLimitePagamentoMensal();
                 }
                 YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
                 if (mesReferencia != null) {
                     YearMonth mesPagamento = mesReferencia.plusMonths(1);
-                    return nomeProfissional + ": pagamento do dia 01 ao 10/"
+                    return nomeProfissional + ": pagamento do dia 01 ao " + diaLimitePagamentoMensal() + "/"
                             + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
                 }
             }
@@ -1552,14 +1622,14 @@ public class PagamentoConsultaService {
 
     String rotuloPagamentoFuturoMensal(Agendamento agendamento, LocalDate hoje) {
         if (cobrancaMensalVencendoNaData(agendamento, hoje)) {
-            return "Você tem do dia 01 ao 10 para pagar";
+            return "Você tem do dia 01 ao " + diaLimitePagamentoMensal() + " para pagar";
         }
         YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
         if (mesReferencia == null) {
             return "—";
         }
         YearMonth mesPagamento = mesReferencia.plusMonths(1);
-        return "Você vai pagar do dia 01 ao 10/"
+        return "Você vai pagar do dia 01 ao " + diaLimitePagamentoMensal() + "/"
                 + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
     }
 
@@ -1568,7 +1638,8 @@ public class PagamentoConsultaService {
             return false;
         }
         int dia = hoje.getDayOfMonth();
-        if (dia < 1 || dia > 10) {
+        int diaLimite = diaLimitePagamentoMensal();
+        if (dia < 1 || dia > diaLimite) {
             return false;
         }
         YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
@@ -1630,7 +1701,8 @@ public class PagamentoConsultaService {
             return "—";
         }
         YearMonth mesPagamento = mesReferencia.plusMonths(1);
-        return "01 ao 10/" + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+        return "01 ao " + diaLimitePagamentoMensal() + "/"
+                + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
     }
 
     public String rotuloMesCobranca(Agendamento agendamento) {
@@ -1953,7 +2025,7 @@ public class PagamentoConsultaService {
 
     private boolean bloqueadoPorPagamentoMensal(Usuario profissional) {
         LocalDate hoje = LocalDate.now();
-        if (hoje.getDayOfMonth() <= 10) {
+        if (hoje.getDayOfMonth() <= diaLimitePagamentoMensal()) {
             return false;
         }
         YearMonth mesAnterior = YearMonth.from(hoje).minusMonths(1);
@@ -2006,5 +2078,10 @@ public class PagamentoConsultaService {
                     return mesReferencia.equals(mesCobranca);
                 })
                 .toList();
+    }
+
+    private int diaLimitePagamentoMensal() {
+        int diaLimite = pagamentoProperties.getMensalDiaLimite();
+        return diaLimite > 0 ? diaLimite : 15;
     }
 }

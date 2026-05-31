@@ -23,10 +23,10 @@ public class RelatorioMensalScheduler {
         executar("dia-3");
     }
 
-    /** Dia 10 de cada mes as 04:00 — remove PDFs antigos para liberar espaco no banco. */
-    @Scheduled(cron = "${app.relatorio-mensal.cron-dia-10-pdf:0 0 4 10 * *}")
-    public void remocaoPdfNoDia10() {
-        executarRemocaoPdf("dia-10");
+    /** Dia 15 de cada mes as 04:00 — remove PDFs antigos para liberar espaco no banco. */
+    @Scheduled(cron = "${app.relatorio-mensal.cron-dia-15-pdf:0 0 4 15 * *}")
+    public void remocaoPdfNoDia15() {
+        executarRemocaoPdf("dia-15");
     }
 
     /** Todo dia as 06:00 — se o dia 3 o servidor estava dormindo, tenta de novo ate arquivar. */

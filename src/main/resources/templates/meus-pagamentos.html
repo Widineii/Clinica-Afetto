@@ -90,6 +90,7 @@
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2 hero-actions">
+                <a th:href="@{/agendamentos/meu-relatorio}" class="btn btn-warning">Meu relatório</a>
                 <a th:href="@{/agendamentos/manual#pagamentos}" class="btn btn-light">Manual</a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
                 <form th:action="@{/logout}" method="post" class="d-inline">
@@ -104,6 +105,11 @@
 
     <div class="card shell-card" id="meus-pagamentos-card">
         <div class="card-body p-4">
+            <th:block th:if="${podeEscolherFormaPagamento}">
+                <div class="mb-4"
+                     th:replace="~{fragments/periodicidade-pagamento-resumo :: bloco(periodicidadeAtual=${periodicidadePagamento}, retornoUrl=@{/agendamentos/meus-pagamentos})}"></div>
+            </th:block>
+
             <nav class="pagamentos-tabs" role="tablist" aria-label="Tipo de pagamento">
                 <button type="button"
                         th:if="${periodicidadePagamento.name() == 'DIARIO'}"
@@ -332,15 +338,16 @@
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <p class="small text-muted mb-0">
                         Sua cobrança é mensal: agenda liberada o mês todo. A partir do dia 1 aparece o pagamento
-                        do mês anterior — você tem do dia <strong>01 ao 10</strong> para pagar.
-                        Depois do dia 10 sem pagar, a agenda bloqueia.
+                        do mês anterior — você tem do dia <strong th:text="|01 ao ${pagamentoService.diaLimitePagamentoMensal}|">01 ao 15</strong> para pagar.
+                        Depois do dia <strong th:text="${pagamentoService.diaLimitePagamentoMensal}">15</strong> sem pagar, a agenda bloqueia.
                     </p>
                     <span class="badge text-bg-primary" th:text="${pagamentoService.estaEmJanelaPagamentoMensal() ? pagamentoService.rotuloJanelaPagamentoMensalAtual() : rotuloMesPagamento}">abril/2026</span>
                 </div>
 
                 <div th:if="${#lists.isEmpty(consultasPagamentoMes)}" class="alert alert-light border mb-0">
                     <span th:if="${pagamentoService.estaEmJanelaPagamentoMensal()}">
-                        Nenhuma consulta do mês anterior pendente. Prazo de pagamento: dia 01 ao 10.
+                        Nenhuma consulta do mês anterior pendente. Prazo de pagamento:
+                        dia <span th:text="|01 ao ${pagamentoService.diaLimitePagamentoMensal}|">01 ao 15</span>.
                     </span>
                     <span th:unless="${pagamentoService.estaEmJanelaPagamentoMensal()}">
                         Nenhuma consulta do mês anterior pendente de pagamento no momento.

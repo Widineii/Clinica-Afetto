@@ -3,7 +3,7 @@
 <body>
 <th:block th:fragment="sino">
     <div class="dropdown notif-bell-wrap"
-         th:with="temNotifRelatorio=${exibirBolinhaNotificacaoRelatorio == true}, temNotifEncerramento=${exibirBolinhaNotificacaoEncerramento == true}, temNotifPagamento=${exibirBolinhaNotificacaoPagamento == true}, temAlgumaNotif=${temNotifRelatorio or temNotifEncerramento or temNotifPagamento}">
+         th:with="temNotifEncerramento=${exibirBolinhaNotificacaoEncerramento == true}, temNotifPagamento=${exibirBolinhaNotificacaoPagamento == true}, temAlgumaNotif=${temNotifEncerramento or temNotifPagamento}">
         <button type="button"
                 class="btn btn-light btn-notif-bell position-relative dropdown-toggle"
                 data-bs-toggle="dropdown"
@@ -30,7 +30,7 @@
                    th:text="${notificacaoPagamentoProfissional.mensagemPainel}">Detalhes</p>
                 <a th:href="${notificacaoPagamentoProfissional.urlMeusPagamentos}"
                    class="btn btn-warning w-100"
-                   th:classappend="${temNotifEncerramento or temNotifRelatorio} ? ' mb-3' : ''">
+                   th:classappend="${temNotifEncerramento} ? ' mb-3' : ''">
                     Ir para pagamentos
                 </a>
             </th:block>
@@ -42,22 +42,8 @@
                 <p class="notif-bell-text mb-3"
                    th:text="${notificacaoEncerramentoSerie.mensagemPainel}">Detalhes</p>
                 <a th:href="@{/agendamentos/central-profissionais(aba='encerramentos',viaNotificacaoEncerramento=true)}"
-                   class="btn btn-teal w-100"
-                   th:classappend="${temNotifRelatorio} ? ' mb-3' : ''">
+                   class="btn btn-teal w-100">
                     Ver encerramentos
-                </a>
-            </th:block>
-            <th:block th:if="${temNotifRelatorio}">
-                <hr th:if="${temNotifPagamento or temNotifEncerramento}" class="notif-bell-divider my-3">
-                <p class="notif-bell-kicker mb-1">Relatorio mensal</p>
-                <p class="notif-bell-title mb-2"
-                   th:text="${notificacaoRelatorioMensal.mensagemResumo}">Relatorio pronto</p>
-                <p class="notif-bell-text mb-3"
-                   th:text="${notificacaoRelatorioMensal.mensagemPainel}">Mensagem</p>
-                <a th:href="@{/agendamentos/relatorio/mensal(viaNotificacao=1)}"
-                   class="btn btn-warning w-100"
-                   th:text="${notificacaoRelatorioMensal.pendenteArquivamento} ? 'Ver relatório do mês passado' : 'Relatório gerado — baixar PDF'">
-                    Abrir relatorio
                 </a>
             </th:block>
             <th:block th:unless="${temAlgumaNotif}">

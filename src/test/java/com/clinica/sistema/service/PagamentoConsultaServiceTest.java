@@ -65,6 +65,7 @@ class PagamentoConsultaServiceTest {
 
     @BeforeEach
     void setUp() {
+        Mockito.lenient().when(pagamentoProperties.getMensalDiaLimite()).thenReturn(15);
         agendamento = new Agendamento();
         agendamento.setId(1L);
         agendamento.setValorClinicaCobra(new BigDecimal("32.00"));
@@ -578,7 +579,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
 
-        assertEquals("Você vai pagar do dia 01 ao 10/06",
+        assertEquals("Você vai pagar do dia 01 ao 15/06",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
     }
 
@@ -593,7 +594,7 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 6, 1));
         agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 29).atTime(10, 0));
 
-        assertEquals("Você tem do dia 01 ao 10 para pagar",
+        assertEquals("Você tem do dia 01 ao 15 para pagar",
                 pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 7, 5)));
     }
 
@@ -609,8 +610,8 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(LocalDate.of(2026, 7, 7).atTime(10, 0));
 
         assertEquals("06/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
-        assertEquals("01 ao 10/07", pagamentoConsultaService.formatarJanelaPagamentoMensal(agendamento));
-        assertEquals("Você vai pagar do dia 01 ao 10/07",
+        assertEquals("01 ao 15/07", pagamentoConsultaService.formatarJanelaPagamentoMensal(agendamento));
+        assertEquals("Você vai pagar do dia 01 ao 15/07",
                 pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 6, 30)));
     }
 
@@ -628,7 +629,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
 
-        assertEquals("Você vai pagar do dia 01 ao 10/06",
+        assertEquals("Você vai pagar do dia 01 ao 15/06",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
         assertEquals("05/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
     }
@@ -699,7 +700,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isDonaClinica(polyana)).thenReturn(true);
 
         assertEquals(
-                "Ana Paula: pagamento do dia 01 ao 10/07",
+                "Ana Paula: pagamento do dia 01 ao 15/07",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
         );
     }
@@ -1222,9 +1223,9 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void janelaPagamentoMensalDoDia01Ao10() {
+    void janelaPagamentoMensalDoDia01Ao15() {
         int dia = LocalDate.now().getDayOfMonth();
-        boolean esperado = dia >= 1 && dia <= 10;
+        boolean esperado = dia >= 1 && dia <= 15;
         assertEquals(esperado, pagamentoConsultaService.estaEmJanelaPagamentoMensal());
     }
 
@@ -1253,7 +1254,7 @@ class PagamentoConsultaServiceTest {
         julia.setId(3L);
         julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
 
-        LocalDate referencia = LocalDate.now().plusDays(1);
+        LocalDate referencia = LocalDate.now();
         Agendamento consulta = new Agendamento();
         consulta.setId(31L);
         consulta.setProfissional(julia);
@@ -1633,7 +1634,7 @@ class PagamentoConsultaServiceTest {
 
             assertTrue(notificacao.isPresent());
             assertEquals("Pagamento mensal", notificacao.get().getMensagemResumo());
-            assertTrue(notificacao.get().getMensagemPainel().contains("até o dia 10"));
+            assertTrue(notificacao.get().getMensagemPainel().contains("até o dia 15"));
         } else {
             assertTrue(pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional).isEmpty());
         }

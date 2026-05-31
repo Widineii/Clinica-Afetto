@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu relatorio - Clinica Afetto</title>
+    <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
+    <style>
+        .meu-relatorio-tabela-scroll {
+            display: block;
+            max-height: 260px;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        .meu-relatorio-tabela-scroll .financeiro-table {
+            margin-bottom: 0;
+        }
+
+        .meu-relatorio-tabela-scroll thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #fff;
+            box-shadow: inset 0 -1px 0 #e2e8f0;
+        }
+    </style>
+</head>
+<body class="financeiro-page">
+<div class="financeiro-wrap">
+
+    <div th:replace="~{fragments/meu-relatorio-hero :: hero(
+        titulo='Meu relatorio',
+        subtitulo='Resumo dos seus atendimentos e taxas PIX pagas no mes selecionado.'
+    )}"></div>
+
+    <div th:if="${erro}" class="alert alert-danger financeiro-card mb-3" th:text="${erro}"></div>
+    <div th:if="${sucesso}" class="alert alert-success financeiro-card mb-3" th:text="${sucesso}"></div>
+
+    <div th:if="${perfilLocal}" class="financeiro-card mb-3">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <strong>Modo demonstracao local</strong>
+                <p class="financeiro-hint mb-0">
+                    Gera atendimentos de exemplo no mes atual (Salas 1, 2 e 3) so para o seu relatorio.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <form th:action="@{/agendamentos/meu-relatorio/dev/semear-demo}" method="post">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <input type="hidden" name="mesAno" th:value="${relatorio.mesAnoInput}">
+                    <input type="hidden" name="sala" th:value="${relatorio.salaFiltro}">
+                    <button type="submit" class="btn btn-primary btn-sm">Gerar atendimentos de teste</button>
+                </form>
+                <form th:action="@{/agendamentos/meu-relatorio/dev/limpar-demo}" method="post">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <input type="hidden" name="mesAno" th:value="${relatorio.mesAnoInput}">
+                    <input type="hidden" name="sala" th:value="${relatorio.salaFiltro}">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Limpar teste</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="financeiro-card mb-4">
+        <div class="card-body">
+            <form th:action="@{/agendamentos/meu-relatorio}" method="get" id="filtroMesForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" for="mesAno">Mes de referencia</label>
+                        <input type="month"
+                               class="form-control"
+                               id="mesAno"
+                               name="mesAno"
+                               th:value="${relatorio.mesAnoInput}"
+                               onchange="this.form.submit()">
+                    </div>
+                    <div class="col-md-8">
+                        <p class="mb-1 fw-semibold" th:text="'Visualizando ' + ${relatorio.mesAnoLabel}">Visualizando Maio de 2026</p>
+                        <p class="financeiro-hint mb-0">
+                            Profissional: <strong th:text="${relatorio.profissionalNome}">Nome</strong>
+                        </p>
+                    </div>
+                    <div class="col-12">
+                        <div class="fin-filtros-grupo mb-0">
+                            <div class="fin-filtros-grupo__titulo">Salas</div>
+                            <div class="fin-filtros-chips">
+                                <button type="submit"
+                                        name="sala"
+                                        value=""
+                                        class="fin-chip"
+                                        th:classappend="${relatorio.salaFiltro == null or relatorio.salaFiltro.isBlank()} ? ' is-active' : ''">
+                                    Todas
+                                </button>
+                                <button type="submit"
+                                        th:each="nomeSala : ${salasFiltro}"
+                                        name="sala"
+                                        th:value="${nomeSala}"
+                                        class="fin-chip"
+                                        th:classappend="${nomeSala == relatorio.salaFiltro} ? ' is-active' : ''"
+                                        th:text="${nomeSala}">
+                                    Sala 1
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="financeiro-resumo-grid mb-4">
+        <div class="financeiro-resumo-card financeiro-resumo-card--destaque">
+            <div class="financeiro-resumo-label">Atendimentos no mes</div>
+            <div class="financeiro-resumo-valor" th:text="${relatorio.totalAtendimentos}">0</div>
+        </div>
+        <div class="financeiro-resumo-card">
+            <div class="financeiro-resumo-label">Taxas PIX pagas</div>
+            <div class="financeiro-resumo-valor" th:text="${relatorio.totalTaxasPagasFormatado}">R$ 0,00</div>
+            <p class="financeiro-hint mb-0 mt-1">
+                <span th:text="${relatorio.totalPixPagos}">0</span> pagamento(s) confirmado(s)
+            </p>
+        </div>
+        <div class="financeiro-resumo-card">
+            <div class="financeiro-resumo-label">Melhor mes</div>
+            <div class="financeiro-resumo-valor" th:text="${relatorio.valorMelhorMesFormatado}">R$ 0,00</div>
+            <p class="financeiro-hint mb-0 mt-1">
+                <span th:text="${relatorio.melhorMesLabel}">—</span>
+                · <span th:text="${relatorio.atendimentosMelhorMes}">0</span> atendimento(s)
+            </p>
+        </div>
+    </div>
+
+    <div class="fin-dashboard-graficos mb-4">
+        <div class="fin-grafico-card">
+            <div class="fin-grafico-card__titulo">Atendimentos por sala</div>
+            <div class="fin-grafico-wrap">
+                <canvas id="graficoSala"></canvas>
+                <div class="fin-grafico-vazio" id="vazioSala">Nenhum atendimento neste mes.</div>
+            </div>
+        </div>
+        <div class="fin-grafico-card">
+            <div class="fin-grafico-card__titulo">Atendimentos por tipo</div>
+            <div class="fin-grafico-wrap">
+                <canvas id="graficoTipo"></canvas>
+                <div class="fin-grafico-vazio" id="vazioTipo">Nenhum atendimento neste mes.</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="application/json" id="grafico-salas-json" th:utext="${relatorio.graficoSalasJson}">[]</script>
+    <script type="application/json" id="grafico-tipos-json" th:utext="${relatorio.graficoTiposJson}">[]</script>
+
+    <div class="financeiro-card mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3">Seus atendimentos no mes</h2>
+            <div th:if="${#lists.isEmpty(relatorio.atendimentos)}" class="financeiro-empty">
+                Nenhum atendimento registrado neste mes.
+            </div>
+            <div th:unless="${#lists.isEmpty(relatorio.atendimentos)}" class="table-responsive meu-relatorio-tabela-scroll fin-tabela-scroll">
+                <table class="table financeiro-table align-middle">
+                    <thead>
+                    <tr>
+                        <th>Consulta</th>
+                        <th>Cliente</th>
+                        <th>Sala</th>
+                        <th>Tipo</th>
+                        <th>Pagamento</th>
+                        <th class="text-end">Taxa</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${relatorio.atendimentos}">
+                        <td th:text="${item.consultaRotulo}">28/05/2026 19:00</td>
+                        <td th:text="${item.nomeCliente}">Cliente</td>
+                        <td th:text="${item.salaNome}">Sala 1</td>
+                        <td th:text="${item.tipoRotulo}">Avulso</td>
+                        <td th:text="${item.statusPagamentoRotulo}">Pago</td>
+                        <td class="text-end fw-semibold" th:text="${item.valorTaxaFormatado}">R$ 35,00</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="financeiro-card">
+        <div class="card-body">
+            <h2 class="h5 mb-3">PIX confirmados no mes</h2>
+            <div th:if="${#lists.isEmpty(relatorio.pagamentosPix)}" class="financeiro-empty">
+                Nenhum PIX confirmado neste mes.
+            </div>
+            <div th:unless="${#lists.isEmpty(relatorio.pagamentosPix)}" class="table-responsive meu-relatorio-tabela-scroll fin-tabela-scroll">
+                <table class="table financeiro-table align-middle">
+                    <thead>
+                    <tr>
+                        <th>Data PIX</th>
+                        <th>Cliente</th>
+                        <th>Sala</th>
+                        <th>Tipo</th>
+                        <th>Consulta</th>
+                        <th class="text-end">Taxa</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${relatorio.pagamentosPix}">
+                        <td th:text="${item.dataPagamentoRotulo}">28/05/2026 14:30</td>
+                        <td th:text="${item.nomeCliente}">Cliente</td>
+                        <td th:text="${item.salaNome}">Sala 1</td>
+                        <td th:text="${item.tipoRecorrenciaRotulo}">Avulso</td>
+                        <td th:text="${item.consultaRotulo}">28/05/2026 19:00</td>
+                        <td class="text-end fw-semibold" th:text="${item.valorTaxaFormatado}">R$ 35,00</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const CORES_SALA = {
+        'Sala 1': '#3B82F6',
+        'Sala 2': '#10B981',
+        'Sala 3': '#A855F7',
+        'Sala 4': '#F97316'
+    };
+    const CORES_TIPO = {
+        'Avulso': '#1B4D5C',
+        'Fixo semanal': '#2563EB',
+        'Quinzenal': '#059669'
+    };
+
+    function lerJson(id) {
+        try {
+            const dados = JSON.parse(document.getElementById(id).textContent || '[]');
+            return Array.isArray(dados) ? dados : [];
+        } catch (erro) {
+            return [];
+        }
+    }
+
+    function alternarVazio(id, visivel) {
+        var elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.classList.toggle('is-visible', visivel);
+        }
+    }
+
+    function montarGrafico(canvasId, vazioId, dados, cores, tipo) {
+        if (typeof Chart === 'undefined') {
+            alternarVazio(vazioId, true);
+            return null;
+        }
+        const canvas = document.getElementById(canvasId);
+        const filtrados = dados.filter(function (item) { return (item.valor || 0) > 0; });
+        alternarVazio(vazioId, filtrados.length === 0);
+        if (!canvas || filtrados.length === 0) {
+            if (canvas) {
+                canvas.style.display = 'none';
+            }
+            return null;
+        }
+        canvas.style.display = 'block';
+        return new Chart(canvas, {
+            type: tipo === 'doughnut' ? 'doughnut' : 'pie',
+            data: {
+                labels: filtrados.map(function (item) { return item.rotulo; }),
+                datasets: [{
+                    data: filtrados.map(function (item) { return item.valor; }),
+                    backgroundColor: filtrados.map(function (item) {
+                        return cores[item.rotulo] || '#64748B';
+                    }),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                },
+                cutout: tipo === 'doughnut' ? '58%' : 0
+            }
+        });
+    }
+
+    montarGrafico('graficoSala', 'vazioSala', lerJson('grafico-salas-json'), CORES_SALA, 'pie');
+    montarGrafico('graficoTipo', 'vazioTipo', lerJson('grafico-tipos-json'), CORES_TIPO, 'doughnut');
+})();
+</script>
+</body>
+</html>

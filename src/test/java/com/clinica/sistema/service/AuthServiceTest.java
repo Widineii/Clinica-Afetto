@@ -65,4 +65,52 @@ class AuthServiceTest {
         assertTrue(authService.podeAcessarCentralProfissionais(admin));
         assertFalse(authService.podeAcessarCentralProfissionais(julia));
     }
+
+    @Test
+    void loginPolyanaEConsideradoDonaClinicaMesmoSemFlagNoBanco() {
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(false);
+
+        assertTrue(authService.isDonaClinica(polyana));
+        assertFalse(authService.podeTrocarPropriaSenha(polyana));
+    }
+
+    @Test
+    void profissionalComumPodeTrocarPropriaSenha() {
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        assertTrue(authService.podeTrocarPropriaSenha(julia));
+    }
+
+    @Test
+    void adminNaoPodeTrocarPropriaSenhaNaAgenda() {
+        Usuario admin = new Usuario();
+        admin.setLogin("admin");
+        admin.setCargo("ROLE_ADMIN");
+
+        assertFalse(authService.podeTrocarPropriaSenha(admin));
+    }
+
+    @Test
+    void somenteProfissionalComumPodeEscolherFormaPagamento() {
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+
+        assertFalse(authService.podeEscolherFormaPagamento(polyana));
+        assertTrue(authService.podeEscolherFormaPagamento(julia));
+        assertFalse(authService.podeEscolherFormaPagamento(admin));
+    }
 }
