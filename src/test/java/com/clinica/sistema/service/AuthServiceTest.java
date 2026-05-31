@@ -113,4 +113,19 @@ class AuthServiceTest {
         assertTrue(authService.podeEscolherFormaPagamento(julia));
         assertFalse(authService.podeEscolherFormaPagamento(admin));
     }
+
+    @Test
+    void donaClinicaNaoDeveVerRelatorioProprio() {
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        assertFalse(authService.podeVerRelatorioProprio(polyana));
+        assertTrue(authService.podeVerRelatorioProprio(julia));
+    }
 }
