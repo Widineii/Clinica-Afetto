@@ -31,7 +31,9 @@
 
     <div th:replace="~{fragments/meu-relatorio-hero :: hero(
         titulo='Meu relatorio',
-        subtitulo='Resumo dos seus atendimentos e taxas PIX pagas no mes selecionado.'
+        subtitulo=${exibirTaxasRelatorio}
+            ? 'Resumo dos seus atendimentos e taxas PIX pagas no mes selecionado.'
+            : 'Resumo dos seus atendimentos no mes selecionado (a dona da clinica nao paga taxa de sala).'
     )}"></div>
 
     <div th:if="${erro}" class="alert alert-danger financeiro-card mb-3" th:text="${erro}"></div>
@@ -114,14 +116,14 @@
             <div class="financeiro-resumo-label">Atendimentos no mes</div>
             <div class="financeiro-resumo-valor" th:text="${relatorio.totalAtendimentos}">0</div>
         </div>
-        <div class="financeiro-resumo-card">
+        <div th:if="${exibirTaxasRelatorio}" class="financeiro-resumo-card">
             <div class="financeiro-resumo-label">Taxas PIX pagas</div>
             <div class="financeiro-resumo-valor" th:text="${relatorio.totalTaxasPagasFormatado}">R$ 0,00</div>
             <p class="financeiro-hint mb-0 mt-1">
                 <span th:text="${relatorio.totalPixPagos}">0</span> pagamento(s) confirmado(s)
             </p>
         </div>
-        <div class="financeiro-resumo-card">
+        <div th:if="${exibirTaxasRelatorio}" class="financeiro-resumo-card">
             <div class="financeiro-resumo-label">Melhor mes</div>
             <div class="financeiro-resumo-valor" th:text="${relatorio.valorMelhorMesFormatado}">R$ 0,00</div>
             <p class="financeiro-hint mb-0 mt-1">
@@ -165,8 +167,8 @@
                         <th>Cliente</th>
                         <th>Sala</th>
                         <th>Tipo</th>
-                        <th>Pagamento</th>
-                        <th class="text-end">Taxa</th>
+                        <th th:if="${exibirTaxasRelatorio}">Pagamento</th>
+                        <th th:if="${exibirTaxasRelatorio}" class="text-end">Taxa</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -175,8 +177,8 @@
                         <td th:text="${item.nomeCliente}">Cliente</td>
                         <td th:text="${item.salaNome}">Sala 1</td>
                         <td th:text="${item.tipoRotulo}">Avulso</td>
-                        <td th:text="${item.statusPagamentoRotulo}">Pago</td>
-                        <td class="text-end fw-semibold" th:text="${item.valorTaxaFormatado}">R$ 35,00</td>
+                        <td th:if="${exibirTaxasRelatorio}" th:text="${item.statusPagamentoRotulo}">Pago</td>
+                        <td th:if="${exibirTaxasRelatorio}" class="text-end fw-semibold" th:text="${item.valorTaxaFormatado}">R$ 35,00</td>
                     </tr>
                     </tbody>
                 </table>
@@ -184,7 +186,7 @@
         </div>
     </div>
 
-    <div class="financeiro-card">
+    <div th:if="${exibirTaxasRelatorio}" class="financeiro-card">
         <div class="card-body">
             <h2 class="h5 mb-3">PIX confirmados no mes</h2>
             <div th:if="${#lists.isEmpty(relatorio.pagamentosPix)}" class="financeiro-empty">

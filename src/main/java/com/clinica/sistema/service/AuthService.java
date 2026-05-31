@@ -92,11 +92,10 @@ public class AuthService {
         return usuario != null && !isAdmin(usuario);
     }
 
-    /** Relatorio individual: profissionais comuns (a dona da clinica nao paga taxa PIX). */
+    /** Relatorio individual: profissionais e dona da clinica (taxas ocultas para a dona). */
     public boolean podeVerRelatorioProprio(Usuario usuario) {
         return usuario != null
                 && !isAdmin(usuario)
-                && !isDonaClinica(usuario)
                 && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
     }
 }

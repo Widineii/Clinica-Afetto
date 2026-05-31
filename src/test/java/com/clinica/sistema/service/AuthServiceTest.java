@@ -115,7 +115,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void donaClinicaNaoDeveVerRelatorioProprio() {
+    void donaClinicaVeRelatorioProprioSemTaxasDePagamento() {
         Usuario polyana = new Usuario();
         polyana.setLogin("polyana");
         polyana.setCargo("ROLE_PROFISSIONAL");
@@ -125,7 +125,9 @@ class AuthServiceTest {
         julia.setLogin("julia");
         julia.setCargo("ROLE_PROFISSIONAL");
 
-        assertFalse(authService.podeVerRelatorioProprio(polyana));
+        assertTrue(authService.podeVerRelatorioProprio(polyana));
         assertTrue(authService.podeVerRelatorioProprio(julia));
+        assertTrue(authService.profissionalIgnoraValoresEPagamento(polyana));
+        assertFalse(authService.profissionalIgnoraValoresEPagamento(julia));
     }
 }

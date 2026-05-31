@@ -18,6 +18,8 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -101,6 +103,30 @@ class RelatorioProfissionalServiceTest {
         assertEquals(1, relatorio.getTotalPixPagos());
         assertEquals(new BigDecimal("32.00"), relatorio.getTotalTaxasPagas());
         assertEquals("Sala 2", relatorio.getSalaFiltro());
+    }
+
+    @Test
+    void montarRelatorio_donaClinicaSemTaxasNemPix() {
+        Usuario polyana = new Usuario();
+        polyana.setId(20L);
+        polyana.setNome("Polyana");
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        YearMonth maio = YearMonth.of(2026, 5);
+        Agendamento atendimento = criarAtendimento(polyana, maio.atDay(10).atTime(10, 0), PagamentoStatus.PAGO);
+        atendimento.setDataPagamento(maio.atDay(9).atTime(14, 30));
+
+        when(agendamentoService.listarAtendimentosProfissionalNoMes(20L, maio)).thenReturn(List.of(atendimento));
+
+        RelatorioProfissionalMesView relatorio = service.montarRelatorio(polyana, maio, null, false);
+
+        assertEquals(1, relatorio.getTotalAtendimentos());
+        assertEquals(0, relatorio.getTotalPixPagos());
+        assertEquals(BigDecimal.ZERO, relatorio.getTotalTaxasPagas());
+        assertTrue(relatorio.getPagamentosPix().isEmpty());
+        assertFalse(relatorio.isExibirTaxas());
     }
 
     private Agendamento criarAtendimento(

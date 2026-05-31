@@ -51,7 +51,7 @@ public class RelatorioProfissionalService {
     }
 
     public RelatorioProfissionalMesView montarRelatorio(Usuario profissional, YearMonth mesSelecionado) {
-        return montarRelatorio(profissional, mesSelecionado, null);
+        return montarRelatorio(profissional, mesSelecionado, null, true);
     }
 
     public RelatorioProfissionalMesView montarRelatorio(
@@ -59,8 +59,22 @@ public class RelatorioProfissionalService {
             YearMonth mesSelecionado,
             String salaFiltro
     ) {
+        return montarRelatorio(profissional, mesSelecionado, salaFiltro, true);
+    }
+
+    public RelatorioProfissionalMesView montarRelatorio(
+            Usuario profissional,
+            YearMonth mesSelecionado,
+            String salaFiltro,
+            boolean exibirTaxas
+    ) {
         if (profissional == null || profissional.getId() == null) {
-            return RelatorioProfissionalMesView.vazio(mesSelecionado, "Profissional", resolverSalaFiltro(salaFiltro));
+            return RelatorioProfissionalMesView.vazio(
+                    mesSelecionado,
+                    "Profissional",
+                    resolverSalaFiltro(salaFiltro),
+                    exibirTaxas
+            );
         }
 
         String salaSelecionada = resolverSalaFiltro(salaFiltro);
@@ -76,29 +90,35 @@ public class RelatorioProfissionalService {
                     .toList();
         }
 
-        LocalDateTime inicioPagamento = mesSelecionado.atDay(1).atStartOfDay();
-        LocalDateTime fimPagamento = mesSelecionado.plusMonths(1).atDay(1).atStartOfDay();
-        List<ReceitaPixLinhaView> pagamentosMes = agendamentoRepository
-                .findPagosPorProfissionalEDataPagamentoNoPeriodo(profissional.getId(), inicioPagamento, fimPagamento)
-                .stream()
-                .map(agendamento -> new ReceitaPixLinhaView(
-                        agendamento,
-                        infinitePayService.resolverValorTaxaClinica(agendamento)
-                ))
-                .filter(linha -> salaSelecionada == null || salaSelecionada.equals(linha.getSalaNome()))
-                .toList();
+        List<ReceitaPixLinhaView> pagamentosMes = List.of();
+        BigDecimal totalTaxas = BigDecimal.ZERO;
+        ResumoHistorico melhorMes = new ResumoHistorico("—");
 
-        BigDecimal totalTaxas = pagamentosMes.stream()
-                .map(ReceitaPixLinhaView::getValorTaxa)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (exibirTaxas) {
+            LocalDateTime inicioPagamento = mesSelecionado.atDay(1).atStartOfDay();
+            LocalDateTime fimPagamento = mesSelecionado.plusMonths(1).atDay(1).atStartOfDay();
+            pagamentosMes = agendamentoRepository
+                    .findPagosPorProfissionalEDataPagamentoNoPeriodo(profissional.getId(), inicioPagamento, fimPagamento)
+                    .stream()
+                    .map(agendamento -> new ReceitaPixLinhaView(
+                            agendamento,
+                            infinitePayService.resolverValorTaxaClinica(agendamento)
+                    ))
+                    .filter(linha -> salaSelecionada == null || salaSelecionada.equals(linha.getSalaNome()))
+                    .toList();
 
-        ResumoHistorico melhorMes = calcularMelhorMes(profissional.getId());
+            totalTaxas = pagamentosMes.stream()
+                    .map(ReceitaPixLinhaView::getValorTaxa)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            melhorMes = calcularMelhorMes(profissional.getId());
+        }
 
         List<RelatorioProfissionalAtendimentoView> linhasAtendimentos = atendimentosMes.stream()
                 .map(agendamento -> new RelatorioProfissionalAtendimentoView(
                         agendamento,
-                        rotularStatusPagamento(agendamento),
-                        agendamento.isPagamentoPago()
+                        exibirTaxas ? rotularStatusPagamento(agendamento) : null,
+                        exibirTaxas && agendamento.isPagamentoPago()
                                 ? infinitePayService.resolverValorTaxaClinica(agendamento)
                                 : BigDecimal.ZERO
                 ))
@@ -121,7 +141,8 @@ public class RelatorioProfissionalService {
                 GraficoJsonUtil.serializarUsoSalasRelatorio(List.of(usoSalas)),
                 GraficoJsonUtil.serializarContagensPorRotulo(usoTipos),
                 GraficoJsonUtil.serializarPagamentosPix(pagamentosMes),
-                salaSelecionada
+                salaSelecionada,
+                exibirTaxas
         );
     }
 

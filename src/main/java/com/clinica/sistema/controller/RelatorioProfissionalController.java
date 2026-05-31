@@ -61,19 +61,28 @@ public class RelatorioProfissionalController {
 
         YearMonth mesSelecionado = resolverMes(mesAno, mes, ano);
         String salaFiltro = relatorioProfissionalService.resolverSalaFiltro(sala);
+        boolean exibirTaxasRelatorio = !authService.profissionalIgnoraValoresEPagamento(usuarioLogado);
         try {
             RelatorioProfissionalMesView relatorio =
-                    relatorioProfissionalService.montarRelatorio(usuarioLogado, mesSelecionado, sala);
+                    relatorioProfissionalService.montarRelatorio(
+                            usuarioLogado,
+                            mesSelecionado,
+                            sala,
+                            exibirTaxasRelatorio
+                    );
             model.addAttribute("relatorio", relatorio);
         } catch (RuntimeException ex) {
             log.error("Falha ao montar relatorio do profissional {}", usuarioLogado.getId(), ex);
             model.addAttribute("relatorio", RelatorioProfissionalMesView.vazio(
                     mesSelecionado,
                     usuarioLogado.getNome(),
-                    salaFiltro
+                    salaFiltro,
+                    exibirTaxasRelatorio
             ));
             model.addAttribute("erro", "Nao foi possivel carregar seu relatorio. Tente novamente.");
         }
+
+        model.addAttribute("exibirTaxasRelatorio", exibirTaxasRelatorio);
 
         model.addAttribute("salasFiltro", RelatorioProfissionalService.SALAS_FILTRO);
         model.addAttribute("perfilLocal", isPerfilLocal());
