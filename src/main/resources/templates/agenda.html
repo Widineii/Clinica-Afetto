@@ -1094,7 +1094,7 @@
 
             .agenda-grid thead th:not(.time-col) {
                 width: auto;
-                min-width: clamp(84px, 11vw, 104px);
+                min-width: clamp(112px, 14vw, 128px);
             }
 
             .agenda-grid .time-col {
@@ -1158,10 +1158,14 @@
                 text-align: center;
             }
 
+            .agenda-grid {
+                min-width: calc(64px + (6 * 136px));
+            }
+
             .agenda-grid thead th:not(.time-col) {
-                min-width: 84px;
+                min-width: 136px;
                 font-size: 0.78rem;
-                padding: 0.45rem;
+                padding: 0.45rem 0.35rem;
             }
 
             .agenda-grid .time-col {
@@ -1172,30 +1176,74 @@
 
             .slot-booked,
             .slot-empty {
-                min-height: 72px;
-                padding: 4px !important;
+                min-height: 96px;
+                max-width: none;
+                overflow: visible;
+                padding: 5px !important;
             }
 
             .slot-card {
-                min-height: 64px;
-                padding: 6px 7px;
+                min-height: 86px;
+                padding: 7px 8px;
                 border-radius: 10px;
+                overflow: visible;
+                gap: 4px;
             }
 
             .slot-card__prof {
-                font-size: 0.72rem;
+                font-size: 0.7rem;
+                white-space: normal;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                line-height: 1.15;
             }
 
             .slot-card__cliente {
-                font-size: 0.76rem;
+                font-size: 0.78rem;
             }
 
             .slot-card__valores {
-                padding: 4px 5px;
+                padding: 5px 6px;
+                gap: 2px;
             }
 
             .slot-card__valor-linha {
-                font-size: 0.62rem;
+                font-size: 0.64rem;
+                gap: 6px;
+            }
+
+            .slot-card__valor-label {
+                font-size: 0.58rem;
+                flex-shrink: 0;
+            }
+
+            .slot-card__valor-num {
+                font-size: 0.64rem;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .slot-card__footer {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+            }
+
+            .slot-card__footer .badge,
+            .slot-card__footer .slot-aguardando-pill,
+            .slot-card__footer .fixed-badge,
+            .slot-card__footer .slot-indicacao-pill,
+            .slot-card__footer .slot-status-pill {
+                width: 100%;
+                white-space: nowrap;
+                word-break: keep-all;
+                overflow-wrap: normal;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 0.58rem;
+                padding: 3px 6px;
             }
 
             .history-table th,
