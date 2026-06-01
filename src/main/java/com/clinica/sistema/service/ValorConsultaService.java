@@ -13,7 +13,12 @@ public class ValorConsultaService {
 
     public static final BigDecimal CLINICA_SALA_4 = new BigDecimal("25.00");
     public static final BigDecimal CLINICA_FIXO_SEMANAL = new BigDecimal("32.00");
-    public static final BigDecimal CLINICA_AVULSO_QUINZENAL = new BigDecimal("35.00");
+    public static final BigDecimal CLINICA_AVULSO = new BigDecimal("35.00");
+    public static final BigDecimal CLINICA_QUINZENAL = new BigDecimal("35.00");
+    public static final BigDecimal CLINICA_MENSAL = new BigDecimal("35.00");
+    /** @deprecated use {@link #CLINICA_AVULSO} */
+    @Deprecated
+    public static final BigDecimal CLINICA_AVULSO_QUINZENAL = CLINICA_AVULSO;
     public static final BigDecimal INDICACAO_PERCENTUAL = new BigDecimal("0.30");
 
     public void aplicarValores(Agendamento agendamento, AgendamentoForm form, Sala sala, String recorrencia) {
@@ -57,7 +62,7 @@ public class ValorConsultaService {
         if ("SEMANAL".equalsIgnoreCase(recorrencia)) {
             return CLINICA_FIXO_SEMANAL;
         }
-        return CLINICA_AVULSO_QUINZENAL;
+        return CLINICA_AVULSO;
     }
 
     /**

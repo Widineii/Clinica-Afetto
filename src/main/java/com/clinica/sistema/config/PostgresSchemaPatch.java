@@ -61,6 +61,12 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                     ADD COLUMN IF NOT EXISTS data_referencia_mes_pagamento DATE
                     """
             );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE agendamentos
+                    ADD COLUMN IF NOT EXISTS historico_datas_mensal VARCHAR(120)
+                    """
+            );
             jdbcTemplate.update(
                     """
                     UPDATE agendamentos
@@ -74,6 +80,15 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                     UPDATE agendamentos
                     SET data_referencia_mes_pagamento = DATE_TRUNC('month', CAST(data_hora_inicio AS DATE))::DATE
                     WHERE data_referencia_mes_pagamento IS NULL
+                      AND data_hora_inicio IS NOT NULL
+                    """
+            );
+            jdbcTemplate.update(
+                    """
+                    UPDATE agendamentos
+                    SET historico_datas_mensal = TO_CHAR(data_hora_inicio, 'DD/MM')
+                    WHERE UPPER(tipo_recorrencia) = 'MENSAL'
+                      AND historico_datas_mensal IS NULL
                       AND data_hora_inicio IS NOT NULL
                     """
             );

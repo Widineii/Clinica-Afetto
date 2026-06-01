@@ -43,7 +43,9 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaUsuariosSeNecessario("periodicidade_alterada_em", "TIMESTAMP");
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");
             adicionarColunaSeNecessario("data_referencia_mes_pagamento", "DATE");
+            adicionarColunaSeNecessario("historico_datas_mensal", "VARCHAR(120)");
             preencherReferenciasCobranca();
+            preencherHistoricoMensalInicial();
             removerChecksStatusPagamento();
             log.info("Schema H2 local: pagamento e status_pagamento verificados.");
         } catch (Exception ex) {
@@ -81,6 +83,18 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
         if (existe != null && existe == 0) {
             jdbcTemplate.execute("ALTER TABLE usuarios ADD COLUMN " + coluna + " " + tipoSql);
         }
+    }
+
+    private void preencherHistoricoMensalInicial() {
+        jdbcTemplate.update(
+                """
+                UPDATE agendamentos
+                SET historico_datas_mensal = FORMATDATETIME(data_hora_inicio, 'dd/MM')
+                WHERE UPPER(tipo_recorrencia) = 'MENSAL'
+                  AND historico_datas_mensal IS NULL
+                  AND data_hora_inicio IS NOT NULL
+                """
+        );
     }
 
     private void preencherReferenciasCobranca() {

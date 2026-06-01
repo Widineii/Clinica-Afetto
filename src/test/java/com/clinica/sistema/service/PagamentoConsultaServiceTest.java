@@ -25,6 +25,7 @@ import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,6 +71,41 @@ class PagamentoConsultaServiceTest {
         agendamento.setId(1L);
         agendamento.setValorClinicaCobra(new BigDecimal("32.00"));
         agendamento.setDataHoraInicio(LocalDate.now().plusDays(3).atTime(10, 0));
+    }
+
+    @Test
+    void indicacaoDeveAguardarAprovacaoSemGerarPix() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        profissional.setDonaClinica(false);
+
+        agendamento.setIndicacaoDona(true);
+        when(infinitePayService.resolverValorTaxaClinica(any())).thenReturn(new BigDecimal("60.00"));
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
+
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), profissional, profissional);
+
+        assertEquals(PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO, agendamento.getStatusPagamento());
+        verify(infinitePayService, never()).gerarLinkPagamento(any());
+    }
+
+    @Test
+    void indicacaoPorGestorParaOutroProfissionalDeveAguardarAprovacao() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        Usuario dona = new Usuario();
+        dona.setId(99L);
+        dona.setDonaClinica(true);
+
+        agendamento.setIndicacaoDona(true);
+        when(infinitePayService.resolverValorTaxaClinica(any())).thenReturn(new BigDecimal("60.00"));
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(dona)).thenReturn(true);
+
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), profissional, dona);
+
+        assertEquals(PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO, agendamento.getStatusPagamento());
+        verify(infinitePayService, never()).gerarLinkPagamento(any());
     }
 
     @Test
@@ -358,6 +394,51 @@ class PagamentoConsultaServiceTest {
 
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
         assertFalse(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
+    }
+
+    @Test
+    void indicacaoSoBloqueiaAgendaAposPrazoPosAtendimento() {
+        when(pagamentoProperties.getIndicacaoDiasLimitePosAtendimento()).thenReturn(2);
+
+        agendamento.setIndicacaoDona(true);
+        agendamento.setIndicacaoAprovadaEm(LocalDateTime.now().minusDays(5));
+        agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(1).withHour(10).withMinute(0));
+        assertFalse(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
+
+        agendamento.setDataHoraInicio(LocalDateTime.now().minusHours(2));
+        assertFalse(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
+        assertTrue(pagamentoConsultaService.podePagarAgora(agendamento));
+
+        agendamento.setDataHoraInicio(LocalDateTime.now().minusDays(4));
+        assertTrue(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
+        assertTrue(pagamentoConsultaService.podePagarAgora(agendamento));
+    }
+
+    @Test
+    void indicacaoApareceEmMeusPagamentosSomenteAposHorarioDaConsulta() {
+        when(pagamentoProperties.getIndicacaoDiasLimitePosAtendimento()).thenReturn(2);
+
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+
+        Agendamento indicacao = new Agendamento();
+        indicacao.setId(50L);
+        indicacao.setProfissional(profissional);
+        indicacao.setIndicacaoDona(true);
+        indicacao.setIndicacaoAprovadaEm(LocalDateTime.now().minusDays(1));
+        indicacao.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        indicacao.setDataHoraInicio(LocalDateTime.now().plusHours(2).withMinute(0).withSecond(0).withNano(0));
+
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+                .thenReturn(java.util.List.of(indicacao));
+
+        assertTrue(pagamentoConsultaService.listarPagamentosPendentesProximoDia(profissional).isEmpty());
+
+        indicacao.setDataHoraInicio(LocalDateTime.now().minusMinutes(5));
+        assertEquals(1, pagamentoConsultaService.listarPagamentosPendentesProximoDia(profissional).size());
+        assertFalse(pagamentoConsultaService.profissionalBloqueadoPorPendenciaPagamento(profissional));
     }
 
     @Test

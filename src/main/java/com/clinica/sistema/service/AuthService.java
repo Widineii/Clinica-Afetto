@@ -3,6 +3,7 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.security.ClinicaUserPrincipal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,6 +15,12 @@ import java.util.Optional;
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+
+    @Value("${app.seed-test-user.login:teste}")
+    private String testUserLogin;
+
+    @Value("${app.seed-test-user.isento-pagamento:false}")
+    private boolean testUserIsentoPagamento;
 
     public AuthService(UsuarioRepository usuarioRepository) {
         this.usuarioRepository = usuarioRepository;
@@ -67,7 +74,14 @@ public class AuthService {
     }
 
     public boolean profissionalIgnoraValoresEPagamento(Usuario profissional) {
-        return isDonaClinica(profissional);
+        if (isDonaClinica(profissional)) {
+            return true;
+        }
+        if (!testUserIsentoPagamento || profissional == null) {
+            return false;
+        }
+        String login = profissional.getLogin();
+        return login != null && testUserLogin.equalsIgnoreCase(login.trim());
     }
 
     /** Profissionais comuns escolhem Diario/Semanal/Mensal na agenda; dona e admin nao. */

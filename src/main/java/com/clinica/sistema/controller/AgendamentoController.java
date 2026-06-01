@@ -142,6 +142,8 @@ public class AgendamentoController {
             @RequestParam(required = false) Long salaId,
             @RequestParam(required = false) LocalDate semana,
             @RequestParam(required = false) Long pagamentoId,
+            @RequestParam(required = false) Long abrirRemarcarMensal,
+            @RequestParam(required = false, defaultValue = "false") boolean secaoMensal,
             HttpSession session
     ) {
         relatorioSemanalService.limparSessao(session);
@@ -178,7 +180,12 @@ public class AgendamentoController {
 
         List<com.clinica.sistema.model.Agendamento> agendamentos = service.buscarParaUsuario(usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> agendamentosAvulsos =
-                service.listarProximosPorSerie(agendamentos, com.clinica.sistema.model.Agendamento::isAvulso);
+                service.listarProximosPorSerie(
+                        agendamentos,
+                        com.clinica.sistema.model.Agendamento::isAvulsoSemMensal
+                );
+        List<com.clinica.sistema.dto.MensalAgendamentoLinha> linhasMensaisResumo =
+                service.agruparMensaisAtivos(agendamentos, usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> agendamentosFixos =
                 service.listarProximasOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isFixoSemanal);
         List<com.clinica.sistema.model.Agendamento> agendamentosQuinzenais =
@@ -216,10 +223,14 @@ public class AgendamentoController {
         );
         model.addAttribute("agendamentos", agendamentos);
         model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
+        model.addAttribute("linhasMensaisResumo", linhasMensaisResumo);
         model.addAttribute("agendamentosFixos", agendamentosFixos);
         model.addAttribute("agendamentosQuinzenais", agendamentosQuinzenais);
         model.addAttribute("totalAgendamentosAvulsos",
-                service.contarSeries(agendamentos, com.clinica.sistema.model.Agendamento::isAvulso));
+                service.contarSeries(
+                        agendamentos,
+                        com.clinica.sistema.model.Agendamento::isAvulsoSemMensal
+                ));
         model.addAttribute("totalAgendamentosFixos",
                 service.contarOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isFixoSemanal));
         model.addAttribute("totalAgendamentosQuinzenais",
@@ -242,11 +253,14 @@ public class AgendamentoController {
             model.addAttribute("seriesQuinzenaisResumo", seriesQuinzenais);
             model.addAttribute("totalFixosResumo", seriesFixas.size());
             model.addAttribute("totalQuinzenaisResumo", seriesQuinzenais.size());
+            model.addAttribute("totalMensaisResumo", linhasMensaisResumo.size());
         } else {
             model.addAttribute("seriesFixasResumo", Collections.emptyList());
             model.addAttribute("seriesQuinzenaisResumo", Collections.emptyList());
             model.addAttribute("totalFixosResumo", 0);
             model.addAttribute("totalQuinzenaisResumo", 0);
+            model.addAttribute("totalMensaisResumo", 0);
+            model.addAttribute("linhasMensaisResumo", Collections.emptyList());
         }
 
         List<Usuario> equipeProfissionais = usuarioService.listarProfissionaisDaEquipe();
@@ -287,6 +301,8 @@ public class AgendamentoController {
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("agendamentoService", service);
+        model.addAttribute("abrirRemarcarMensal", abrirRemarcarMensal);
+        model.addAttribute("secaoMensal", secaoMensal);
         model.addAttribute("periodicidadePagamento", pagamentoConsultaService.resolverPeriodicidade(usuarioLogado));
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         popularControlePeriodicidadePropria(model, usuarioLogado);
@@ -608,6 +624,7 @@ public class AgendamentoController {
             @ModelAttribute AgendamentoForm agendamentoForm,
             RedirectAttributes redirectAttributes
     ) {
+        boolean continuacaoMensal = agendamentoForm.isContinuacaoMensal();
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             var criado = service.salvar(agendamentoForm, usuarioLogado);
@@ -644,7 +661,11 @@ public class AgendamentoController {
                                 ? "Agendamento quinzenal cadastrado. A série continua automaticamente até encerrar."
                                 : "SEMANAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
                                         ? "Agendamento fixo cadastrado. A série continua automaticamente até encerrar."
-                                        : "Agendamento cadastrado com sucesso."
+                                        : "MENSAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
+                                                ? (agendamentoForm.isContinuacaoMensal()
+                                                        ? "Próxima consulta mensal reservada. Pagamento conforme sua regra (diário na véspera, semanal ou mensal)."
+                                                        : "Consulta mensal cadastrada. Marque a próxima quando precisar em Meus agendamentos.")
+                                                : "Agendamento cadastrado com sucesso."
                 );
             }
         } catch (RuntimeException e) {
@@ -653,7 +674,25 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("abrirModalErroAgendamento", true);
             redirectAttributes.addFlashAttribute("agendamentoForm", agendamentoForm);
         }
+        if (continuacaoMensal) {
+            return "redirect:/agendamentos/dashboard?secaoMensal=true#meus-agendamentos";
+        }
         return "redirect:/agendamentos/dashboard";
+    }
+
+    @GetMapping("/{id}/proxima-mensal")
+    public String prepararProximaConsultaMensal(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            service.prepararProximaConsultaMensal(id, usuarioLogado);
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/agendamentos/dashboard";
+        }
+        return "redirect:/agendamentos/dashboard?abrirRemarcarMensal=" + id;
     }
 
     @GetMapping("/{id}/realocar")
@@ -742,6 +781,27 @@ public class AgendamentoController {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             service.cancelar(id, usuarioLogado);
             redirectAttributes.addFlashAttribute("sucesso", "Agendamento cancelado com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/{id}/cancelar-serie-mensal")
+    public String cancelarSerieMensal(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            int cancelados = service.cancelarSerieMensal(id, usuarioLogado);
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    cancelados == 1
+                            ? "Consulta mensal cancelada."
+                            : cancelados + " consultas mensais futuras canceladas."
+            );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("erroContexto", "agendamento");

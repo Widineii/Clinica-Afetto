@@ -107,6 +107,10 @@ public class Agendamento {
     @Column(name = "motivo_encerramento_serie", length = 500)
     private String motivoEncerramentoSerie;
 
+    /** Histórico de datas remarcadas (dd/MM separadas por |), máx. 6 visíveis — reseta na 7ª. */
+    @Column(name = "historico_datas_mensal", length = 120)
+    private String historicoDatasMensal;
+
     @Column(name = "serie_encerrada_em")
     private LocalDateTime serieEncerradaEm;
 
@@ -122,11 +126,19 @@ public class Agendamento {
     }
 
     @Transient
+    public boolean isMensal() {
+        if ("MENSAL".equalsIgnoreCase(recorrencia) || "MENSAL".equalsIgnoreCase(tipoRecorrencia)) {
+            return true;
+        }
+        return possuiMarcadorSerie("mensal");
+    }
+
+    @Transient
     public boolean isFixoSemanal() {
         if ("SEMANAL".equalsIgnoreCase(recorrencia) || "SEMANAL".equalsIgnoreCase(tipoRecorrencia)) {
             return true;
         }
-        if (isQuinzenal()) {
+        if (isQuinzenal() || isMensal()) {
             return false;
         }
         return Boolean.TRUE.equals(fixo) && possuiMarcadorSerie("semanal");
@@ -146,9 +158,17 @@ public class Agendamento {
     }
 
     @Transient
+    public boolean isAvulsoSemMensal() {
+        return isAvulso() && !isMensal();
+    }
+
+    @Transient
     public String getRecorrenciaLabel() {
         if (isQuinzenal()) {
             return "Quinzenal";
+        }
+        if (isMensal()) {
+            return "Mensal";
         }
         if (isFixoSemanal()) {
             return "Fixo";

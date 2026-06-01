@@ -224,6 +224,9 @@ public class RelatorioProfissionalService {
         if (agendamento.isQuinzenal()) {
             return "Quinzenal";
         }
+        if (agendamento.isMensal()) {
+            return "Mensal";
+        }
         if (agendamento.isFixoSemanal()) {
             return "Fixo semanal";
         }

@@ -788,6 +788,12 @@
             color: #1d4ed8;
         }
 
+        .meus-agendamentos-data-badge--vencido {
+            border-color: #dc2626;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         .meus-agendamentos-data-badge--selectable.meus-agendamentos-data-badge--vencido {
             border-color: #dc2626;
             background: #fee2e2;
@@ -824,6 +830,39 @@
             align-items: center;
         }
 
+        .remarcar-mensal-panel {
+            margin-top: 8px;
+        }
+
+        .remarcar-mensal-panel--aberto {
+            display: block !important;
+        }
+
+        .remarcar-mensal-panel__inner {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #ecfeff;
+            border: 2px solid #12c6bd;
+            margin-top: 4px;
+        }
+
+        .meus-agendamentos-mensal-linha--remarcando {
+            border-color: #12c6bd;
+            box-shadow: 0 0 0 2px rgba(18, 198, 189, 0.25);
+            background: #f0fdfa;
+        }
+
+        .remarcar-mensal-tabs .nav-link {
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+        }
+
+        .remarcar-mensal-tabs .nav-link.active {
+            color: #0f766e;
+            border-color: #cbd5e1 #cbd5e1 #f8fafc;
+        }
+
         .meus-agendamentos-avulso-linha {
             display: flex;
             flex-wrap: wrap;
@@ -847,6 +886,11 @@
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
+        }
+
+        #novo-agendamento.agendamento-form-destaque {
+            box-shadow: 0 0 0 3px rgba(18, 198, 189, 0.45);
+            transition: box-shadow 0.3s ease;
         }
 
         .slot-card--aguardando-pagamento {
@@ -907,6 +951,29 @@
         #valorLiquidoProfissional {
             color: var(--afetto-teal-dark);
             font-weight: 600;
+        }
+
+        .valores-consulta-referencia {
+            margin-top: 0.85rem;
+            padding-top: 0.85rem;
+            border-top: 1px dashed rgba(16, 59, 76, 0.18);
+        }
+
+        .valores-consulta-referencia .titulo {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 0.45rem;
+        }
+
+        .valores-consulta-referencia ul {
+            margin: 0;
+            padding-left: 1.1rem;
+            color: #334155;
+            font-size: 0.88rem;
+            line-height: 1.55;
         }
 
         .top-actions {
@@ -1448,8 +1515,16 @@
                         <span class="badge text-bg-info">1 hora</span>
                     </div>
 
+                    <div th:if="${infoProximaMensal != null}"
+                         class="alert alert-info small py-2 mb-3"
+                         id="infoProximaMensalBanner"
+                         th:text="${infoProximaMensal}">
+                        Próxima consulta mensal...
+                    </div>
+
                     <form id="formNovoAgendamento" th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                        <input type="hidden" th:field="*{continuacaoMensal}" id="continuacaoMensalAgenda">
                         <div class="col-12">
                             <label class="form-label">Profissional</label>
                             <div th:if="${isAdmin or isDonaClinica}">
@@ -1507,8 +1582,11 @@
                                 <option value="AVULSO">Avulso</option>
                                 <option value="SEMANAL">Fixo semanal</option>
                                 <option value="QUINZENAL">Quinzenal</option>
+                                <option value="MENSAL">Mensal</option>
                             </select>
-                            <div class="form-text">Fixo semanal renova com 12 datas; quinzenal com 6. Ao passar ou cancelar um dia, entra o próximo.</div>
+                            <div class="form-text mt-1 d-none" id="recorrenciaHintMensalAgenda">
+                                Mensal: só esta consulta (ex.: 08/06). No mês seguinte, marque de novo quando o cliente voltar — pode ser outro dia e outro horário.
+                            </div>
                             <div class="form-text mt-1" id="pagamentoRecorrenciaHintSemanal"
                                  th:unless="${isDonaClinica}"
                                  th:if="${periodicidadePagamento != null and periodicidadePagamento.name() == 'SEMANAL'}">
@@ -1520,10 +1598,6 @@
                                 Pagamento mensal: agenda liberada no mês; do dia 01 ao 15 paga o mês anterior.
                                 Ao realocar, a fatura continua no mês em que você agendou (ex.: marcou em 29/06
                                 e realocou para 07/07 — continua na fatura de junho).
-                            </div>
-                            <div class="form-text mt-1" id="pagamentoRecorrenciaHint"
-                                 th:unless="${isDonaClinica or (periodicidadePagamento != null and (periodicidadePagamento.name() == 'SEMANAL' or periodicidadePagamento.name() == 'MENSAL'))}">
-                                Pagamento da taxa da clínica: 1 dia antes da consulta (1ª data da série paga na hora).
                             </div>
                         </div>
 
@@ -1571,12 +1645,16 @@
                                 <strong>Líquido do profissional:</strong>
                                 <span id="valorLiquidoProfissional">—</span>
                             </p>
-                            <p class="form-text mt-2 mb-0" id="valoresConsultaHint">
-                                Sala 4 = R$ 25;<br>
-                                fixo semanal = R$ 32;<br>
-                                avulso/quinzenal = R$ 35.<br>
-                                indicacao = 30% do valor do agendamento
-                            </p>
+                            <div class="valores-consulta-referencia" id="valoresConsultaHint">
+                                <p class="titulo mb-0">Taxas da clínica</p>
+                                <ul>
+                                    <li><strong>Avulso:</strong> R$ 35</li>
+                                    <li><strong>Semanal:</strong> R$ 32</li>
+                                    <li><strong>Quinzenal:</strong> R$ 35</li>
+                                    <li><strong>Mensal:</strong> R$ 35 (1 consulta; remarcar no mês seguinte)</li>
+                                    <li><strong>Indicação:</strong> 30% do valor da consulta</li>
+                                </ul>
+                            </div>
                         </div>
 
                         <div class="col-12 d-grid">
@@ -1618,14 +1696,14 @@
                         Meus agendamentos
                         <span class="badge rounded-pill text-bg-success">Layout caderno</span>
                     </h2>
-                    <p class="small text-muted mb-3">Somente os agendamentos do usuário logado. Fixo mostra 12 datas; quinzenal mostra 6.</p>
+                    <p class="small text-muted mb-3">Somente os agendamentos do usuário logado. Fixo: 12 datas; quinzenal: 6. Mensal: 1 consulta por vez — marque a próxima no mês seguinte.</p>
 
                         <details class="agenda-section">
                             <summary class="agenda-toggle">
                                 <span>Avulso</span>
                                 <span class="agenda-count" th:text="${totalAgendamentosAvulsos}">0</span>
                             </summary>
-                            <div th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${agendamentosAvulsos})}"></div>
+                            <div th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${agendamentosAvulsos}, vazioRotulo=null)}"></div>
                         </details>
 
                         <details class="agenda-section">
@@ -1642,6 +1720,14 @@
                                 <span class="agenda-count" th:text="${totalQuinzenaisResumo}">0</span>
                             </summary>
                             <div th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${seriesQuinzenaisResumo}, radioPrefix='data-serie-')}"></div>
+                        </details>
+
+                        <details class="agenda-section" id="mensal-agendamentos-section">
+                            <summary class="agenda-toggle">
+                                <span>Mensal</span>
+                                <span class="agenda-count" th:text="${totalMensaisResumo}">0</span>
+                            </summary>
+                            <div th:replace="~{fragments/caderno-agendamentos :: mensal-lista(linhasMensais=${linhasMensaisResumo}, salas=${salas}, horariosDisponiveis=${horariosDisponiveis})}"></div>
                         </details>
                 </div>
             </div>
@@ -1760,6 +1846,7 @@
                                             <span th:if="${pagamentoService.exibirSalaConfirmadaNaGrade(item, usuarioLogado)}"
                                                   class="badge rounded-pill text-bg-success slot-status-pill">Sala confirmada</span>
                                             <span th:if="${item.fixo == true and !item.reservaPendenteNaGrade}" class="fixed-badge slot-status-pill" th:text="${item.recorrenciaLabel}">Fixo</span>
+                                            <span th:if="${item.mensal}" class="fixed-badge slot-status-pill">Mensal</span>
                                             <span th:if="${item.indicacaoDona == true and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}"
                                                   class="slot-indicacao-pill slot-status-pill">Ind. 30%</span>
                                             <span th:if="${item.statusPagamento != null and pagamentoService.bloqueadoPorPagamento(item)}"
@@ -2113,6 +2200,9 @@
     });
     var mensagemErroAgendamento = /*[[${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio' or erroContexto == 'uso-banco') ? erro : null}]]*/ null;
     var contextoErroAgendamento = /*[[${erroContexto}]]*/ null;
+    var focarNovoAgendamento = /*[[${focarNovoAgendamento}]]*/ false;
+    var abrirRemarcarMensal = /*[[${abrirRemarcarMensal}]]*/ null;
+    var secaoMensal = /*[[${secaoMensal}]]*/ false;
     var erroSenhaModal = /*[[${erroSenha != null ? erroSenha : (erro != null and erroContexto == 'senha' ? erro : null)}]]*/ null;
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
     var podeEscolherProfissionalAgendamento = /*[[${isAdmin or isDonaClinica}]]*/ false;
@@ -2130,6 +2220,7 @@
             var hintPagamento = document.getElementById('pagamentoRecorrenciaHint');
             var salaSelect = formAgendamento ? formAgendamento.querySelector('[name="salaId"]') : null;
             var recorrenciaSelect = formAgendamento ? formAgendamento.querySelector('[name="recorrencia"]') : null;
+            var hintRecorrenciaMensalAgenda = document.getElementById('recorrenciaHintMensalAgenda');
             var indicacaoInput = document.getElementById('indicacaoDona');
             var recebeInput = document.getElementById('valorProfissionalRecebe');
             var clinicaInput = document.getElementById('valorClinicaCobra');
@@ -2321,11 +2412,23 @@
                 });
             }
 
+            function atualizarHintRecorrenciaAgenda() {
+                if (hintRecorrenciaMensalAgenda && recorrenciaSelect) {
+                    hintRecorrenciaMensalAgenda.classList.toggle('d-none', recorrenciaSelect.value !== 'MENSAL');
+                }
+            }
+
             if (recorrenciaSelect) {
                 recorrenciaSelect.addEventListener('change', function () {
                     clinicaManual = false;
                     atualizarClinicaAutomatica();
+                    atualizarHintRecorrenciaAgenda();
+                    var contMensal = document.getElementById('continuacaoMensalAgenda');
+                    if (contMensal) {
+                        contMensal.value = 'false';
+                    }
                 });
+                atualizarHintRecorrenciaAgenda();
             }
 
             if (indicacaoInput) {
@@ -2444,6 +2547,122 @@
             abrirAvisoErroAgendamento();
         }
 
+        if (focarNovoAgendamento) {
+            var cardNovoAgendamento = document.getElementById('novo-agendamento');
+            if (cardNovoAgendamento) {
+                cardNovoAgendamento.classList.add('agendamento-form-destaque');
+                setTimeout(function () {
+                    cardNovoAgendamento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
+            }
+        }
+
+        function abrirPainelRemarcarMensal(agendamentoId) {
+            var panel = document.getElementById('remarcar-mensal-panel-' + agendamentoId);
+            if (!panel) {
+                return;
+            }
+            document.querySelectorAll('.remarcar-mensal-panel').forEach(function (outro) {
+                if (outro !== panel) {
+                    outro.classList.remove('remarcar-mensal-panel--aberto');
+                    outro.classList.add('d-none');
+                }
+            });
+            var mensalSection = document.getElementById('mensal-agendamentos-section');
+            if (mensalSection && !mensalSection.open) {
+                mensalSection.open = true;
+            }
+            var ancestor = panel.parentElement;
+            while (ancestor) {
+                if (ancestor.tagName === 'DETAILS' && !ancestor.open) {
+                    ancestor.open = true;
+                }
+                ancestor = ancestor.parentElement;
+            }
+            panel.classList.remove('d-none');
+            panel.classList.add('remarcar-mensal-panel--aberto');
+            destacarCardRemarcarMensal(panel);
+            setTimeout(function () {
+                var meus = document.getElementById('meus-agendamentos');
+                if (meus) {
+                    meus.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 150);
+        }
+
+        function destacarCardRemarcarMensal(panel) {
+            document.querySelectorAll('.meus-agendamentos-mensal-linha--remarcando').forEach(function (card) {
+                card.classList.remove('meus-agendamentos-mensal-linha--remarcando');
+            });
+            var card = panel.closest('.meus-agendamentos-mensal-linha');
+            if (card) {
+                card.classList.add('meus-agendamentos-mensal-linha--remarcando');
+            }
+        }
+
+        if (secaoMensal) {
+            var mensalSectionAuto = document.getElementById('mensal-agendamentos-section');
+            if (mensalSectionAuto) {
+                mensalSectionAuto.open = true;
+            }
+            var meusAgendamentos = document.getElementById('meus-agendamentos');
+            if (meusAgendamentos) {
+                setTimeout(function () {
+                    meusAgendamentos.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
+            }
+        }
+
+        if (abrirRemarcarMensal) {
+            abrirPainelRemarcarMensal(abrirRemarcarMensal);
+        }
+
+        document.querySelectorAll('.btn-abrir-remarcar-mensal').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var panelId = btn.getAttribute('data-panel-id');
+                if (!panelId) {
+                    return;
+                }
+                var panel = document.getElementById(panelId);
+                if (!panel) {
+                    return;
+                }
+                var aberto = panel.classList.contains('remarcar-mensal-panel--aberto');
+                document.querySelectorAll('.remarcar-mensal-panel').forEach(function (outro) {
+                    outro.classList.remove('remarcar-mensal-panel--aberto');
+                    outro.classList.add('d-none');
+                });
+                document.querySelectorAll('.meus-agendamentos-mensal-linha--remarcando').forEach(function (card) {
+                    card.classList.remove('meus-agendamentos-mensal-linha--remarcando');
+                });
+                if (!aberto) {
+                    panel.classList.remove('d-none');
+                    panel.classList.add('remarcar-mensal-panel--aberto');
+                    destacarCardRemarcarMensal(panel);
+                    var meus = document.getElementById('meus-agendamentos');
+                    if (meus) {
+                        meus.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        });
+
+        document.querySelectorAll('.btn-fechar-remarcar-mensal').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var panel = btn.closest('.remarcar-mensal-panel');
+                if (panel) {
+                    panel.classList.remove('remarcar-mensal-panel--aberto');
+                    panel.classList.add('d-none');
+                }
+                var card = btn.closest('.meus-agendamentos-mensal-linha');
+                if (card) {
+                    card.classList.remove('meus-agendamentos-mensal-linha--remarcando');
+                }
+            });
+        });
+
         var btnTentarSenha = document.getElementById('trocarSenhaTentarNovamente');
         if (btnTentarSenha) {
             btnTentarSenha.addEventListener('click', function () {
@@ -2494,9 +2713,13 @@
                 encerrarSerieResumo.textContent = resumo || 'Todos os horários da série serão removidos.';
             }
             if (encerrarSerieTitulo) {
-                encerrarSerieTitulo.textContent = tipoSerie === 'QUINZENAL'
-                    ? 'Encerrar série quinzenal'
-                    : 'Encerrar série semanal';
+                if (tipoSerie === 'QUINZENAL') {
+                    encerrarSerieTitulo.textContent = 'Encerrar série quinzenal';
+                } else if (tipoSerie === 'MENSAL') {
+                    encerrarSerieTitulo.textContent = 'Encerrar série mensal';
+                } else {
+                    encerrarSerieTitulo.textContent = 'Encerrar série semanal';
+                }
             }
             bootstrap.Modal.getOrCreateInstance(encerrarSerieModalEl).show();
         }
@@ -2740,13 +2963,17 @@
                 }
             }
 
-            if (tipo === 'SEMANAL' || tipo === 'QUINZENAL') {
+            if (tipo === 'SEMANAL' || tipo === 'QUINZENAL' || tipo === 'MENSAL') {
                 encerrarContextoGrade.id = id;
                 encerrarContextoGrade.tipo = tipo;
                 encerrarContextoGrade.resumo = cliente + ' — série completa (' + sala + ')'
-                btnEncerrar.textContent = tipo === 'QUINZENAL'
-                    ? 'Encerrar série quinzenal'
-                    : 'Encerrar série fixa';
+                if (tipo === 'QUINZENAL') {
+                    btnEncerrar.textContent = 'Encerrar série quinzenal';
+                } else if (tipo === 'MENSAL') {
+                    btnEncerrar.textContent = 'Encerrar série mensal';
+                } else {
+                    btnEncerrar.textContent = 'Encerrar série fixa';
+                }
                 formEncerrar.classList.remove('d-none');
             } else {
                 encerrarContextoGrade.id = null;

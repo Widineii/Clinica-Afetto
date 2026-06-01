@@ -423,4 +423,19 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );
+
+    @Query("""
+            SELECT COUNT(a)
+            FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND (
+                UPPER(a.tipoRecorrencia) = 'MENSAL'
+                OR LOWER(a.serieFixaId) LIKE 'mensal-%'
+              )
+              AND LOWER(TRIM(a.nomeCliente)) = LOWER(TRIM(:nomeCliente))
+            """)
+    int countMensalByProfissionalIdAndNomeCliente(
+            @Param("profissionalId") Long profissionalId,
+            @Param("nomeCliente") String nomeCliente
+    );
 }

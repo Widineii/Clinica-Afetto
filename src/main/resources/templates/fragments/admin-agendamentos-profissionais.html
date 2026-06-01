@@ -4,7 +4,7 @@
 <div th:fragment="painel (resumosProfissionais, profissionaisEquipe)" class="card shell-card mt-4" id="agendamentos-profissionais">
     <div class="card-body p-3">
         <h2 class="h6 mb-2">Agendamentos por profissional</h2>
-        <p class="small text-muted mb-2">Clique no nome para ver avulso, fixo, quinzenal e valores de cada profissional.</p>
+        <p class="small text-muted mb-2">Clique no nome para ver avulso, fixo, quinzenal, mensal e valores de cada profissional.</p>
 
         <p th:if="${#lists.isEmpty(resumosProfissionais) and #lists.isEmpty(profissionaisEquipe)}"
            class="text-muted py-2 px-1 small mb-0">
@@ -32,7 +32,7 @@
                                 <span class="agenda-count" th:text="${resumo.totalAvulsos}">0</span>
                             </summary>
                             <div class="accordion-profissionais__filho-body"
-                                 th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${resumo.agendamentosAvulsos})}"></div>
+                                 th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${resumo.agendamentosAvulsos}, vazioRotulo=null)}"></div>
                         </details>
 
                         <details class="accordion-profissionais__filho">
@@ -51,6 +51,15 @@
                             </summary>
                             <div class="accordion-profissionais__filho-body"
                                  th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${resumo.seriesQuinzenais}, radioPrefix=|admin-${resumo.profissionalId}-quinz-|)}"></div>
+                        </details>
+
+                        <details class="accordion-profissionais__filho">
+                            <summary class="accordion-profissionais__filho-trigger">
+                                <span>Mensal</span>
+                                <span class="agenda-count" th:text="${resumo.totalMensais}">0</span>
+                            </summary>
+                            <div class="accordion-profissionais__filho-body"
+                                 th:replace="~{fragments/caderno-agendamentos :: mensal-lista(linhasMensais=${resumo.linhasMensais}, salas=${salas}, horariosDisponiveis=${horariosDisponiveis})}"></div>
                         </details>
                     </div>
                 </div>

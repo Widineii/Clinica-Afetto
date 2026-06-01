@@ -8,8 +8,10 @@
           th:text="${agendamento.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</span>
 </div>
 
-<div th:fragment="avulso-lista (agendamentos)">
-    <p th:if="${#lists.isEmpty(agendamentos)}" class="text-muted small mb-0 py-1">Nenhum agendamento avulso.</p>
+<div th:fragment="avulso-lista (agendamentos, vazioRotulo)">
+    <p th:if="${#lists.isEmpty(agendamentos)}"
+       class="text-muted small mb-0 py-1"
+       th:text="${vazioRotulo != null ? vazioRotulo : 'Nenhum agendamento avulso.'}">Nenhum agendamento avulso.</p>
     <div th:each="agendamento : ${agendamentos}" class="meus-agendamentos-avulso-linha">
         <div>
             <span class="meus-agendamentos-avulso-linha__texto"
@@ -26,6 +28,127 @@
                     Cancelar
                 </button>
             </form>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="mensal-lista (linhasMensais, salas, horariosDisponiveis)">
+    <p th:if="${#lists.isEmpty(linhasMensais)}"
+       class="text-muted small mb-0 py-1">Nenhum agendamento mensal.</p>
+    <div th:each="linha : ${linhasMensais}"
+         th:with="agendamento=${linha.agendamentoReferencia}, dataSugerida=${agendamentoService.obterDataSugeridaProximaConsultaMensal(agendamento)}, horarioSugerido=${agendamentoService.obterHorarioSugeridoProximaConsultaMensal(agendamento)}"
+         class="meus-agendamentos-serie-linha meus-agendamentos-mensal-linha">
+        <div class="meus-agendamentos-serie-linha__titulo"
+             th:text="${linha.rotuloCabecalho}">
+            Cliente - Sala - 08:00
+        </div>
+        <p th:if="${linha.valoresConsultaResumo != null}"
+           class="agendamento-valores small text-muted mb-2"
+           th:text="${linha.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
+        <div class="meus-agendamentos-serie-linha__datas mb-2">
+            <span th:each="ocorrencia : ${linha.datasHistorico}"
+                  class="meus-agendamentos-data-badge me-2 mb-1"
+                  th:classappend="${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}">
+                <span th:text="${ocorrencia.dataRotulo}">04/06</span>
+                <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}"
+                      class="ms-1 text-warning"
+                      title="Pagar">$</span>
+            </span>
+        </div>
+        <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
+        <div class="meus-agendamentos-serie-linha__acoes mt-2"
+             th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado) or agendamentoService.podeCancelarSerieMensal(agendamento, usuarioLogado)}">
+            <button th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado)}"
+                    type="button"
+                    class="btn btn-sm btn-outline-primary me-2 btn-abrir-remarcar-mensal"
+                    th:attr="data-panel-id=|remarcar-mensal-panel-${linha.agendamentoReferenciaId}|">
+                Marcar outra consulta
+            </button>
+            <form th:if="${agendamentoService.podeCancelarSerieMensal(agendamento, usuarioLogado)}"
+                  th:action="@{/agendamentos/{id}/cancelar-serie-mensal(id=${agendamento.id})}"
+                  method="post"
+                  class="d-inline">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit"
+                        class="btn btn-sm btn-outline-danger"
+                        th:attr="data-cliente=${agendamento.nomeCliente}"
+                        onclick="return confirm('Cancelar todas as consultas mensais futuras deste cliente?');">
+                    Cancelar série
+                </button>
+            </form>
+        </div>
+        <div th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado)}"
+             class="remarcar-mensal-panel d-none w-100"
+             th:id="|remarcar-mensal-panel-${linha.agendamentoReferenciaId}|"
+             th:classappend="${abrirRemarcarMensal != null and abrirRemarcarMensal == linha.agendamentoReferenciaId} ? ' remarcar-mensal-panel--aberto' : ''">
+                <div class="remarcar-mensal-panel__inner">
+                    <ul class="nav nav-tabs remarcar-mensal-tabs mb-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <span class="nav-link active" role="tab" aria-selected="true">Remarcar</span>
+                        </li>
+                    </ul>
+                    <p class="small text-muted mb-3">
+                        Próxima consulta mensal para
+                        <strong th:text="${agendamento.nomeCliente}">Cliente</strong>.
+                        Data sugerida:
+                        <strong th:text="${#temporals.format(dataSugerida, 'dd/MM/yyyy')}">05/07/2026</strong>
+                        — a nova data aparecerá ao lado das anteriores neste card (até 6; na 7ª, reinicia).
+                    </p>
+                    <form th:action="@{/agendamentos}" method="post" class="row g-2 align-items-end">
+                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                        <input type="hidden" name="agendamentoOrigemId" th:value="${linha.agendamentoReferenciaId}">
+                        <input type="hidden" name="profissionalId" th:value="${agendamento.profissional?.id}">
+                        <input type="hidden" name="nomeCliente" th:value="${agendamento.nomeCliente}">
+                        <input type="hidden" name="recorrencia" value="MENSAL">
+                        <input type="hidden" name="fixo" value="false">
+                        <input type="hidden" name="continuacaoMensal" value="true">
+                        <input type="hidden" name="indicacaoDona" value="false">
+                        <input th:if="${agendamento.possuiValoresConsulta()}"
+                               type="hidden"
+                               name="valorProfissionalRecebe"
+                               th:value="${agendamento.valorProfissionalRecebe}">
+                        <input th:if="${agendamento.possuiValoresConsulta()}"
+                               type="hidden"
+                               name="valorClinicaCobra"
+                               th:value="${agendamento.valorClinicaCobra}">
+                        <div class="col-12 col-sm-4">
+                            <label class="form-label small mb-1">Sala</label>
+                            <select name="salaId" class="form-select form-select-sm" required>
+                                <option value="">Selecione</option>
+                                <option th:each="sala : ${salas}"
+                                        th:value="${sala.id}"
+                                        th:text="${sala.nome}"
+                                        th:selected="${agendamento.sala != null and agendamento.sala.id == sala.id}">Sala</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <label class="form-label small mb-1">Data</label>
+                            <input type="date"
+                                   name="dataAtendimento"
+                                   class="form-control form-control-sm"
+                                   th:value="${#temporals.format(dataSugerida, 'yyyy-MM-dd')}"
+                                   required>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <label class="form-label small mb-1">Horário</label>
+                            <select name="horarioAtendimento" class="form-select form-select-sm" required>
+                                <option value="">Selecione</option>
+                                <option th:each="horario : ${horariosDisponiveis}"
+                                        th:value="${horario}"
+                                        th:text="${#temporals.format(horario, 'HH:mm')}"
+                                        th:selected="${horario == horarioSugerido}">07:00</option>
+                            </select>
+                        </div>
+                        <div class="col-12 d-flex flex-wrap gap-2 pt-1">
+                            <button type="submit" class="btn btn-sm btn-primary">Confirmar remarcação</button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary btn-fechar-remarcar-mensal">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
         </div>
     </div>
 </div>

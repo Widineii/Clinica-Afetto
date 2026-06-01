@@ -56,6 +56,8 @@ class FinanceiroReceitaPixServiceTest {
         when(repository.findPagosPorDataPagamentoNoPeriodo(any(), any()))
                 .thenReturn(List.of(pago1, pago2));
         when(repository.findTodosPagosComDataPagamento()).thenReturn(List.of(pago1, pago2));
+        when(repository.findPorDataConsultaEStatusPagamentoNoPeriodo(any(), any(), any()))
+                .thenReturn(List.of());
         when(infinitePayService.resolverValorTaxaClinica(pago1)).thenReturn(new BigDecimal("35.00"));
         when(infinitePayService.resolverValorTaxaClinica(pago2)).thenReturn(new BigDecimal("32.00"));
 
@@ -64,19 +66,42 @@ class FinanceiroReceitaPixServiceTest {
         assertEquals(2, resumo.getQuantidadePagamentos());
         assertEquals(0, new BigDecimal("67.00").compareTo(resumo.getTotalRecebido()));
         assertEquals(true, resumo.getTotalRecebidoFormatado().contains("67"));
+        assertEquals(0, resumo.getQuantidadePendentes());
         assertEquals(1, resumo.getProfissionaisPainel().size());
         assertEquals(2, resumo.getProfissionaisPainel().get(0).getAtendimentosMesAtual());
+    }
+
+    @Test
+    void deveSomarTaxasPendentesPorDataDaConsulta() {
+        Agendamento pendente = agendamentoPendente(
+                LocalDateTime.of(2026, 6, 12, 10, 0),
+                PagamentoStatus.AGUARDANDO_PAGAMENTO
+        );
+        when(repository.findPagosPorDataPagamentoNoPeriodo(any(), any())).thenReturn(List.of());
+        when(repository.findTodosPagosComDataPagamento()).thenReturn(List.of());
+        when(repository.findPorDataConsultaEStatusPagamentoNoPeriodo(any(), any(), any()))
+                .thenReturn(List.of(pendente));
+        when(infinitePayService.resolverValorTaxaClinica(pendente)).thenReturn(new BigDecimal("35.00"));
+
+        ReceitaPixMesView resumo = service.montarResumoMes(YearMonth.of(2026, 6));
+
+        assertEquals(1, resumo.getQuantidadePendentes());
+        assertEquals(0, new BigDecimal("35.00").compareTo(resumo.getTotalAReceber()));
+        assertEquals("Aguardando pagamento", resumo.getPendentes().get(0).getStatusPagamentoRotulo());
     }
 
     @Test
     void mesSemPagamentosDeveRetornarZero() {
         when(repository.findPagosPorDataPagamentoNoPeriodo(any(), any())).thenReturn(List.of());
         when(repository.findTodosPagosComDataPagamento()).thenReturn(List.of());
+        when(repository.findPorDataConsultaEStatusPagamentoNoPeriodo(any(), any(), any()))
+                .thenReturn(List.of());
 
         ReceitaPixMesView resumo = service.montarResumoMes(YearMonth.of(2026, 6));
 
         assertEquals(0, resumo.getQuantidadePagamentos());
         assertEquals(0, BigDecimal.ZERO.compareTo(resumo.getTotalRecebido()));
+        assertEquals(0, resumo.getQuantidadePendentes());
         assertTrue(resumo.getProfissionaisPainel().isEmpty());
     }
 
@@ -87,6 +112,8 @@ class FinanceiroReceitaPixServiceTest {
         Agendamento abril = agendamentoPago(LocalDateTime.of(2026, 4, 15, 9, 0));
         when(repository.findPagosPorDataPagamentoNoPeriodo(any(), any())).thenReturn(List.of(maio1, maio2));
         when(repository.findTodosPagosComDataPagamento()).thenReturn(List.of(maio1, maio2, abril));
+        when(repository.findPorDataConsultaEStatusPagamentoNoPeriodo(any(), any(), any()))
+                .thenReturn(List.of());
         when(infinitePayService.resolverValorTaxaClinica(maio1)).thenReturn(new BigDecimal("35.00"));
         when(infinitePayService.resolverValorTaxaClinica(maio2)).thenReturn(new BigDecimal("35.00"));
         when(infinitePayService.resolverValorTaxaClinica(abril)).thenReturn(new BigDecimal("50.00"));
@@ -117,6 +144,25 @@ class FinanceiroReceitaPixServiceTest {
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
         agendamento.setDataPagamento(dataPagamento);
         agendamento.setDataHoraInicio(dataPagamento.plusHours(5));
+        agendamento.setValorClinicaCobra(new BigDecimal("35.00"));
+        return agendamento;
+    }
+
+    private Agendamento agendamentoPendente(LocalDateTime dataConsulta, PagamentoStatus status) {
+        Usuario profissional = new Usuario();
+        profissional.setNome("Julia");
+        profissional.setDonaClinica(false);
+
+        Sala sala = new Sala();
+        sala.setNome("Sala 1");
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(2L);
+        agendamento.setProfissional(profissional);
+        agendamento.setSala(sala);
+        agendamento.setNomeCliente("Cliente pendente");
+        agendamento.setStatusPagamento(status);
+        agendamento.setDataHoraInicio(dataConsulta);
         agendamento.setValorClinicaCobra(new BigDecimal("35.00"));
         return agendamento;
     }

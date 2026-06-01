@@ -53,6 +53,9 @@ public class SerieAgendamentoLinha {
         if ("QUINZENAL".equalsIgnoreCase(tipoRecorrencia)) {
             return base + " - Quinzenal (" + diaSemanaRotulo + ")";
         }
+        if ("MENSAL".equalsIgnoreCase(tipoRecorrencia)) {
+            return base + " - Mensal (" + diaSemanaRotulo + ")";
+        }
         return base + " - " + diaSemanaRotulo;
     }
 }

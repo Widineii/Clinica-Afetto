@@ -77,6 +77,9 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-test-user.reset-password-on-startup:true}")
     private boolean testUserResetPasswordOnStartup;
 
+    @Value("${app.seed-test-user.exigir-troca-senha:#{null}}")
+    private Boolean testUserExigirTrocaSenha;
+
     public StartupDataInitializer(
             SalaRepository salaRepository,
             UsuarioRepository usuarioRepository,
@@ -230,11 +233,16 @@ public class StartupDataInitializer implements CommandLineRunner {
         if (novo || testUserResetPasswordOnStartup) {
             usuario.setSenha(passwordEncoder.encode(testUserPassword.trim()));
         }
-        if (novo && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
-            usuario.setDeveTrocarSenha(true);
-        }
+        usuario.setDeveTrocarSenha(deveExigirTrocaSenhaPerfilTeste(novo));
 
         usuarioRepository.save(usuario);
+    }
+
+    private boolean deveExigirTrocaSenhaPerfilTeste(boolean novo) {
+        if (testUserExigirTrocaSenha != null) {
+            return novo && testUserExigirTrocaSenha;
+        }
+        return novo && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso();
     }
 
     private void sincronizarUsuariosPadrao() {

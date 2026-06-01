@@ -42,9 +42,10 @@ class ValorConsultaServiceTest {
     }
 
     @Test
-    void avulsoEQuinzenalDevemCobrarTrintaECinco() {
+    void avulsoQuinzenalEMensalDevemCobrarTrintaECinco() {
         assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "AVULSO"));
         assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "QUINZENAL"));
+        assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "MENSAL"));
     }
 
     @Test
@@ -92,5 +93,19 @@ class ValorConsultaServiceTest {
     void isSala4ReconheceNomeDaSala() {
         assertTrue(service.isSala4(sala4));
         assertFalse(service.isSala4(sala1));
+    }
+
+    @Test
+    void demaisConsultasDaSerieNaoDevemUsarIndicacao() {
+        AgendamentoForm form = new AgendamentoForm();
+        form.setValorProfissionalRecebe(new BigDecimal("200.00"));
+        form.setIndicacaoDona(true);
+
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+        service.aplicarValores(agendamento, form, sala1, "SEMANAL", false);
+
+        assertFalse(agendamento.getIndicacaoDona());
+        assertEquals(new BigDecimal("32.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("168.00"), agendamento.getValorLiquidoProfissional());
     }
 }
