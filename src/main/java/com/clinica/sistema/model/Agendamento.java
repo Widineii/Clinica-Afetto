@@ -90,6 +90,12 @@ public class Agendamento {
     @Column(name = "liberado_em")
     private LocalDateTime liberadoEm;
 
+    @Column(name = "confirmacao_dinheiro_limite_em")
+    private LocalDateTime confirmacaoDinheiroLimiteEm;
+
+    @Column(name = "indicacao_aprovada_em")
+    private LocalDateTime indicacaoAprovadaEm;
+
     /** Semana de cobranca (modo semanal): nao muda ao realocar o atendimento. */
     @Column(name = "data_referencia_semana_pagamento")
     private LocalDate dataReferenciaSemanaPagamento;
@@ -190,14 +196,44 @@ public class Agendamento {
     }
 
     @Transient
+    public boolean isIndicacaoDona() {
+        return Boolean.TRUE.equals(indicacaoDona);
+    }
+
+    @Transient
+    public boolean isAguardandoAprovacaoIndicacao() {
+        return statusPagamento == PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO;
+    }
+
+    @Transient
+    public boolean isIndicacaoAprovadaPelaDona() {
+        return indicacaoAprovadaEm != null;
+    }
+
+    @Transient
     public boolean isPagamentoPendente() {
         return statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO
-                || statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO;
+                || statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO
+                || statusPagamento == PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO
+                || statusPagamento == PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO;
     }
 
     @Transient
     public boolean isEsperandoConfirmacaoPagamento() {
         return statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO;
+    }
+
+    @Transient
+    public boolean isAguardandoConfirmacaoDinheiro() {
+        return statusPagamento == PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO;
+    }
+
+    @Transient
+    public boolean confirmacaoDinheiroVencida() {
+        if (!isAguardandoConfirmacaoDinheiro() || confirmacaoDinheiroLimiteEm == null) {
+            return false;
+        }
+        return LocalDateTime.now().isAfter(confirmacaoDinheiroLimiteEm);
     }
 
     @Transient
@@ -213,6 +249,8 @@ public class Agendamento {
     @Transient
     public boolean isReservaPendenteNaGrade() {
         return statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO
+                || statusPagamento == PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO
+                || statusPagamento == PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO
                 || statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO
                 || statusPagamento == PagamentoStatus.PAGAMENTO_FUTURO
                 || statusPagamento == PagamentoStatus.LIBERADO_FALTA_PAGAMENTO;
@@ -229,8 +267,13 @@ public class Agendamento {
         if (statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO) {
             return "Esperando pagamento";
         }
+        if (statusPagamento == PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO) {
+            return "Indicação — aguard. aprovação";
+        }
         if (statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO) {
-            return "Aguardando pagamento";
+            return isIndicacaoDona() && isIndicacaoAprovadaPelaDona()
+                    ? "Indicação — aguard. PIX"
+                    : "Aguardando pagamento";
         }
         if (statusPagamento == PagamentoStatus.PAGAMENTO_FUTURO) {
             return "Pagamento em " + formatarDiaPagamentoFuturo();

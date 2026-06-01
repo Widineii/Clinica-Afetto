@@ -17,12 +17,37 @@ public class ValorConsultaService {
     public static final BigDecimal INDICACAO_PERCENTUAL = new BigDecimal("0.30");
 
     public void aplicarValores(Agendamento agendamento, AgendamentoForm form, Sala sala, String recorrencia) {
+        aplicarValores(agendamento, form, sala, recorrencia, true);
+    }
+
+    public void aplicarValores(
+            Agendamento agendamento,
+            AgendamentoForm form,
+            Sala sala,
+            String recorrencia,
+            boolean permitirIndicacao
+    ) {
         BigDecimal valorRecebe = normalizarValor(form.getValorProfissionalRecebe(), "Informe quanto o cliente paga ao profissional.");
-        BigDecimal valorClinica = resolverValorClinicaParaForm(form, sala, recorrencia, valorRecebe);
+        boolean indicacao = permitirIndicacao && form.isIndicacaoDona();
+        BigDecimal valorClinica = indicacao
+                ? calcularTarifaClinicaIndicacao(valorRecebe)
+                : resolverValorClinicaSemIndicacao(form, sala, recorrencia, valorRecebe);
         agendamento.setValorProfissionalRecebe(valorRecebe);
         agendamento.setValorClinicaCobra(valorClinica);
         agendamento.setValorLiquidoProfissional(calcularLiquido(valorRecebe, valorClinica));
-        agendamento.setIndicacaoDona(form.isIndicacaoDona());
+        agendamento.setIndicacaoDona(indicacao);
+    }
+
+    private BigDecimal resolverValorClinicaSemIndicacao(
+            AgendamentoForm form,
+            Sala sala,
+            String recorrencia,
+            BigDecimal valorRecebe
+    ) {
+        if (form.getValorClinicaCobra() != null && form.getValorClinicaCobra().signum() > 0) {
+            return normalizarValor(form.getValorClinicaCobra(), "Informe quanto a clinica cobra nesta sessao.");
+        }
+        return calcularTarifaClinicaPadrao(sala, recorrencia);
     }
 
     public BigDecimal calcularTarifaClinicaPadrao(Sala sala, String recorrencia) {
@@ -81,5 +106,22 @@ public class ValorConsultaService {
         destino.setValorClinicaCobra(origem.getValorClinicaCobra());
         destino.setValorLiquidoProfissional(origem.getValorLiquidoProfissional());
         destino.setIndicacaoDona(origem.getIndicacaoDona());
+    }
+
+    /** Demais datas de uma serie semanal/quinzenal: taxa padrao da clinica, sem indicacao. */
+    public void copiarValoresOcorrenciaSerie(
+            Agendamento destino,
+            Agendamento origem,
+            Sala sala,
+            String recorrencia
+    ) {
+        BigDecimal valorRecebe = origem.getValorProfissionalRecebe();
+        destino.setValorProfissionalRecebe(valorRecebe);
+        destino.setIndicacaoDona(false);
+        BigDecimal valorClinica = calcularTarifaClinicaPadrao(sala, recorrencia);
+        destino.setValorClinicaCobra(valorClinica);
+        if (valorRecebe != null) {
+            destino.setValorLiquidoProfissional(calcularLiquido(valorRecebe, valorClinica));
+        }
     }
 }

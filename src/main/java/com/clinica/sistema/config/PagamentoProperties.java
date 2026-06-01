@@ -18,6 +18,8 @@ public class PagamentoProperties {
      * a confirmacao em producao usa a API payment_check da InfinitePay.
      */
     private String webhookSecret = "";
+    /** Prazo para pagar PIX apos indicao aprovada (dias apos o atendimento, inclusive). */
+    private int indicacaoDiasLimitePosAtendimento = 2;
 
     public int getPrazoConfirmacaoMinutos() {
         return prazoConfirmacaoMinutos;
@@ -49,5 +51,13 @@ public class PagamentoProperties {
 
     public void setWebhookSecret(String webhookSecret) {
         this.webhookSecret = webhookSecret;
+    }
+
+    public int getIndicacaoDiasLimitePosAtendimento() {
+        return indicacaoDiasLimitePosAtendimento;
+    }
+
+    public void setIndicacaoDiasLimitePosAtendimento(int indicacaoDiasLimitePosAtendimento) {
+        this.indicacaoDiasLimitePosAtendimento = indicacaoDiasLimitePosAtendimento;
     }
 }

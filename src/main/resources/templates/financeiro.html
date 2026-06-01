@@ -11,8 +11,9 @@
 
     <div th:replace="~{fragments/financeiro-hero :: hero(
         titulo='Gestao financeira',
-        subtitulo='Painel da receita PIX confirmada no mes, com graficos por sala, profissional e tipo de consulta.'
+        subtitulo='Receita PIX confirmada e taxas a receber de reservas aguardando pagamento, com graficos por sala, profissional e tipo.'
     )}"></div>
+    <p class="text-end financeiro-hint mb-2" th:if="${versaoSiteRotulo != null}" th:text="${versaoSiteRotulo}">Versao</p>
 
     <div th:if="${sucesso}" class="alert alert-success financeiro-card mb-3" th:text="${sucesso}"></div>
     <div th:if="${erro}" class="alert alert-danger financeiro-card mb-3" th:text="${erro}"></div>
@@ -52,7 +53,8 @@
                     <div class="col-md-7">
                         <p class="mb-1 fw-semibold" th:text="'Visualizando ' + ${receita.mesAnoLabel}">Visualizando Maio de 2026</p>
                         <p class="financeiro-hint mb-0">
-                            Soma das taxas da clínica com status <strong>Pago</strong>, pela data em que o PIX foi confirmado.
+                            <strong>Recebido:</strong> taxas com status <strong>Pago</strong> (data do PIX).
+                            <strong class="ms-1">A receber:</strong> reservas do mes com consulta agendada e pagamento ainda pendente (data da consulta).
                         </p>
                     </div>
                 </div>
@@ -61,11 +63,21 @@
     </div>
 
     <div class="fin-dashboard-topo">
-        <div class="fin-kpi-card">
-            <div class="fin-kpi-card__label">Receita PIX da clínica</div>
-            <div class="fin-kpi-card__valor" id="kpiTotal">R$ 0,00</div>
-            <div class="fin-kpi-card__meta">
-                <span id="kpiQuantidade">0</span> pagamento(s) confirmado(s)
+        <div class="fin-kpi-col">
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-card__label">Receita PIX da clínica</div>
+                <div class="fin-kpi-card__valor" id="kpiTotal" th:text="${receita.totalRecebidoFormatado}">R$ 0,00</div>
+                <div class="fin-kpi-card__meta">
+                    <span id="kpiQuantidade" th:text="${receita.quantidadePagamentos}">0</span> pagamento(s) confirmado(s)
+                </div>
+            </div>
+            <div class="fin-kpi-card fin-kpi-card--pendente">
+                <div class="fin-kpi-card__label" id="kpiPendentesLabel">Taxas a receber (mes)</div>
+                <div class="fin-kpi-card__valor" id="kpiTotalAReceber" th:text="${receita.totalAReceberFormatado}">R$ 0,00</div>
+                <div class="fin-kpi-card__meta" id="kpiPendentesMeta">
+                    <span id="kpiQuantidadePendentes" th:text="${receita.quantidadePendentes}">0</span>
+                    <span id="kpiPendentesMetaTexto"> reserva(s) aguardando pagamento</span>
+                </div>
             </div>
         </div>
 
@@ -95,15 +107,21 @@
                             class="fin-prof-card"
                             th:each="prof : ${receita.profissionaisPainel}"
                             data-grupo="profissional"
-                            th:attr="data-chave=${prof.chave}"
-                            th:text="${prof.nome}">Julia</button>
+                            th:data-chave="${prof.chave}">
+                        <span class="fin-prof-card__nome" th:text="${prof.nome}">Julia</span>
+                    </button>
                 </div>
 
                 <div class="fin-prof-detalhe" id="painelProfissionalDetalhe" hidden>
                     <div class="fin-prof-detalhe__nome" id="painelProfissionalNome">Profissional</div>
-                    <div class="fin-prof-metricas">
+                    <div class="fin-prof-metricas fin-prof-metricas--com-pendente">
+                        <div class="fin-prof-metrica fin-prof-metrica--pendente fin-prof-metrica--destaque">
+                            <span class="fin-prof-metrica__rotulo">Falta pagar (mes)</span>
+                            <strong class="fin-prof-metrica__valor" id="painelFaltaPagarValor">R$ 0,00</strong>
+                            <span class="fin-prof-metrica__meta" id="painelFaltaPagarMeta">0 reserva(s) aguardando</span>
+                        </div>
                         <div class="fin-prof-metrica">
-                            <span class="fin-prof-metrica__rotulo">Mes atual</span>
+                            <span class="fin-prof-metrica__rotulo">PIX recebido no mes</span>
                             <strong class="fin-prof-metrica__valor" id="painelMesAtualValor">R$ 0,00</strong>
                             <span class="fin-prof-metrica__meta" id="painelMesAtualMeta">0 atendimentos</span>
                         </div>
@@ -151,6 +169,47 @@
     </div>
 
     <script type="application/json" id="pagamentos-json" th:utext="${receita.pagamentosGraficoJson}">[]</script>
+    <script type="application/json" id="pendentes-json" th:utext="${receita.pendentesGraficoJson}">[]</script>
+
+    <div class="financeiro-card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <span>
+                    <span class="h5 mb-0 d-block">Reservas aguardando pagamento</span>
+                    <span class="financeiro-hint" id="detalhePendentesResumo">Taxas da clínica previstas para consultas do mes ainda nao pagas.</span>
+                </span>
+                <span class="financeiro-badge-tipo financeiro-badge-tipo--mensal ms-2 fin-badge-pendente">A receber</span>
+            </div>
+
+            <div class="mt-3" id="detalhePendentes">
+                <div class="table-responsive fin-tabela-scroll">
+                    <table class="table financeiro-table align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Consulta</th>
+                            <th>Profissional</th>
+                            <th>Cliente</th>
+                            <th>Sala</th>
+                            <th>Tipo</th>
+                            <th>Status pagamento</th>
+                            <th class="text-end">Taxa clínica</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tabelaPendentes"></tbody>
+                        <tfoot>
+                        <tr>
+                            <th colspan="6" class="text-end">Total filtrado</th>
+                            <th class="text-end" id="totalTabelaPendentes" th:text="${receita.totalAReceberFormatado}">R$ 0,00</th>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <p th:if="${#lists.isEmpty(receita.pendentes)}" class="financeiro-empty mb-0 mt-3" id="pendentesVazioServidor">
+                Nenhuma reserva pendente de pagamento neste mes.
+            </p>
+        </div>
+    </div>
 
     <div class="financeiro-card">
         <div class="card-body">
@@ -241,6 +300,32 @@
         };
     });
 
+    let pendentesBase = [];
+    try {
+        pendentesBase = JSON.parse(document.getElementById('pendentes-json').textContent || '[]');
+    } catch (erroPendentes) {
+        pendentesBase = [];
+    }
+    if (!Array.isArray(pendentesBase)) {
+        pendentesBase = [];
+    }
+
+    const pendentesLinhas = pendentesBase.map(function (item) {
+        return {
+            profissional: normalizar(item.profissionalChave),
+            profissionalNome: item.profissionalNome,
+            sala: normalizar(item.salaChave),
+            salaNome: item.salaNome,
+            tipo: normalizar(item.tipoRecorrencia),
+            tipoRotulo: item.tipoRecorrenciaRotulo,
+            valor: Number(item.valorTaxa),
+            valorFormatado: item.valorTaxaFormatado,
+            statusPagamentoRotulo: item.statusPagamentoRotulo,
+            nomeCliente: item.nomeCliente,
+            consultaRotulo: item.consultaRotulo
+        };
+    });
+
     const filtros = { sala: '', profissional: '' };
     const mesAtualLabel = /*[[${receita.mesAnoLabel}]]*/ 'Mes atual';
     let painelProfissionais = [];
@@ -311,6 +396,61 @@
         });
     }
 
+    function filtrarPendentes() {
+        return pendentesLinhas.filter(function (linha) {
+            if (filtros.sala && linha.sala !== filtros.sala) {
+                return false;
+            }
+            if (filtros.profissional && linha.profissional !== filtros.profissional) {
+                return false;
+            }
+            return true;
+        });
+    }
+
+    function nomeProfissionalSelecionado() {
+        if (!filtros.profissional) {
+            return '';
+        }
+        var botaoAtivo = document.querySelector(
+            '.fin-prof-card.is-active[data-grupo="profissional"]:not([data-chave=""])'
+        );
+        if (botaoAtivo) {
+            var nomeSpan = botaoAtivo.querySelector('.fin-prof-card__nome');
+            if (nomeSpan && nomeSpan.textContent) {
+                return nomeSpan.textContent.trim();
+            }
+        }
+        var dados = painelPorChave[filtros.profissional];
+        return dados && dados.nome ? dados.nome : filtros.profissional;
+    }
+
+    function resumoPendentesParaExibicao(pendentesFiltrados) {
+        if (!filtros.profissional) {
+            return {
+                total: pendentesFiltrados.reduce(function (acc, linha) { return acc + linha.valor; }, 0),
+                qtd: pendentesFiltrados.length
+            };
+        }
+        if (filtros.sala) {
+            return {
+                total: pendentesFiltrados.reduce(function (acc, linha) { return acc + linha.valor; }, 0),
+                qtd: pendentesFiltrados.length
+            };
+        }
+        var dados = painelPorChave[filtros.profissional];
+        if (dados) {
+            return {
+                total: Number(dados.valorAReceberMes) || 0,
+                qtd: Number(dados.quantidadePendentesMes) || 0
+            };
+        }
+        return {
+            total: pendentesFiltrados.reduce(function (acc, linha) { return acc + linha.valor; }, 0),
+            qtd: pendentesFiltrados.length
+        };
+    }
+
     function agrupar(linhasFiltradas, chaveFn, rotuloFn) {
         const mapa = {};
         linhasFiltradas.forEach(function (linha) {
@@ -343,6 +483,67 @@
         }
     }
 
+    function atualizarKpiPendentes(linhasFiltradas) {
+        const resumo = resumoPendentesParaExibicao(linhasFiltradas);
+        const total = resumo.total;
+        const kpiTotal = document.getElementById('kpiTotalAReceber');
+        const kpiQuantidade = document.getElementById('kpiQuantidadePendentes');
+        const kpiMetaTexto = document.getElementById('kpiPendentesMetaTexto');
+        const kpiLabel = document.getElementById('kpiPendentesLabel');
+        const totalTabela = document.getElementById('totalTabelaPendentes');
+        const vazioServidor = document.getElementById('pendentesVazioServidor');
+        const detalhe = document.getElementById('detalhePendentes');
+        const nomeProf = nomeProfissionalSelecionado();
+        if (kpiTotal) {
+            kpiTotal.textContent = formatarMoedaCompacta(total);
+        }
+        if (kpiQuantidade) {
+            kpiQuantidade.textContent = String(resumo.qtd);
+        }
+        if (kpiLabel) {
+            kpiLabel.textContent = nomeProf ? ('Falta pagar · ' + nomeProf) : 'Taxas a receber (mes)';
+        }
+        if (kpiMetaTexto) {
+            if (nomeProf) {
+                kpiMetaTexto.textContent = resumo.qtd === 0
+                    ? ' — nenhuma reserva pendente neste mes'
+                    : ' reserva(s) aguardando pagamento';
+            } else {
+                kpiMetaTexto.textContent = ' reserva(s) aguardando pagamento';
+            }
+        }
+        if (totalTabela) {
+            totalTabela.textContent = formatarMoeda(total);
+        }
+        if (vazioServidor && pendentesLinhas.length > 0) {
+            vazioServidor.hidden = true;
+        }
+        if (detalhe) {
+            detalhe.hidden = pendentesLinhas.length === 0;
+        }
+    }
+
+    function atualizarResumoPendentes(quantidade) {
+        const resumo = document.getElementById('detalhePendentesResumo');
+        if (!resumo) {
+            return;
+        }
+        const nomeProf = nomeProfissionalSelecionado();
+        if (pendentesLinhas.length === 0) {
+            resumo.textContent = 'Nenhuma reserva pendente de pagamento neste mes.';
+            return;
+        }
+        if (quantidade === 0) {
+            resumo.textContent = nomeProf
+                ? nomeProf + ' nao tem reserva pendente neste filtro.'
+                : 'Nenhuma reserva pendente neste filtro.';
+            return;
+        }
+        resumo.textContent = nomeProf
+            ? nomeProf + ': ' + quantidade + ' reserva(s) aguardando pagamento no filtro atual'
+            : quantidade + ' reserva(s) aguardando pagamento no filtro atual';
+    }
+
     function atualizarResumoTabela(quantidade) {
         const resumo = document.getElementById('detalhePagamentosResumo');
         if (!resumo) {
@@ -371,6 +572,27 @@
                 '<td>' + linha.salaNome + '</td>' +
                 '<td>' + linha.tipoRotulo + '</td>' +
                 '<td>' + linha.consultaRotulo + '</td>' +
+                '<td class="text-end fw-semibold">' + linha.valorFormatado + '</td>';
+            corpo.appendChild(tr);
+        });
+    }
+
+    function atualizarTabelaPendentes(linhasFiltradas) {
+        const corpo = document.getElementById('tabelaPendentes');
+        if (!corpo) {
+            return;
+        }
+        atualizarResumoPendentes(linhasFiltradas.length);
+        corpo.innerHTML = '';
+        linhasFiltradas.forEach(function (linha) {
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + linha.consultaRotulo + '</td>' +
+                '<td>' + linha.profissionalNome + '</td>' +
+                '<td>' + linha.nomeCliente + '</td>' +
+                '<td>' + linha.salaNome + '</td>' +
+                '<td>' + linha.tipoRotulo + '</td>' +
+                '<td>' + linha.statusPagamentoRotulo + '</td>' +
                 '<td class="text-end fw-semibold">' + linha.valorFormatado + '</td>';
             corpo.appendChild(tr);
         });
@@ -660,7 +882,7 @@
         }
     }
 
-    function atualizarPainelProfissional() {
+    function atualizarPainelProfissional(pendentesFiltrados) {
         var painel = document.getElementById('painelProfissionalDetalhe');
         if (!painel) {
             return;
@@ -669,27 +891,41 @@
             painel.hidden = true;
             return;
         }
+        var nome = nomeProfissionalSelecionado();
         var dados = painelPorChave[filtros.profissional];
-        if (!dados) {
-            painel.hidden = true;
-            return;
-        }
+        var resumoPendente = resumoPendentesParaExibicao(pendentesFiltrados);
+
         painel.hidden = false;
-        document.getElementById('painelProfissionalNome').textContent = dados.nome;
-        document.getElementById('painelMesAtualValor').textContent = dados.valorMesAtualFormatado;
-        document.getElementById('painelMesAtualMeta').textContent =
-            mesAtualLabel + ' · ' + dados.atendimentosMesAtual + ' atendimento(s)';
-        document.getElementById('painelMelhorMesValor').textContent = dados.valorMelhorMesFormatado;
-        document.getElementById('painelMelhorMesMeta').textContent =
-            dados.melhorMesLabel + ' · ' + dados.atendimentosMelhorMes + ' atendimento(s)';
+        document.getElementById('painelProfissionalNome').textContent = nome;
+        document.getElementById('painelFaltaPagarValor').textContent = formatarMoeda(resumoPendente.total);
+        document.getElementById('painelFaltaPagarMeta').textContent = resumoPendente.qtd === 0
+            ? 'Nenhuma reserva pendente neste mes'
+            : resumoPendente.qtd + ' reserva(s) aguardando pagamento';
+
+        if (dados) {
+            document.getElementById('painelMesAtualValor').textContent = dados.valorMesAtualFormatado;
+            document.getElementById('painelMesAtualMeta').textContent =
+                mesAtualLabel + ' · ' + dados.atendimentosMesAtual + ' atendimento(s) pago(s)';
+            document.getElementById('painelMelhorMesValor').textContent = dados.valorMelhorMesFormatado;
+            document.getElementById('painelMelhorMesMeta').textContent =
+                dados.melhorMesLabel + ' · ' + dados.atendimentosMelhorMes + ' atendimento(s)';
+        } else {
+            document.getElementById('painelMesAtualValor').textContent = formatarMoeda(0);
+            document.getElementById('painelMesAtualMeta').textContent = mesAtualLabel + ' · 0 atendimento(s) pago(s)';
+            document.getElementById('painelMelhorMesValor').textContent = formatarMoeda(0);
+            document.getElementById('painelMelhorMesMeta').textContent = '— · 0 atendimento(s)';
+        }
     }
 
     function renderizarPainel() {
         const linhasFiltradas = filtrarLinhas();
+        const pendentesFiltrados = filtrarPendentes();
         atualizarKpi(linhasFiltradas);
+        atualizarKpiPendentes(pendentesFiltrados);
         atualizarTabela(linhasFiltradas);
+        atualizarTabelaPendentes(pendentesFiltrados);
         atualizarGraficos(linhasFiltradas);
-        atualizarPainelProfissional();
+        atualizarPainelProfissional(pendentesFiltrados);
     }
 
     document.querySelectorAll('.fin-chip, .fin-prof-card').forEach(function (botao) {

@@ -33,9 +33,22 @@ public class ReceitaPixMesView {
     private final String pagamentosGraficoJson;
     private final List<ProfissionalReceitaPainelView> profissionaisPainel;
     private final String profissionaisPainelJson;
+    private final List<ReceitaPendenteLinhaView> pendentes;
+    private final int quantidadePendentes;
+    private final BigDecimal totalAReceber;
+    private final String totalAReceberFormatado;
+    private final String pendentesGraficoJson;
 
     public static ReceitaPixMesView vazio(YearMonth mesSelecionado) {
-        return new ReceitaPixMesView(mesSelecionado, Collections.emptyList(), BigDecimal.ZERO, Collections.emptyList());
+        return new ReceitaPixMesView(
+                mesSelecionado,
+                Collections.emptyList(),
+                BigDecimal.ZERO,
+                Collections.emptyList(),
+                null,
+                Collections.emptyList(),
+                BigDecimal.ZERO
+        );
     }
 
     public ReceitaPixMesView(
@@ -44,7 +57,7 @@ public class ReceitaPixMesView {
             BigDecimal totalRecebido,
             List<ProfissionalReceitaPainelView> profissionaisPainel
     ) {
-        this(mesSelecionado, pagamentos, totalRecebido, profissionaisPainel, null);
+        this(mesSelecionado, pagamentos, totalRecebido, profissionaisPainel, null, Collections.emptyList(), BigDecimal.ZERO);
     }
 
     public ReceitaPixMesView(
@@ -52,7 +65,9 @@ public class ReceitaPixMesView {
             List<ReceitaPixLinhaView> pagamentos,
             BigDecimal totalRecebido,
             List<ProfissionalReceitaPainelView> profissionaisPainel,
-            List<String> salasFiltro
+            List<String> salasFiltro,
+            List<ReceitaPendenteLinhaView> pendentes,
+            BigDecimal totalAReceber
     ) {
         this.mesSelecionado = mesSelecionado;
         this.mesAnoLabel = capitalize(mesSelecionado.format(MES_ANO_LABEL));
@@ -73,6 +88,11 @@ public class ReceitaPixMesView {
         this.pagamentosGraficoJson = GraficoJsonUtil.serializarPagamentosPix(pagamentos);
         this.profissionaisPainel = profissionaisPainel != null ? profissionaisPainel : Collections.emptyList();
         this.profissionaisPainelJson = GraficoJsonUtil.serializarProfissionaisPainel(this.profissionaisPainel);
+        this.pendentes = pendentes != null ? pendentes : Collections.emptyList();
+        this.quantidadePendentes = this.pendentes.size();
+        this.totalAReceber = totalAReceber != null ? totalAReceber : BigDecimal.ZERO;
+        this.totalAReceberFormatado = MoedaBrasilUtil.formatar(this.totalAReceber);
+        this.pendentesGraficoJson = GraficoJsonUtil.serializarPendentes(this.pendentes);
     }
 
     private static String capitalize(String texto) {

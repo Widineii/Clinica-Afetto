@@ -214,7 +214,7 @@
                                            class="form-check-input pendencia-check"
                                            th:data-id="${pendencia.id}"
                                            th:data-taxa="${pagamentoService.formatarValorTaxaPix(pendencia)}"
-                                           th:disabled="${pendencia.possuiQrPagamentoAtivo()}">
+                                           th:disabled="${pendencia.possuiQrPagamentoAtivo() or !pagamentoService.podePagarAgora(pendencia)}">
                                 </td>
                                 <td th:text="${#temporals.format(pendencia.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
                                 <td th:text="${#temporals.format(pendencia.dataHoraInicio, 'HH:mm')}">08:00</td>
@@ -222,20 +222,30 @@
                                 <td th:text="${pendencia.nomeCliente}">Cliente</td>
                                 <td class="pendencia-taxa" th:text="${pagamentoService.formatarValorTaxaPix(pendencia)}">R$ 35,00</td>
                                 <td>
-                                    <span th:if="${pendencia.possuiQrPagamentoAtivo()}"
+                                    <span th:if="${pagamentoService.exibirMensagemIndicacaoEmMeusPagamentos(pendencia)}"
+                                          class="badge text-bg-info text-wrap"
+                                          style="max-width: 14rem; white-space: normal; line-height: 1.35;"
+                                          th:text="${pagamentoService.mensagemIndicacaoMeusPagamentos(pendencia)}">
+                                        Você tem prazo para pagar a indicação: 2 dias após o atendimento.
+                                    </span>
+                                    <span th:if="${!pagamentoService.exibirMensagemIndicacaoEmMeusPagamentos(pendencia) and pendencia.possuiQrPagamentoAtivo()}"
                                           class="badge text-bg-info">Aguardando confirmação</span>
-                                    <span th:if="${!pendencia.possuiQrPagamentoAtivo() and pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
+                                    <span th:if="${!pagamentoService.exibirMensagemIndicacaoEmMeusPagamentos(pendencia) and !pendencia.possuiQrPagamentoAtivo() and pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
                                           class="badge text-bg-secondary">Recuperar vaga</span>
-                                    <span th:if="${!pendencia.possuiQrPagamentoAtivo() and !pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
+                                    <span th:if="${!pagamentoService.exibirMensagemIndicacaoEmMeusPagamentos(pendencia) and !pendencia.possuiQrPagamentoAtivo() and !pagamentoService.podeRecuperarVagaComPagamento(pendencia)}"
                                           class="badge text-bg-warning">Pagar hoje</span>
                                 </td>
                                 <td>
-                                    <form th:if="${!pendencia.possuiQrPagamentoAtivo()}"
+                                    <form th:if="${!pendencia.possuiQrPagamentoAtivo() and pagamentoService.podePagarAgora(pendencia)}"
                                           th:action="@{/pagamentos/{id}/gerar-link(id=${pendencia.id})}"
                                           method="post"
                                           class="d-inline">
                                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                                        <button type="submit" class="btn btn-sm btn-outline-warning">Pagar uma</button>
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-warning"
+                                                th:text="${pagamentoService.isConsultaIndicacao(pendencia) ? 'Pagar indicação' : 'Pagar uma'}">
+                                            Pagar uma
+                                        </button>
                                     </form>
                                 </td>
                             </tr>

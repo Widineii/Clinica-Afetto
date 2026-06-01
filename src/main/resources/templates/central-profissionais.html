@@ -672,6 +672,17 @@
                     <i class="fa-solid fa-sliders" aria-hidden="true"></i>
                     Configuração
                 </a>
+                <a th:href="@{/agendamentos/central-profissionais(aba='indicacoes')}"
+                   th:class="${abaCentral == 'indicacoes' ? 'central-tab active' : 'central-tab'}"
+                   id="tabIndicacoes"
+                   data-aba="indicacoes"
+                   th:attr="aria-current=${abaCentral == 'indicacoes' ? 'page' : null}">
+                    <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+                    Indicação pendente
+                    <span th:if="${totalIndicacoesPendentes != null and totalIndicacoesPendentes > 0}"
+                          class="badge rounded-pill text-bg-warning ms-1"
+                          th:text="${totalIndicacoesPendentes}">0</span>
+                </a>
                 <a th:href="@{/agendamentos/central-profissionais(aba='encerramentos')}"
                    th:class="${abaCentral == 'encerramentos' ? 'central-tab active' : 'central-tab'}"
                    id="tabEncerramentos"
@@ -851,6 +862,8 @@
                     <strong>Mensal:</strong> mês liberado para agendar; cobrança do mês anterior a partir do dia 1; prazo até dia 15; depois bloqueia.
                 </div>
             </section>
+
+            <div th:replace="~{fragments/indicacoes-pendentes-painel :: painel(pendentes=${indicacoesPendentes}, pagamentoService=${pagamentoService})}"></div>
 
             <section class="central-pane"
                      id="central-pane-encerramentos"
@@ -1091,6 +1104,7 @@
         var centralPanes = {
             equipe: document.getElementById('central-pane-equipe'),
             configuracao: document.getElementById('central-pane-configuracao'),
+            indicacoes: document.getElementById('central-pane-indicacoes'),
             encerramentos: document.getElementById('central-pane-encerramentos')
         };
 

@@ -20,7 +20,9 @@ import java.util.List;
 public class FinanceiroDemoSeedService {
 
     public static final String PREFIXO_CLIENTE = "DEMO-FIN-";
+    public static final String PREFIXO_PENDENTE = "DEMO-FIN-PEND-";
     public static final int PAGAMENTOS_POR_PROFISSIONAL = 1;
+    public static final int PENDENTES_POR_PROFISSIONAL = 1;
 
     private static final BigDecimal[] TAXAS = {
             new BigDecimal("35.00"),

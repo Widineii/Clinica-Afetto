@@ -88,7 +88,7 @@
         <form th:action="@{/agendamentos/minha-periodicidade-pagamento}" method="post" class="mt-0">
             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
             <input type="hidden" name="retorno" th:value="${retornoUrl}">
-            <div class="periodicidade-resumo-opcoes" role="group" aria-label="Forma de pagamento">
+            <div class="periodicidade-resumo-opcoes mt-2" role="group" aria-label="Forma de pagamento">
                 <button th:each="opt : ${periodicidadesPagamento}"
                         type="submit"
                         name="periodicidade"

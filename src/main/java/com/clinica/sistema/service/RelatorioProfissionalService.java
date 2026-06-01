@@ -239,6 +239,8 @@ public class RelatorioProfissionalService {
             case PAGO -> "Pago";
             case AGUARDANDO_PAGAMENTO -> "Aguardando pagamento";
             case ESPERANDO_CONFIRMACAO -> "Esperando confirmacao";
+            case AGUARDANDO_APROVACAO_INDICACAO -> "Aguardando aprovacao indicacao";
+            case AGUARDANDO_CONFIRMACAO_DINHEIRO -> "Aguardando PIX";
             case PAGAMENTO_FUTURO -> "Pagamento futuro";
             case LIBERADO_FALTA_PAGAMENTO -> "Liberado (falta pagamento)";
         };

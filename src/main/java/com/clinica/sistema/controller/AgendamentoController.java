@@ -17,6 +17,7 @@ import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.NovidadeSiteService;
+import com.clinica.sistema.service.IndicacaoReservaService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import com.clinica.sistema.service.RelatorioSemanalService;
@@ -50,6 +51,7 @@ public class AgendamentoController {
     private final RelatorioMensalService relatorioMensalService;
     private final EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService;
     private final PagamentoConsultaService pagamentoConsultaService;
+    private final IndicacaoReservaService indicacaoReservaService;
     private final FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService;
     private final ManualProperties manualProperties;
     private final SiteProperties siteProperties;
@@ -64,6 +66,7 @@ public class AgendamentoController {
             RelatorioMensalService relatorioMensalService,
             EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService,
             PagamentoConsultaService pagamentoConsultaService,
+            IndicacaoReservaService indicacaoReservaService,
             FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService,
             ManualProperties manualProperties,
             SiteProperties siteProperties,
@@ -77,6 +80,7 @@ public class AgendamentoController {
         this.relatorioMensalService = relatorioMensalService;
         this.encerramentoSerieNotificacaoService = encerramentoSerieNotificacaoService;
         this.pagamentoConsultaService = pagamentoConsultaService;
+        this.indicacaoReservaService = indicacaoReservaService;
         this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
         this.manualProperties = manualProperties;
         this.siteProperties = siteProperties;
@@ -309,7 +313,8 @@ public class AgendamentoController {
                 : null;
         Long pagamentoSelecionadoId = pagamentoId != null ? pagamentoId : extrairIdPagamento(pagamentoFlashId);
         if (pagamentoSelecionadoId != null) {
-            service.buscarPorId(pagamentoSelecionadoId).ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
+            service.buscarPorId(pagamentoSelecionadoId)
+                    .ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
         }
         aplicarModalPixConfirmadoSeNecessario(model);
         popularNovidades(model, usuarioLogado, session);
@@ -415,10 +420,14 @@ public class AgendamentoController {
         String abaAtiva = switch (aba != null ? aba.toLowerCase() : "equipe") {
             case "configuracao" -> "configuracao";
             case "encerramentos" -> "encerramentos";
+            case "indicacoes" -> "indicacoes";
             default -> "equipe";
         };
         model.addAttribute("abaAtiva", abaAtiva);
         model.addAttribute("encerramentosSerie", service.listarEncerramentosSerieRecentes());
+        model.addAttribute("indicacoesPendentes", indicacaoReservaService.listarAguardandoAprovacao());
+        model.addAttribute("totalIndicacoesPendentes", indicacaoReservaService.contarAguardandoAprovacao());
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
         if ("encerramentos".equals(abaAtiva) || viaNotificacaoEncerramento) {
             encerramentoSerieNotificacaoService.marcarComoVisto(session);
             model.addAttribute("notificacaoEncerramentoSerie", null);
@@ -602,7 +611,12 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             var criado = service.salvar(agendamentoForm, usuarioLogado);
-            if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(criado.getStatusPagamento())) {
+            if (PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO.equals(criado.getStatusPagamento())) {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Reserva de indicação enviada. A Polyana precisa aprovar antes do pagamento PIX."
+                );
+            } else if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(criado.getStatusPagamento())) {
                 redirectAttributes.addFlashAttribute(
                         "sucesso",
                         "Agendamento reservado na agenda. Esperando confirmação do pagamento ("

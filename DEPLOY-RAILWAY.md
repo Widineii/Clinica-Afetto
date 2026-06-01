@@ -49,6 +49,9 @@ git push -u origin main
 | `ADMIN_LOGIN` | `admin` |
 | `ADMIN_PASSWORD` | senha forte (anote em lugar seguro) |
 | `ADMIN_NAME` | `Administracao` |
+| `SEED_TEST_USER_ENABLED` | `true` (perfil **teste** / senha **297b** para voce testar no ar) |
+| `SEED_TEST_USER_LOGIN` | `teste` (opcional) |
+| `SEED_TEST_USER_PASSWORD` | `297b` (opcional; minimo 4 caracteres no sistema) |
 
 7. **Redeploy** o app (Deployments → tres pontinhos → Redeploy) e aguarde **Active**
 8. Abra o domínio público (ex.: `clinica-agenda-production.up.railway.app`)

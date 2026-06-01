@@ -608,8 +608,11 @@ public class AgendamentoService {
             novo.setSerieFixaId(serieFixaId);
             novo.setTipoRecorrencia(recorrencia);
             novo.setRecorrencia(recorrencia);
+            boolean primeiraConsultaSerie = semana == 0;
             if (!authService.profissionalIgnoraValoresEPagamento(profissional)) {
-                valorConsultaService.aplicarValores(novo, form, sala, recorrencia);
+                valorConsultaService.aplicarValores(novo, form, sala, recorrencia, primeiraConsultaSerie);
+            } else {
+                novo.setIndicacaoDona(form.isIndicacaoDona() && primeiraConsultaSerie);
             }
             novosAgendamentos.add(novo);
         }
@@ -1164,7 +1167,7 @@ public class AgendamentoService {
         String recorrencia = recorrenciaDoAgendamento(modelo);
         novo.setTipoRecorrencia(recorrencia);
         novo.setRecorrencia(recorrencia);
-        valorConsultaService.copiarValores(novo, modelo);
+        valorConsultaService.copiarValoresOcorrenciaSerie(novo, modelo, modelo.getSala(), recorrencia);
         return novo;
     }
 

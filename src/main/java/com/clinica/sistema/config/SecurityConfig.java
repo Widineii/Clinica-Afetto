@@ -25,7 +25,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/error", "/actuator/health", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/api/webhooks/**").permitAll()
-                        .requestMatchers("/agendamentos/**", "/conta/**", "/pagamentos/**").authenticated()
+                        .requestMatchers("/agendamentos/**", "/conta/**", "/pagamentos/**", "/indicacoes/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**"))

@@ -1,6 +1,7 @@
 package com.clinica.sistema.config;
 
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
@@ -61,6 +62,21 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-admin-name:Administracao}")
     private String adminName;
 
+    @Value("${app.seed-test-user.enabled:false}")
+    private boolean seedTestUserEnabled;
+
+    @Value("${app.seed-test-user.login:teste}")
+    private String testUserLogin;
+
+    @Value("${app.seed-test-user.password:297b}")
+    private String testUserPassword;
+
+    @Value("${app.seed-test-user.name:Perfil Teste}")
+    private String testUserName;
+
+    @Value("${app.seed-test-user.reset-password-on-startup:true}")
+    private boolean testUserResetPasswordOnStartup;
+
     public StartupDataInitializer(
             SalaRepository salaRepository,
             UsuarioRepository usuarioRepository,
@@ -82,6 +98,7 @@ public class StartupDataInitializer implements CommandLineRunner {
         garantirSalas();
         sincronizarUsuariosPadrao();
         garantirAdmin();
+        garantirUsuarioTeste();
         migrarSenhasLegadas();
 
         if (seedDemoData) {
@@ -183,6 +200,41 @@ public class StartupDataInitializer implements CommandLineRunner {
                 "ROLE_ADMIN",
                 false
         ));
+    }
+
+    /**
+     * Perfil opcional para testes em producao (ativar com app.seed-test-user.enabled=true).
+     * Nao e dona da clinica; no primeiro acesso pode pedir troca de senha.
+     */
+    private void garantirUsuarioTeste() {
+        if (!seedTestUserEnabled) {
+            return;
+        }
+        if (testUserLogin == null || testUserLogin.isBlank()
+                || testUserPassword == null || testUserPassword.isBlank()) {
+            return;
+        }
+
+        String login = testUserLogin.trim().toLowerCase(Locale.ROOT);
+        Usuario usuario = usuarioRepository.findByLogin(login).orElseGet(Usuario::new);
+        boolean novo = usuario.getId() == null;
+
+        usuario.setNome(testUserName != null && !testUserName.isBlank() ? testUserName.trim() : "Perfil Teste");
+        usuario.setLogin(login);
+        usuario.setCargo("ROLE_PROFISSIONAL");
+        usuario.setDonaClinica(false);
+        if (usuario.getPeriodicidadePagamento() == null) {
+            usuario.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+        }
+
+        if (novo || testUserResetPasswordOnStartup) {
+            usuario.setSenha(passwordEncoder.encode(testUserPassword.trim()));
+        }
+        if (novo && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
+            usuario.setDeveTrocarSenha(true);
+        }
+
+        usuarioRepository.save(usuario);
     }
 
     private void sincronizarUsuariosPadrao() {

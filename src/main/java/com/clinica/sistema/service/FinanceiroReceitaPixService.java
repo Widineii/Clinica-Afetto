@@ -1,13 +1,17 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.dto.ProfissionalReceitaPainelView;
+import com.clinica.sistema.dto.ReceitaPendenteLinhaView;
 import com.clinica.sistema.dto.ReceitaPixLinhaView;
 import com.clinica.sistema.dto.ReceitaPixMesView;
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -22,6 +26,16 @@ import java.util.Map;
 
 @Service
 public class FinanceiroReceitaPixService {
+
+    private static final Logger log = LoggerFactory.getLogger(FinanceiroReceitaPixService.class);
+
+    private static final List<PagamentoStatus> STATUS_TAXA_A_RECEBER = List.of(
+            PagamentoStatus.PAGAMENTO_FUTURO,
+            PagamentoStatus.ESPERANDO_CONFIRMACAO,
+            PagamentoStatus.AGUARDANDO_PAGAMENTO,
+            PagamentoStatus.AGUARDANDO_APROVACAO_INDICACAO,
+            PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO
+    );
 
     private static final DateTimeFormatter MES_ANO_LABEL =
             DateTimeFormatter.ofPattern("MMMM 'de' yyyy", new Locale("pt", "BR"));
@@ -58,15 +72,40 @@ public class FinanceiroReceitaPixService {
                 .map(ReceitaPixLinhaView::getValorTaxa)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<ProfissionalReceitaPainelView> profissionaisPainel =
-                mesclarEquipeCompleta(montarPainelProfissionais(mesSelecionado));
+        List<ReceitaPendenteLinhaView> pendentes = montarPendentesMes(inicio, fim);
+        Map<String, ResumoPendenteProfissional> pendentesPorChave = agregarPendentesPorChave(pendentes);
+
+        List<ProfissionalReceitaPainelView> profissionaisPainel = enriquecerPainelComPendentes(
+                mesclarEquipeCompleta(montarPainelProfissionais(mesSelecionado)),
+                pendentesPorChave
+        );
 
         List<String> salasFiltro = salaRepository.findAllByOrderByNomeAsc().stream()
                 .map(sala -> sala.getNome())
                 .filter(nome -> nome != null && !nome.isBlank())
                 .toList();
+        BigDecimal totalAReceber = pendentes.stream()
+                .map(ReceitaPendenteLinhaView::getValorTaxa)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return new ReceitaPixMesView(mesSelecionado, linhas, total, profissionaisPainel, salasFiltro);
+        return new ReceitaPixMesView(mesSelecionado, linhas, total, profissionaisPainel, salasFiltro, pendentes, totalAReceber);
+    }
+
+    private List<ReceitaPendenteLinhaView> montarPendentesMes(LocalDateTime inicio, LocalDateTime fim) {
+        try {
+            return agendamentoRepository
+                    .findPorDataConsultaEStatusPagamentoNoPeriodo(inicio, fim, STATUS_TAXA_A_RECEBER)
+                    .stream()
+                    .filter(this::contaParaReceitaClinica)
+                    .map(agendamento -> new ReceitaPendenteLinhaView(
+                            agendamento,
+                            infinitePayService.resolverValorTaxaClinica(agendamento)
+                    ))
+                    .toList();
+        } catch (RuntimeException ex) {
+            log.warn("Nao foi possivel carregar taxas a receber no financeiro: {}", ex.getMessage());
+            return List.of();
+        }
     }
 
     private List<ProfissionalReceitaPainelView> montarPainelProfissionais(YearMonth mesSelecionado) {
@@ -104,6 +143,44 @@ public class FinanceiroReceitaPixService {
                         entry.getValue(),
                         mesSelecionado
                 ))
+                .toList();
+    }
+
+    private Map<String, ResumoPendenteProfissional> agregarPendentesPorChave(List<ReceitaPendenteLinhaView> pendentes) {
+        Map<String, ResumoPendenteProfissional> mapa = new HashMap<>();
+        for (ReceitaPendenteLinhaView linha : pendentes) {
+            String chave = linha.getProfissionalChave();
+            if (chave == null || chave.isBlank()) {
+                continue;
+            }
+            mapa.computeIfAbsent(chave, ignored -> new ResumoPendenteProfissional())
+                    .adicionar(linha.getValorTaxa());
+        }
+        return mapa;
+    }
+
+    private List<ProfissionalReceitaPainelView> enriquecerPainelComPendentes(
+            List<ProfissionalReceitaPainelView> painel,
+            Map<String, ResumoPendenteProfissional> pendentesPorChave
+    ) {
+        return painel.stream()
+                .map(profissional -> {
+                    ResumoPendenteProfissional resumo = pendentesPorChave.getOrDefault(
+                            profissional.getChave(),
+                            ResumoPendenteProfissional.VAZIO
+                    );
+                    return new ProfissionalReceitaPainelView(
+                            profissional.getChave(),
+                            profissional.getNome(),
+                            profissional.getValorMesAtual(),
+                            profissional.getAtendimentosMesAtual(),
+                            profissional.getMelhorMesLabel(),
+                            profissional.getValorMelhorMes(),
+                            profissional.getAtendimentosMelhorMes(),
+                            resumo.valor,
+                            resumo.quantidade
+                    );
+                })
                 .toList();
     }
 
@@ -197,5 +274,17 @@ public class FinanceiroReceitaPixService {
     private static final class ResumoMensalProfissional {
         private BigDecimal valor = BigDecimal.ZERO;
         private int quantidade;
+    }
+
+    private static final class ResumoPendenteProfissional {
+        private static final ResumoPendenteProfissional VAZIO = new ResumoPendenteProfissional();
+
+        private BigDecimal valor = BigDecimal.ZERO;
+        private int quantidade;
+
+        private void adicionar(BigDecimal valorTaxa) {
+            valor = valor.add(valorTaxa != null ? valorTaxa : BigDecimal.ZERO);
+            quantidade++;
+        }
     }
 }

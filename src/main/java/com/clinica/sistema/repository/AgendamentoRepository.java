@@ -276,6 +276,25 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByStatusPagamentoOrderByDataHoraInicioAsc(PagamentoStatus statusPagamento);
+
+    long countByStatusPagamento(PagamentoStatus statusPagamento);
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.indicacaoDona = true
+              AND a.statusPagamento IN :statuses
+            ORDER BY a.dataHoraInicio ASC
+            """)
+    List<Agendamento> findByIndicacaoDonaTrueAndStatusPagamentoIn(
+            @Param("statuses") List<PagamentoStatus> statuses
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByIndicacaoDonaTrueOrderBySerieFixaIdAscDataHoraInicioAsc();
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findByProfissionalIdAndStatusPagamentoAndPagamentoExpiraEmAfterOrderByPagamentoExpiraEmAsc(
             Long profissionalId,
             PagamentoStatus statusPagamento,
@@ -324,6 +343,20 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findPagosPorDataPagamentoNoPeriodo(
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+              AND a.statusPagamento IN :statuses
+            ORDER BY a.dataHoraInicio ASC, a.id ASC
+            """)
+    List<Agendamento> findPorDataConsultaEStatusPagamentoNoPeriodo(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("statuses") List<PagamentoStatus> statuses
     );
 
     @EntityGraph(attributePaths = {"profissional", "sala"})

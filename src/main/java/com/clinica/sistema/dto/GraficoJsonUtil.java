@@ -83,6 +83,31 @@ public final class GraficoJsonUtil {
         return json.toString();
     }
 
+    public static String serializarPendentes(List<ReceitaPendenteLinhaView> pendentes) {
+        StringBuilder json = new StringBuilder("[");
+        for (int indice = 0; indice < pendentes.size(); indice++) {
+            if (indice > 0) {
+                json.append(',');
+            }
+            ReceitaPendenteLinhaView linha = pendentes.get(indice);
+            json.append('{')
+                    .append("\"profissionalChave\":").append(texto(linha.getProfissionalChave())).append(',')
+                    .append("\"profissionalNome\":").append(texto(linha.getProfissionalNome())).append(',')
+                    .append("\"salaChave\":").append(texto(linha.getSalaChave())).append(',')
+                    .append("\"salaNome\":").append(texto(linha.getSalaNome())).append(',')
+                    .append("\"tipoRecorrencia\":").append(texto(linha.getTipoRecorrencia())).append(',')
+                    .append("\"tipoRecorrenciaRotulo\":").append(texto(linha.getTipoRecorrenciaRotulo())).append(',')
+                    .append("\"valorTaxa\":").append(valor(linha.getValorTaxa())).append(',')
+                    .append("\"valorTaxaFormatado\":").append(texto(linha.getValorTaxaFormatado())).append(',')
+                    .append("\"statusPagamentoRotulo\":").append(texto(linha.getStatusPagamentoRotulo())).append(',')
+                    .append("\"nomeCliente\":").append(texto(linha.getNomeCliente())).append(',')
+                    .append("\"consultaRotulo\":").append(texto(linha.getConsultaRotulo()))
+                    .append('}');
+        }
+        json.append(']');
+        return json.toString();
+    }
+
     public static String serializarProfissionaisPainel(List<ProfissionalReceitaPainelView> profissionais) {
         StringBuilder json = new StringBuilder("[");
         for (int indice = 0; indice < profissionais.size(); indice++) {
@@ -99,7 +124,10 @@ public final class GraficoJsonUtil {
                     .append("\"melhorMesLabel\":").append(texto(profissional.getMelhorMesLabel())).append(',')
                     .append("\"valorMelhorMes\":").append(valor(profissional.getValorMelhorMes())).append(',')
                     .append("\"valorMelhorMesFormatado\":").append(texto(profissional.getValorMelhorMesFormatado())).append(',')
-                    .append("\"atendimentosMelhorMes\":").append(profissional.getAtendimentosMelhorMes())
+                    .append("\"atendimentosMelhorMes\":").append(profissional.getAtendimentosMelhorMes()).append(',')
+                    .append("\"valorAReceberMes\":").append(valor(profissional.getValorAReceberMes())).append(',')
+                    .append("\"valorAReceberMesFormatado\":").append(texto(profissional.getValorAReceberMesFormatado())).append(',')
+                    .append("\"quantidadePendentesMes\":").append(profissional.getQuantidadePendentesMes())
                     .append('}');
         }
         json.append(']');
@@ -122,6 +150,8 @@ public final class GraficoJsonUtil {
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\r", "")
-                .replace("\n", "\\n") + "\"";
+                .replace("\n", "\\n")
+                .replace("<", "\\u003c")
+                .replace(">", "\\u003e") + "\"";
     }
 }

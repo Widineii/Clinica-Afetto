@@ -33,10 +33,9 @@
              th:replace="~{fragments/pagamento-demo-local :: instrucao-demo-local}"></div>
         <div th:if="${!pagamentoService.modoTestePagamento() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
              th:replace="~{fragments/pagamento-consulta :: instrucao-checkout-infinitepay}"></div>
-        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
+        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento) and !pagamentoService.modoTestePagamento()}"
            th:href="${agendamento.pagamentoLink}"
-           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
-           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
+           th:target="_self"
            class="btn btn-primary btn-lg w-100 mb-3">
             Abrir pagamento PIX
         </a>
@@ -301,6 +300,14 @@
                     <p class="mb-3">Taxa da clínica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
 
                     <div th:replace="~{fragments/pagamento-consulta :: bloco-pagamento-qr(agendamento=${agendamento}, imgWidth=240)}"></div>
+
+                    <form th:if="${pagamentoService.modoTestePagamento() and agendamento.id != null}"
+                          th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
+                          method="post"
+                          class="d-grid gap-2 mb-3">
+                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                        <button type="submit" class="btn btn-success">Simular pagamento (teste)</button>
+                    </form>
 
                     <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
 

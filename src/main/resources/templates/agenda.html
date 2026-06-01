@@ -1357,7 +1357,7 @@
                      alt="Afetto Psicologia e Saúde">
                 <div class="hero-band__copy">
                     <p class="text-uppercase small mb-2 opacity-75 hero-band__kicker">Sistema de agenda da clínica</p>
-                    <h1 class="h2 hero-band-headline__title mb-2">Acompanhe a sua agenda da clínica.</h1>
+                    <h1 class="h2 hero-band-headline__title mb-2">Agende seus horários na Clinica Afetto</h1>
                     <p class="mb-0 opacity-75 hero-band__user">
                         Usuário: <strong th:text="${usuarioLogado.nome}">Nome</strong>
                     </p>
@@ -1734,7 +1734,7 @@
                                             <span class="slot-card__prof"
                                                   th:text="${item.profissional != null ? item.profissional.nome : 'Profissional'}">Profissional</span>
                                             <span class="slot-card__hora"
-                                                  th:text="${#temporals.format(item.dataHoraFim, 'HH:mm')}">08:00</span>
+                                                  th:text="${#temporals.format(item.dataHoraInicio, 'HH:mm')}">08:00</span>
                                         </div>
                                         <div class="slot-card__cliente" th:text="${item.nomeCliente}">Cliente</div>
                                         <div class="slot-card__valores"

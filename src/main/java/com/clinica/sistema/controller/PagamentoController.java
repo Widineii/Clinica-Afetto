@@ -93,15 +93,7 @@ public class PagamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             Agendamento agendamento = pagamentoConsultaService.pagarAgora(id, usuarioLogado);
-            if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
-                redirectAttributes.addFlashAttribute(
-                        "sucesso",
-                        "Pagamento gerado. Escaneie o QR ou abra o link PIX ("
-                                + pagamentoConsultaService.prazoConfirmacaoMinutos()
-                                + " min para confirmar)."
-                );
-            }
-            return "redirect:/pagamentos/" + agendamento.getId();
+            return redirecionarModalPixAgenda(agendamento, redirectAttributes);
         } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
             return "redirect:/agendamentos/meus-pagamentos";
@@ -118,15 +110,11 @@ public class PagamentoController {
     ) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoPendentesSelecionados(
+            String order = pagamentoConsultaService.gerarPagamentoUnicoPendentesSelecionados(
                     usuarioLogado,
                     agendamentoIds
             );
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    "PIX unico do proximo dia gerado. Pague uma vez para quitar as consultas selecionadas."
-            );
-            return "redirect:/pagamentos/dia?order=" + orderNsu;
+            return "redirect:/pagamentos/dia?order=" + order;
         } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         } catch (RuntimeException ex) {
@@ -139,12 +127,8 @@ public class PagamentoController {
     public String gerarLinksSemanaAtual(RedirectAttributes redirectAttributes) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(usuarioLogado);
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    "PIX unico da semana gerado. Pague uma vez para quitar todas as consultas listadas."
-            );
-            return "redirect:/pagamentos/semana?order=" + orderNsu;
+            String order = pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(usuarioLogado);
+            return "redirect:/pagamentos/semana?order=" + order;
         } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         } catch (RuntimeException ex) {
@@ -157,12 +141,8 @@ public class PagamentoController {
     public String gerarLinksMesAnterior(RedirectAttributes redirectAttributes) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(usuarioLogado);
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    "PIX unico do mes anterior gerado. Pague uma vez para quitar todas as consultas listadas."
-            );
-            return "redirect:/pagamentos/mes?order=" + orderNsu;
+            String order = pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(usuarioLogado);
+            return "redirect:/pagamentos/mes?order=" + order;
         } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         } catch (RuntimeException ex) {
@@ -276,9 +256,8 @@ public class PagamentoController {
     ) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            Agendamento agendamento = pagamentoConsultaService.gerarLinkPagamento(id, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Link de pagamento gerado.");
-            return "redirect:/pagamentos/" + agendamento.getId();
+            Agendamento agendamento = pagamentoConsultaService.pagarAgora(id, usuarioLogado);
+            return redirecionarModalPixAgenda(agendamento, redirectAttributes);
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         }
@@ -346,6 +325,15 @@ public class PagamentoController {
         if (referer != null && referer.contains("/pagamentos/checkout-teste")) {
             return "redirect:/agendamentos/dashboard";
         }
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    private String redirecionarModalPixAgenda(Agendamento agendamento, RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute(
+                "sucesso",
+                "PIX gerado. Escaneie o QR na tela ou use Pagamentos pendentes se fechar."
+        );
+        redirectAttributes.addFlashAttribute("pagamentoAgendamentoId", agendamento.getId());
         return "redirect:/agendamentos/dashboard";
     }
 
