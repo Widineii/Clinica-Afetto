@@ -5,7 +5,6 @@ import com.clinica.sistema.dto.RelatorioUsoSiteView;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@Profile("local")
 public class RelatorioUsoSiteService {
 
     private final UsuarioRepository usuarioRepository;

@@ -5,7 +5,6 @@ import com.clinica.sistema.service.RelatorioUsoSitePdfService;
 import com.clinica.sistema.service.RelatorioUsoSiteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,7 +17,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.nio.charset.StandardCharsets;
 
-@Profile("local")
 @Controller
 @RequestMapping("/agendamentos/admin")
 public class AdminRelatorioUsoSiteController {
@@ -54,7 +52,6 @@ public class AdminRelatorioUsoSiteController {
         try {
             model.addAttribute("usuarioLogado", usuario);
             model.addAttribute("isAdmin", true);
-            model.addAttribute("perfilLocal", true);
             model.addAttribute("versaoDownload", System.currentTimeMillis());
             model.addAttribute("relatorio", relatorioUsoSiteService.montarRelatorio());
             return "admin-relatorio-uso-site";

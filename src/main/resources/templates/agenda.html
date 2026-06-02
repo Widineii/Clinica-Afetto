@@ -1436,7 +1436,7 @@
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
                    class="btn btn-warning">Uso do banco</a>
-                <a th:if="${isAdmin and @environment.acceptsProfiles('local')}"
+                <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/relatorio-uso-site}"
                    class="btn btn-warning">Uso do site</a>
                 <a th:if="${podeGerenciarEquipe}"

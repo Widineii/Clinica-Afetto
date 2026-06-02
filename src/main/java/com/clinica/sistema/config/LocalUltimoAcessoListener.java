@@ -5,7 +5,6 @@ import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.security.ClinicaUserPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Component;
@@ -14,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 @Component
-@Profile("local")
 public class LocalUltimoAcessoListener {
 
     private static final Logger log = LoggerFactory.getLogger(LocalUltimoAcessoListener.class);

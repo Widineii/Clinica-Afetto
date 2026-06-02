@@ -13,7 +13,6 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
@@ -23,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
-@Profile("local")
 public class RelatorioUsoSitePdfService {
 
     private static final Font TITLE = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
@@ -46,7 +44,7 @@ public class RelatorioUsoSitePdfService {
             documento.add(titulo);
 
             Paragraph sub = new Paragraph(
-                    "Gerado em " + LocalDateTime.now().format(DATA_HORA) + " · Ambiente local",
+                    "Gerado em " + LocalDateTime.now().format(DATA_HORA) + " · Agenda Afetto",
                     SUBTITLE
             );
             sub.setAlignment(Element.ALIGN_CENTER);
