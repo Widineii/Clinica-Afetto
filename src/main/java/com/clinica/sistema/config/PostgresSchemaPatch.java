@@ -9,6 +9,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * Garante colunas novas no PostgreSQL (Neon/Render) quando ddl-auto nao aplicou a tempo.
  */
@@ -92,9 +94,53 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                       AND data_hora_inicio IS NOT NULL
                     """
             );
-            log.info("Schema PostgreSQL: colunas de pagamento e usuarios verificadas.");
+            atualizarCheckStatusPagamento();
+            log.info("Schema PostgreSQL: colunas de pagamento, usuarios e status_pagamento verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Hibernate criou o CHECK antes de existir {@code AGUARDANDO_APROVACAO_INDICACAO}; sem isso
+     * indicações falham no INSERT e a solicitação nunca chega para aprovação.
+     */
+    private void atualizarCheckStatusPagamento() {
+        List<String> checksStatus = jdbcTemplate.queryForList(
+                """
+                SELECT c.conname
+                FROM pg_constraint c
+                JOIN pg_class t ON c.conrelid = t.oid
+                WHERE t.relname = 'agendamentos'
+                  AND c.contype = 'c'
+                  AND pg_get_constraintdef(c.oid) ILIKE '%status_pagamento%'
+                """,
+                String.class
+        );
+        for (String constraint : checksStatus) {
+            jdbcTemplate.execute(
+                    "ALTER TABLE agendamentos DROP CONSTRAINT IF EXISTS \"" + constraint + "\""
+            );
+            log.info("Removida constraint PostgreSQL {} em agendamentos.", constraint);
+        }
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE agendamentos
+                ADD CONSTRAINT agendamentos_status_pagamento_check
+                CHECK (
+                    status_pagamento IS NULL
+                    OR status_pagamento IN (
+                        'PAGAMENTO_FUTURO',
+                        'ESPERANDO_CONFIRMACAO',
+                        'AGUARDANDO_CONFIRMACAO_DINHEIRO',
+                        'AGUARDANDO_APROVACAO_INDICACAO',
+                        'AGUARDANDO_PAGAMENTO',
+                        'LIBERADO_FALTA_PAGAMENTO',
+                        'PAGO'
+                    )
+                )
+                """
+        );
+        log.info("Constraint agendamentos_status_pagamento_check atualizada com AGUARDANDO_APROVACAO_INDICACAO.");
     }
 }
