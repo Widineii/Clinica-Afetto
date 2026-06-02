@@ -70,7 +70,7 @@
             border-radius: 24px;
             padding: clamp(16px, 3vw, 24px);
             position: relative;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .hero-band__brand {
@@ -980,7 +980,9 @@
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            justify-content: flex-end;
+            justify-content: flex-start;
+            align-items: flex-start;
+            align-content: flex-start;
         }
 
         .grade-semana-nav {
@@ -1431,7 +1433,6 @@
                 </div>
             </div>
             <div class="top-actions afetto-top-actions">
-                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
                    class="btn btn-warning">Uso do banco</a>
@@ -1468,6 +1469,7 @@
                     <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                     <button type="submit" class="btn btn-light">Sair</button>
                 </form>
+                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
             </div>
         </div>
     </div>

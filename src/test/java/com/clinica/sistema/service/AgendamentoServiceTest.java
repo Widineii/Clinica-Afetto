@@ -17,6 +17,7 @@ import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.model.EncerramentoSerieRegistro;
 import com.clinica.sistema.repository.EncerramentoSerieRegistroRepository;
+import com.clinica.sistema.service.NovoAgendamentoNotificacaoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,6 +70,9 @@ class AgendamentoServiceTest {
 
     @Mock
     private EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository;
+
+    @Mock
+    private NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
 
     @Mock
     private AuthService authService;

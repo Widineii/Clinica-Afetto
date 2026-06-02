@@ -8,12 +8,41 @@
                 overflow: visible;
             }
 
-            .hero-band .top-actions {
+            .hero-band .top-actions,
+            .hero-band .afetto-top-actions {
                 overflow: visible;
+                position: relative;
+                z-index: 4;
+            }
+
+            .afetto-hero-stack {
+                align-items: flex-start !important;
+            }
+
+            @media (min-width: 1200px) {
+                .hero-band__brand {
+                    flex: 0 1 min(36%, 26rem);
+                    max-width: min(36%, 26rem);
+                }
+
+                .afetto-top-actions {
+                    flex: 1 1 auto;
+                    justify-content: flex-start;
+                    align-content: flex-start;
+                    padding-left: 0.25rem;
+                    padding-right: 0.25rem;
+                }
+
+                .afetto-top-actions .notif-bell-wrap {
+                    order: 99;
+                    margin-left: auto;
+                    align-self: flex-start;
+                }
             }
 
             .notif-bell-wrap {
                 position: relative;
+                flex-shrink: 0;
             }
 
             .notif-bell-wrap .dropdown-toggle::after {
@@ -22,6 +51,9 @@
 
             .notif-bell-wrap .dropdown-menu {
                 z-index: 1080;
+                margin-top: 0.65rem;
+                inset: auto 0 auto auto !important;
+                transform: none !important;
             }
 
             .btn-notif-bell {
@@ -47,9 +79,13 @@
             }
 
             .notif-bell-panel {
-                width: min(320px, calc(100vw - 24px));
+                width: min(340px, calc(100vw - 24px));
                 border: 0;
                 border-radius: 16px;
+                padding: 1rem 1.1rem 1.35rem;
+                max-height: min(70vh, 460px);
+                overflow-y: auto;
+                box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
             }
 
             .notif-bell-kicker {
@@ -90,6 +126,28 @@
             .notif-bell-divider {
                 border-color: #e2e8f0;
                 opacity: 1;
+            }
+
+            .notif-bell-list {
+                display: grid;
+                gap: 0.75rem;
+                margin-bottom: 0.85rem;
+            }
+
+            .notif-bell-item {
+                padding: 0.75rem 0.85rem;
+                border-radius: 12px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+            }
+
+            .notif-bell-more {
+                font-size: 0.82rem;
+                color: #64748b;
+            }
+
+            .notif-bell-action {
+                margin-bottom: 0;
             }
         </style>
     </th:block>

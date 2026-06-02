@@ -70,6 +70,7 @@ public class AgendamentoService {
     private final ValorConsultaService valorConsultaService;
     private final PagamentoConsultaService pagamentoConsultaService;
     private final EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository;
+    private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
 
     public AgendamentoService(
             AgendamentoRepository repository,
@@ -78,7 +79,8 @@ public class AgendamentoService {
             AuthService authService,
             ValorConsultaService valorConsultaService,
             PagamentoConsultaService pagamentoConsultaService,
-            EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository
+            EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository,
+            NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService
     ) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
@@ -87,6 +89,7 @@ public class AgendamentoService {
         this.valorConsultaService = valorConsultaService;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.encerramentoSerieRegistroRepository = encerramentoSerieRegistroRepository;
+        this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
     }
 
     private volatile Instant ultimaRenovacaoSeries = Instant.EPOCH;
@@ -836,6 +839,7 @@ public class AgendamentoService {
         if (isRecorrenciaComSerie(recorrencia)) {
             renovarSeriesRecorrentesAtivas();
         }
+        novoAgendamentoNotificacaoService.registrarNovosAgendamentos(novosAgendamentos, usuarioLogado);
         return novosAgendamentos.get(0);
     }
 

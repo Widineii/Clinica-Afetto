@@ -637,8 +637,7 @@
                     Usuário: <strong th:text="${usuarioLogado.nome}">Nome</strong>
                 </p>
             </div>
-            <div class="top-actions">
-                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
+            <div class="top-actions afetto-top-actions">
                 <a th:if="${isAdmin}" th:href="@{/agendamentos/admin/uso-banco}" class="btn btn-warning btn-sm">Uso do banco</a>
                 <a th:href="@{/agendamentos/manual#dona-admin}" class="btn btn-light">Manual</a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
@@ -646,6 +645,7 @@
                     <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                     <button type="submit" class="btn btn-light">Sair</button>
                 </form>
+                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
             </div>
         </div>
     </div>

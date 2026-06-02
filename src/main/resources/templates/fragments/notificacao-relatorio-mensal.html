@@ -3,11 +3,15 @@
 <body>
 <th:block th:fragment="sino">
     <div class="dropdown notif-bell-wrap"
-         th:with="temNotifEncerramento=${exibirBolinhaNotificacaoEncerramento == true}, temNotifPagamento=${exibirBolinhaNotificacaoPagamento == true}, temAlgumaNotif=${temNotifEncerramento or temNotifPagamento}">
+         th:with="temNotifEncerramento=${exibirBolinhaNotificacaoEncerramento == true},
+                  temNotifPagamento=${exibirBolinhaNotificacaoPagamento == true},
+                  temNotifNovoAgendamento=${exibirBolinhaNotificacaoNovoAgendamento == true},
+                  temAlgumaNotif=${temNotifEncerramento or temNotifPagamento or temNotifNovoAgendamento}">
         <button type="button"
                 class="btn btn-light btn-notif-bell position-relative dropdown-toggle"
                 data-bs-toggle="dropdown"
                 data-bs-auto-close="outside"
+                data-bs-display="static"
                 aria-expanded="false"
                 th:attr="aria-label=${temAlgumaNotif} ? 'Você tem notificações pendentes' : 'Notificações'"
                 title="Notificacoes">
@@ -18,8 +22,34 @@
                   class="notif-bell-badge"
                   aria-hidden="true"></span>
         </button>
-        <div class="dropdown-menu dropdown-menu-end shadow notif-bell-panel p-3">
+        <div class="dropdown-menu dropdown-menu-end shadow notif-bell-panel">
+            <th:block th:if="${temNotifNovoAgendamento}">
+                <p class="notif-bell-kicker mb-1">Novos agendamentos</p>
+                <p class="notif-bell-text mb-2"
+                   th:if="${totalNotificacoesNovosAgendamentos > 1}"
+                   th:text="|${totalNotificacoesNovosAgendamentos} agendamentos novos na clínica|">
+                    3 agendamentos novos
+                </p>
+                <div class="notif-bell-list">
+                    <article class="notif-bell-item"
+                             th:each="notif : ${notificacoesNovosAgendamentos}">
+                        <p class="notif-bell-title mb-1" th:text="${notif.mensagemResumo}">Resumo</p>
+                        <p class="notif-bell-text mb-0" th:text="${notif.mensagemDetalhe}">Detalhes</p>
+                    </article>
+                </div>
+                <p class="notif-bell-more mb-2"
+                   th:if="${totalNotificacoesNovosAgendamentos > #lists.size(notificacoesNovosAgendamentos)}"
+                   th:text="|+ ${totalNotificacoesNovosAgendamentos - #lists.size(notificacoesNovosAgendamentos)} notificação(ões) anterior(es)|">
+                    + 2 anteriores
+                </p>
+                <a th:href="@{/agendamentos/dashboard(viaNotificacaoNovoAgendamento=true)}"
+                   class="btn btn-teal w-100 notif-bell-action"
+                   th:classappend="${temNotifPagamento or temNotifEncerramento} ? ' mb-3' : ''">
+                    Ver na agenda
+                </a>
+            </th:block>
             <th:block th:if="${temNotifPagamento}">
+                <hr th:if="${temNotifNovoAgendamento}" class="notif-bell-divider my-3">
                 <p class="notif-bell-kicker mb-1">Pagamento</p>
                 <p class="notif-bell-title mb-2"
                    th:text="${notificacaoPagamentoProfissional.mensagemResumo}">Pagamento pendente</p>
@@ -29,20 +59,20 @@
                 <p class="notif-bell-text mb-3"
                    th:text="${notificacaoPagamentoProfissional.mensagemPainel}">Detalhes</p>
                 <a th:href="${notificacaoPagamentoProfissional.urlMeusPagamentos}"
-                   class="btn btn-warning w-100"
+                   class="btn btn-warning w-100 notif-bell-action"
                    th:classappend="${temNotifEncerramento} ? ' mb-3' : ''">
                     Ir para pagamentos
                 </a>
             </th:block>
             <th:block th:if="${temNotifEncerramento}">
-                <hr th:if="${temNotifPagamento}" class="notif-bell-divider my-3">
+                <hr th:if="${temNotifPagamento or temNotifNovoAgendamento}" class="notif-bell-divider my-3">
                 <p class="notif-bell-kicker mb-1">Encerramento de série</p>
                 <p class="notif-bell-title mb-2"
                    th:text="${notificacaoEncerramentoSerie.mensagemResumo}">Alguém encerrou série</p>
                 <p class="notif-bell-text mb-3"
                    th:text="${notificacaoEncerramentoSerie.mensagemPainel}">Detalhes</p>
                 <a th:href="@{/agendamentos/central-profissionais(aba='encerramentos',viaNotificacaoEncerramento=true)}"
-                   class="btn btn-teal w-100">
+                   class="btn btn-teal w-100 notif-bell-action">
                     Ver encerramentos
                 </a>
             </th:block>

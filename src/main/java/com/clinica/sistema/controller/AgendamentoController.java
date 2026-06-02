@@ -15,6 +15,7 @@ import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
+import com.clinica.sistema.service.NovoAgendamentoNotificacaoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.NovidadeSiteService;
 import com.clinica.sistema.service.IndicacaoReservaService;
@@ -51,6 +52,7 @@ public class AgendamentoController {
     private final RelatorioSemanalService relatorioSemanalService;
     private final RelatorioMensalService relatorioMensalService;
     private final EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService;
+    private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
     private final PagamentoConsultaService pagamentoConsultaService;
     private final IndicacaoReservaService indicacaoReservaService;
     private final FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService;
@@ -66,6 +68,7 @@ public class AgendamentoController {
             RelatorioSemanalService relatorioSemanalService,
             RelatorioMensalService relatorioMensalService,
             EncerramentoSerieNotificacaoService encerramentoSerieNotificacaoService,
+            NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService,
             PagamentoConsultaService pagamentoConsultaService,
             IndicacaoReservaService indicacaoReservaService,
             FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService,
@@ -80,6 +83,7 @@ public class AgendamentoController {
         this.relatorioSemanalService = relatorioSemanalService;
         this.relatorioMensalService = relatorioMensalService;
         this.encerramentoSerieNotificacaoService = encerramentoSerieNotificacaoService;
+        this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.indicacaoReservaService = indicacaoReservaService;
         this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
@@ -113,9 +117,13 @@ public class AgendamentoController {
                     }
                     if (authService.podeAcessarCentralProfissionais(usuario)) {
                         encerramentoSerieNotificacaoService.adicionarNotificacaoAoModelSeAplicavel(model, session);
+                        novoAgendamentoNotificacaoService.adicionarNotificacaoAoModelSeAplicavel(model, session);
                     } else {
                         model.addAttribute("notificacaoEncerramentoSerie", null);
                         model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
+                        model.addAttribute("notificacoesNovosAgendamentos", List.of());
+                        model.addAttribute("totalNotificacoesNovosAgendamentos", 0L);
+                        model.addAttribute("exibirBolinhaNotificacaoNovoAgendamento", false);
                     }
                     if (!authService.isAdmin(usuario)
                             && !authService.isDonaClinica(usuario)
@@ -131,6 +139,9 @@ public class AgendamentoController {
                     model.addAttribute("exibirBolinhaNotificacaoRelatorio", false);
                     model.addAttribute("notificacaoEncerramentoSerie", null);
                     model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
+                    model.addAttribute("notificacoesNovosAgendamentos", List.of());
+                    model.addAttribute("totalNotificacoesNovosAgendamentos", 0L);
+                    model.addAttribute("exibirBolinhaNotificacaoNovoAgendamento", false);
                     model.addAttribute("notificacaoPagamentoProfissional", null);
                     model.addAttribute("exibirBolinhaNotificacaoPagamento", false);
                 }
@@ -145,6 +156,7 @@ public class AgendamentoController {
             @RequestParam(required = false) Long pagamentoId,
             @RequestParam(required = false) Long abrirRemarcarMensal,
             @RequestParam(required = false, defaultValue = "false") boolean secaoMensal,
+            @RequestParam(required = false, defaultValue = "false") boolean viaNotificacaoNovoAgendamento,
             HttpSession session
     ) {
         relatorioSemanalService.limparSessao(session);
@@ -152,6 +164,13 @@ public class AgendamentoController {
             return "redirect:/login";
         }
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+
+        if (viaNotificacaoNovoAgendamento && authService.podeAcessarCentralProfissionais(usuarioLogado)) {
+            novoAgendamentoNotificacaoService.marcarComoVisto(session);
+            model.addAttribute("notificacoesNovosAgendamentos", List.of());
+            model.addAttribute("totalNotificacoesNovosAgendamentos", 0L);
+            model.addAttribute("exibirBolinhaNotificacaoNovoAgendamento", false);
+        }
 
         service.renovarSeriesRecorrentesAtivasSeNecessario();
 
