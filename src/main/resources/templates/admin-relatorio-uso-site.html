@@ -129,8 +129,7 @@
             </div>
         </div>
         <p class="hint mb-0">
-            O ultimo acesso e registrado a cada login bem-sucedido no sistema.
-            Agendamento conta qualquer consulta cadastrada no nome do profissional.
+            O ultimo acesso e registrado a cada login. Quem ja tem agendamento tambem aparece como ja entrou.
         </p>
     </div>
 
@@ -159,8 +158,11 @@
                     <td>
                         <span th:if="${linha.jaAcessouSite}" class="badge rounded-pill badge-ok">
                             Ja entrou
-                            <span class="fw-normal opacity-75"
+                            <span th:if="${linha.acessoConfirmadoPorLogin()}"
+                                  class="fw-normal opacity-75"
                                   th:text="' · ' + ${#temporals.format(linha.ultimoAcessoEm, 'dd/MM/yyyy HH:mm')}"> · 01/06/2026 10:00</span>
+                            <span th:if="${linha.entrouSoPorHistoricoAgenda()}"
+                                  class="fw-normal opacity-75"> · ja usou a agenda</span>
                         </span>
                         <span th:unless="${linha.jaAcessouSite}" class="badge rounded-pill badge-pendente">Nunca entrou</span>
                     </td>

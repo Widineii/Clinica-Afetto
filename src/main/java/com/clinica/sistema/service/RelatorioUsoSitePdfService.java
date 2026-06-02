@@ -112,9 +112,11 @@ public class RelatorioUsoSitePdfService {
             }
             celula(tabela, nome);
             celula(tabela, linha.login());
-            String entrou = linha.jaAcessouSite()
+            String entrou = linha.acessoConfirmadoPorLogin()
                     ? "Ja entrou (" + linha.ultimoAcessoEm().format(DATA_HORA) + ")"
-                    : "Nunca entrou";
+                    : linha.entrouSoPorHistoricoAgenda()
+                            ? "Ja entrou (ja usou a agenda)"
+                            : "Nunca entrou";
             celula(tabela, entrou);
             celulaCentral(tabela, String.valueOf(linha.totalAgendamentos()));
         }

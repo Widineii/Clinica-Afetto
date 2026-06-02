@@ -61,7 +61,8 @@ public class RelatorioUsoSiteService {
 
     private ProfissionalUsoSiteLinha montarLinha(Usuario profissional, Map<Long, Long> agendamentosPorProfissional) {
         long totalAgendamentos = agendamentosPorProfissional.getOrDefault(profissional.getId(), 0L);
-        boolean jaAcessou = profissional.getUltimoAcessoEm() != null;
+        boolean jaAgendou = totalAgendamentos > 0;
+        boolean jaAcessou = profissional.getUltimoAcessoEm() != null || jaAgendou;
         return new ProfissionalUsoSiteLinha(
                 profissional.getId(),
                 profissional.getNome(),
@@ -70,7 +71,7 @@ public class RelatorioUsoSiteService {
                 profissional.getUltimoAcessoEm(),
                 totalAgendamentos,
                 jaAcessou,
-                totalAgendamentos > 0
+                jaAgendou
         );
     }
 }

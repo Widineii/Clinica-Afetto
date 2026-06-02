@@ -12,4 +12,13 @@ public record ProfissionalUsoSiteLinha(
         boolean jaAcessouSite,
         boolean jaAgendou
 ) {
+    /** Login registrado apos implantacao do controle de acesso. */
+    public boolean acessoConfirmadoPorLogin() {
+        return ultimoAcessoEm != null;
+    }
+
+    /** Quem tem agendamento ja usou a agenda, mesmo sem data de login gravada. */
+    public boolean entrouSoPorHistoricoAgenda() {
+        return ultimoAcessoEm == null && totalAgendamentos > 0;
+    }
 }
