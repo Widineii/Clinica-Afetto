@@ -25,9 +25,9 @@ public class RelatorioProfissionalDemoSeedService {
 
     private static final List<DemoAtendimento> ATENDIMENTOS_DEMO = List.of(
             new DemoAtendimento("Sala 1", "AVULSO", new BigDecimal("35.00"), 5, 10, 0),
-            new DemoAtendimento("Sala 1", "SEMANAL", new BigDecimal("32.00"), 12, 14, 30),
+            new DemoAtendimento("Sala 1", "SEMANAL", new BigDecimal("35.00"), 12, 14, 30),
             new DemoAtendimento("Sala 2", "AVULSO", new BigDecimal("35.00"), 8, 16, 0),
-            new DemoAtendimento("Sala 2", "QUINZENAL", new BigDecimal("32.00"), 18, 11, 15),
+            new DemoAtendimento("Sala 2", "QUINZENAL", new BigDecimal("35.00"), 18, 11, 15),
             new DemoAtendimento("Sala 3", "AVULSO", new BigDecimal("25.00"), 22, 9, 45)
     );
 

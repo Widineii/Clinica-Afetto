@@ -18,7 +18,7 @@ class ReceitaPixAgregadorTest {
     void deveAgregarReceitaPorSalaProfissionalETipo() {
         List<ReceitaPixLinhaView> linhas = List.of(
                 linha("Julia", "Sala 1", "AVULSO", "35.00"),
-                linha("Carol", "Sala 2", "SEMANAL", "32.00"),
+                linha("Carol", "Sala 2", "SEMANAL", "35.00"),
                 linha("Julia", "Sala 1", "QUINZENAL", "25.00")
         );
         BigDecimal total = new BigDecimal("92.00");

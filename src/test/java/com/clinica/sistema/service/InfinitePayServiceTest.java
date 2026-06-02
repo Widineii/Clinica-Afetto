@@ -54,7 +54,7 @@ class InfinitePayServiceTest {
         sala4Agendamento.setSala(sala4);
         sala4Agendamento.setTipoRecorrencia("SEMANAL");
 
-        assertEquals(new BigDecimal("32.00"), service.valorPagamento(fixo));
+        assertEquals(new BigDecimal("35.00"), service.valorPagamento(fixo));
         assertEquals(new BigDecimal("35.00"), service.valorPagamento(avulso));
         assertEquals(new BigDecimal("25.00"), service.valorPagamento(sala4Agendamento));
     }

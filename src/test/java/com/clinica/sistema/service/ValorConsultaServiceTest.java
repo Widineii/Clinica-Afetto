@@ -37,15 +37,19 @@ class ValorConsultaServiceTest {
     }
 
     @Test
-    void fixoSemanalDeveCobrarTrintaEDois() {
-        assertEquals(new BigDecimal("32.00"), service.calcularTarifaClinicaPadrao(sala1, "SEMANAL"));
+    void fixoSemanalDeveCobrarTrintaECinco() {
+        assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "SEMANAL"));
     }
 
     @Test
-    void avulsoQuinzenalEMensalDevemCobrarTrintaECinco() {
+    void avulsoEQuinzenalDevemCobrarTrintaECinco() {
         assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "AVULSO"));
         assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "QUINZENAL"));
-        assertEquals(new BigDecimal("35.00"), service.calcularTarifaClinicaPadrao(sala1, "MENSAL"));
+    }
+
+    @Test
+    void mensalDeveCobrarTrintaEDois() {
+        assertEquals(new BigDecimal("32.00"), service.calcularTarifaClinicaPadrao(sala1, "MENSAL"));
     }
 
     @Test
@@ -105,8 +109,8 @@ class ValorConsultaServiceTest {
         service.aplicarValores(agendamento, form, sala1, "SEMANAL", false);
 
         assertFalse(agendamento.getIndicacaoDona());
-        assertEquals(new BigDecimal("32.00"), agendamento.getValorClinicaCobra());
-        assertEquals(new BigDecimal("168.00"), agendamento.getValorLiquidoProfissional());
+        assertEquals(new BigDecimal("35.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("165.00"), agendamento.getValorLiquidoProfissional());
     }
 
     @Test

@@ -165,7 +165,7 @@ class RelatorioMensalFluxoIntegracaoTest {
         semanal.setHorarioAtendimento(LocalTime.of(9, 0));
         semanal.setRecorrencia("SEMANAL");
         semanal.setValorProfissionalRecebe(new BigDecimal("150.00"));
-        semanal.setValorClinicaCobra(new BigDecimal("32.00"));
+        semanal.setValorClinicaCobra(new BigDecimal("35.00"));
         agendamentoService.salvar(semanal, admin);
 
         LocalDateTime inicioMes = mesPassado.atDay(1).atStartOfDay();

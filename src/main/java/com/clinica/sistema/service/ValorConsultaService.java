@@ -12,10 +12,10 @@ import java.math.RoundingMode;
 public class ValorConsultaService {
 
     public static final BigDecimal CLINICA_SALA_4 = new BigDecimal("25.00");
-    public static final BigDecimal CLINICA_FIXO_SEMANAL = new BigDecimal("32.00");
+    public static final BigDecimal CLINICA_FIXO_SEMANAL = new BigDecimal("35.00");
     public static final BigDecimal CLINICA_AVULSO = new BigDecimal("35.00");
     public static final BigDecimal CLINICA_QUINZENAL = new BigDecimal("35.00");
-    public static final BigDecimal CLINICA_MENSAL = new BigDecimal("35.00");
+    public static final BigDecimal CLINICA_MENSAL = new BigDecimal("32.00");
     /** @deprecated use {@link #CLINICA_AVULSO} */
     @Deprecated
     public static final BigDecimal CLINICA_AVULSO_QUINZENAL = CLINICA_AVULSO;
@@ -72,6 +72,12 @@ public class ValorConsultaService {
         }
         if ("SEMANAL".equalsIgnoreCase(recorrencia)) {
             return CLINICA_FIXO_SEMANAL;
+        }
+        if ("QUINZENAL".equalsIgnoreCase(recorrencia)) {
+            return CLINICA_QUINZENAL;
+        }
+        if ("MENSAL".equalsIgnoreCase(recorrencia)) {
+            return CLINICA_MENSAL;
         }
         return CLINICA_AVULSO;
     }

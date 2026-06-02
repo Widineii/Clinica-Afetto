@@ -279,7 +279,7 @@ public class InfinitePayService {
 
     /**
      * Valor cobrado no PIX: taxa da clinica salva no agendamento ou tarifa padrao
-     * (Sala 4 = 25, fixo = 32, avulso/quinzenal = 35, indicacao = 30%).
+     * (Sala 4 = 25, avulso/semanal/quinzenal = 35, mensal = 32, indicacao = 30%).
      */
     public BigDecimal resolverValorTaxaClinica(Agendamento agendamento) {
         if (agendamento == null) {
