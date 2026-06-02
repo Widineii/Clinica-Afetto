@@ -14,11 +14,14 @@
 </div>
 
 <div th:fragment="status-badge (agendamento)">
-    <span th:if="${agendamento != null and agendamento.statusPagamento != null}"
+    <span th:if="${agendamento != null and agendamento.statusPagamento != null and pagamentoService.podeVerPagamento(agendamento, usuarioLogado)}"
           class="badge rounded-pill ms-1 pagamento-status-badge"
           th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.esperandoConfirmacaoPagamento ? ' text-bg-warning' : (agendamento.pagamentoPendente ? ' text-bg-secondary' : ' text-bg-light text-dark'))}"
           th:title="${pagamentoService.rotuloStatusPagamento(agendamento, usuarioLogado)}"
           th:text="${pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado)}">Esperando confirmação</span>
+    <span th:if="${agendamento != null and !pagamentoService.podeVerPagamento(agendamento, usuarioLogado) and !#strings.isEmpty(pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado))}"
+          class="badge rounded-pill ms-1 pagamento-status-badge text-bg-secondary"
+          th:text="${pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado)}">Sala confirmada</span>
 </div>
 
 <div th:fragment="instrucao-checkout-infinitepay"
@@ -69,6 +72,7 @@
     <div th:if="${agendamento != null}" class="pagamento-acoes mt-2 d-flex flex-wrap gap-2 align-items-center">
         <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
 
+        <th:block th:if="${pagamentoService.podeVerPagamento(agendamento, usuarioLogado)}">
         <a th:if="${agendamento.possuiQrPagamentoAtivo() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
            th:href="${agendamento.pagamentoLink}"
            th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
@@ -117,6 +121,7 @@
               class="small text-muted">
             Vaga liberada na grade — pague antes de outro profissional reservar.
         </span>
+        </th:block>
 
         <a th:if="${agendamentoService != null and usuarioLogado != null and agendamentoService.podeRealocar(agendamento, usuarioLogado) and agendamento.id != null}"
            th:href="@{/agendamentos/{id}/realocar(id=${agendamento.id})}"

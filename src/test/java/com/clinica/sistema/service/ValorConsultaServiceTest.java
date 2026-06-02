@@ -108,4 +108,19 @@ class ValorConsultaServiceTest {
         assertEquals(new BigDecimal("32.00"), agendamento.getValorClinicaCobra());
         assertEquals(new BigDecimal("168.00"), agendamento.getValorLiquidoProfissional());
     }
+
+    @Test
+    void consultaPropriaDonaDeveRegistrarSomenteValorRecebido() {
+        AgendamentoForm form = new AgendamentoForm();
+        form.setValorProfissionalRecebe(new BigDecimal("180.00"));
+        form.setIndicacaoDona(true);
+
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+        service.aplicarValorConsultaPropriaDona(agendamento, form);
+
+        assertEquals(new BigDecimal("180.00"), agendamento.getValorProfissionalRecebe());
+        assertEquals(BigDecimal.ZERO, agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("180.00"), agendamento.getValorLiquidoProfissional());
+        assertFalse(agendamento.getIndicacaoDona());
+    }
 }

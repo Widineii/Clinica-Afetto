@@ -35,6 +35,35 @@
             background: #fff;
             box-shadow: inset 0 -1px 0 #e2e8f0;
         }
+
+        .financeiro-resumo-card--ganhos {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border: 1px solid #6ee7b7;
+            border-radius: 16px;
+            padding: 1.25rem 1.35rem;
+        }
+
+        .financeiro-resumo-card--ganhos .financeiro-resumo-label {
+            color: #4b7c6f;
+            font-size: 0.9rem;
+        }
+
+        .financeiro-resumo-card--ganhos .financeiro-resumo-valor {
+            color: #0f4c3a;
+            font-size: clamp(1.75rem, 4vw, 2.25rem);
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        .financeiro-resumo-card--ganhos .financeiro-hint {
+            color: #3d6b5c;
+        }
+
+        @media (min-width: 768px) {
+            .financeiro-resumo-card--ganhos-destaque {
+                max-width: 22rem;
+            }
+        }
     </style>
 </head>
 <body class="financeiro-page">
@@ -122,9 +151,19 @@
         </div>
     </div>
 
+    <div th:if="${relatorio.exibirGanhosConsulta}"
+         class="financeiro-resumo-card financeiro-resumo-card--ganhos financeiro-resumo-card--ganhos-destaque mb-4">
+        <div class="financeiro-resumo-label">Você ganhou no mês (líquido)</div>
+        <div class="financeiro-resumo-valor" th:text="${relatorio.totalGanhosMesFormatado}">R$ 0,00</div>
+        <p class="financeiro-hint mb-0 mt-2">
+            <span th:text="${relatorio.consultasComValorGanhos}">0</span> consulta(s) —
+            valor após descontar a taxa da sala
+        </p>
+    </div>
+
     <div class="financeiro-resumo-grid mb-4">
         <div class="financeiro-resumo-card financeiro-resumo-card--destaque">
-            <div class="financeiro-resumo-label">Atendimentos no mes</div>
+            <div class="financeiro-resumo-label">Atendimentos no mês</div>
             <div class="financeiro-resumo-valor" th:text="${relatorio.totalAtendimentos}">0</div>
         </div>
         <div th:if="${exibirTaxasRelatorio}" class="financeiro-resumo-card">
@@ -158,6 +197,14 @@
                 <canvas id="graficoTipo"></canvas>
                 <div class="fin-grafico-vazio" id="vazioTipo">Nenhum atendimento neste mes.</div>
             </div>
+        </div>
+    </div>
+
+    <div class="fin-grafico-card fin-grafico-card--full mb-4">
+        <div class="fin-grafico-card__titulo">Atendimentos por sala</div>
+        <div class="fin-grafico-wrap fin-grafico-wrap--bar" id="wrapGraficoSalaBarra">
+            <canvas id="graficoSalaBarra"></canvas>
+            <div class="fin-grafico-vazio" id="vazioSalaBarra">Nenhum atendimento neste mes.</div>
         </div>
     </div>
 
@@ -244,8 +291,10 @@
     const CORES_TIPO = {
         'Avulso': '#1B4D5C',
         'Fixo semanal': '#2563EB',
-        'Quinzenal': '#059669'
+        'Quinzenal': '#059669',
+        'Mensal': '#0D9488'
     };
+    const ORDEM_SALAS = ['Sala 1', 'Sala 2', 'Sala 3', 'Sala 4'];
 
     function lerJson(id) {
         try {
@@ -269,6 +318,105 @@
 
     var graficoSalaInst;
     var graficoTipoInst;
+    var graficoSalaBarraInst;
+
+    function ordenarDadosSalas(dados) {
+        var mapa = {};
+        dados.forEach(function (item) {
+            mapa[item.rotulo] = item.valor || 0;
+        });
+        return ORDEM_SALAS.map(function (rotulo) {
+            return { rotulo: rotulo, valor: mapa[rotulo] || 0 };
+        }).filter(function (item) {
+            return item.valor > 0;
+        });
+    }
+
+    function alturaGraficoSalas(quantidade) {
+        return Math.max(280, Math.min(420, 220 + (quantidade * 24)));
+    }
+
+    function montarGraficoSalasBarras(dados) {
+        if (typeof Chart === 'undefined') {
+            alternarVazio('vazioSalaBarra', true);
+            return null;
+        }
+        const canvas = document.getElementById('graficoSalaBarra');
+        const wrap = document.getElementById('wrapGraficoSalaBarra');
+        const filtrados = ordenarDadosSalas(dados);
+        alternarVazio('vazioSalaBarra', filtrados.length === 0);
+        if (!canvas || filtrados.length === 0) {
+            if (canvas) {
+                canvas.style.display = 'none';
+            }
+            return null;
+        }
+        canvas.style.display = 'block';
+        if (wrap) {
+            var altura = alturaGraficoSalas(filtrados.length);
+            wrap.style.minHeight = altura + 'px';
+            wrap.style.height = altura + 'px';
+        }
+        var estreita = telaEstreita();
+        return new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: filtrados.map(function (item) { return item.rotulo; }),
+                datasets: [{
+                    label: 'Atendimentos',
+                    data: filtrados.map(function (item) { return item.valor; }),
+                    backgroundColor: filtrados.map(function (item) {
+                        return CORES_SALA[item.rotulo] || '#64748B';
+                    }),
+                    hoverBackgroundColor: filtrados.map(function (item) {
+                        return CORES_SALA[item.rotulo] || '#475569';
+                    }),
+                    borderColor: filtrados.map(function (item) {
+                        return CORES_SALA[item.rotulo] || '#475569';
+                    }),
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    maxBarThickness: 72
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (contexto) {
+                                var valor = contexto.parsed.y || 0;
+                                return valor + (valor === 1 ? ' atendimento' : ' atendimentos');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            maxRotation: 0,
+                            minRotation: 0,
+                            font: { size: estreita ? 11 : 12 }
+                        },
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
+                        },
+                        title: {
+                            display: true,
+                            text: 'Atendimentos'
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     function montarGrafico(canvasId, vazioId, dados, cores, tipo) {
         if (typeof Chart === 'undefined') {
@@ -324,8 +472,12 @@
         if (graficoTipoInst) {
             graficoTipoInst.destroy();
         }
+        if (graficoSalaBarraInst) {
+            graficoSalaBarraInst.destroy();
+        }
         graficoSalaInst = montarGrafico('graficoSala', 'vazioSala', lerJson('grafico-salas-json'), CORES_SALA, 'pie');
         graficoTipoInst = montarGrafico('graficoTipo', 'vazioTipo', lerJson('grafico-tipos-json'), CORES_TIPO, 'doughnut');
+        graficoSalaBarraInst = montarGraficoSalasBarras(lerJson('grafico-salas-json'));
     }
 
     renderizarGraficos();

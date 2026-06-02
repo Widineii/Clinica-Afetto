@@ -547,8 +547,9 @@ class AgendamentoServiceTest {
         agendamento.setSala(sala);
         agendamento.setNomeCliente("Cliente teste");
         agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
-        agendamento.setDataReferenciaSemanaPagamento(LocalDate.of(2026, 6, 1));
-        agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 1).atTime(10, 0));
+        LocalDate inicioSemana = LocalDate.now().plusDays(5);
+        agendamento.setDataReferenciaSemanaPagamento(inicioSemana.with(DayOfWeek.MONDAY));
+        agendamento.setDataHoraInicio(inicioSemana.atTime(10, 0));
         agendamento.setDataHoraFim(agendamento.getDataHoraInicio().plusHours(1));
 
         Sala outraSala = new Sala();
@@ -557,7 +558,7 @@ class AgendamentoServiceTest {
 
         RelocacaoAgendamentoForm form = new RelocacaoAgendamentoForm();
         form.setSalaId(9L);
-        form.setDataAtendimento(LocalDate.of(2026, 6, 8));
+        form.setDataAtendimento(inicioSemana.plusDays(3));
         form.setHorarioAtendimento(LocalTime.of(14, 0));
 
         when(pagamentoConsultaService.resolverPeriodicidade(profissional))
@@ -574,8 +575,8 @@ class AgendamentoServiceTest {
 
         Agendamento atualizado = agendamentoService.realocar(50L, form, profissional);
 
-        assertEquals(LocalDate.of(2026, 6, 1), atualizado.getDataReferenciaSemanaPagamento());
-        assertEquals(LocalDate.of(2026, 6, 8), atualizado.getDataHoraInicio().toLocalDate());
+        assertEquals(inicioSemana.with(DayOfWeek.MONDAY), atualizado.getDataReferenciaSemanaPagamento());
+        assertEquals(inicioSemana.plusDays(3), atualizado.getDataHoraInicio().toLocalDate());
     }
 
     @Test

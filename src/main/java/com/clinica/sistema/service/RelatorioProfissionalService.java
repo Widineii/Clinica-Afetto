@@ -13,6 +13,7 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -51,7 +52,7 @@ public class RelatorioProfissionalService {
     }
 
     public RelatorioProfissionalMesView montarRelatorio(Usuario profissional, YearMonth mesSelecionado) {
-        return montarRelatorio(profissional, mesSelecionado, null, true);
+        return montarRelatorio(profissional, mesSelecionado, null, true, false);
     }
 
     public RelatorioProfissionalMesView montarRelatorio(
@@ -59,7 +60,7 @@ public class RelatorioProfissionalService {
             YearMonth mesSelecionado,
             String salaFiltro
     ) {
-        return montarRelatorio(profissional, mesSelecionado, salaFiltro, true);
+        return montarRelatorio(profissional, mesSelecionado, salaFiltro, true, false);
     }
 
     public RelatorioProfissionalMesView montarRelatorio(
@@ -68,12 +69,23 @@ public class RelatorioProfissionalService {
             String salaFiltro,
             boolean exibirTaxas
     ) {
+        return montarRelatorio(profissional, mesSelecionado, salaFiltro, exibirTaxas, false);
+    }
+
+    public RelatorioProfissionalMesView montarRelatorio(
+            Usuario profissional,
+            YearMonth mesSelecionado,
+            String salaFiltro,
+            boolean exibirTaxas,
+            boolean exibirGanhosConsulta
+    ) {
         if (profissional == null || profissional.getId() == null) {
             return RelatorioProfissionalMesView.vazio(
                     mesSelecionado,
                     "Profissional",
                     resolverSalaFiltro(salaFiltro),
-                    exibirTaxas
+                    exibirTaxas,
+                    exibirGanhosConsulta
             );
         }
 
@@ -127,6 +139,18 @@ public class RelatorioProfissionalService {
         RelatorioLinhaView usoSalas = montarUsoSalas(profissional.getNome(), atendimentosMes);
         List<ContagemGraficoView> usoTipos = montarUsoTipos(atendimentosMes);
 
+        BigDecimal totalGanhosMes = BigDecimal.ZERO;
+        int consultasComValorGanhos = 0;
+        if (exibirGanhosConsulta) {
+            for (Agendamento agendamento : atendimentosMes) {
+                BigDecimal valorLiquido = resolverValorLiquidoConsulta(agendamento);
+                if (valorLiquido.signum() > 0) {
+                    totalGanhosMes = totalGanhosMes.add(valorLiquido);
+                    consultasComValorGanhos++;
+                }
+            }
+        }
+
         return new RelatorioProfissionalMesView(
                 mesSelecionado,
                 profissional.getNome(),
@@ -142,7 +166,10 @@ public class RelatorioProfissionalService {
                 GraficoJsonUtil.serializarContagensPorRotulo(usoTipos),
                 GraficoJsonUtil.serializarPagamentosPix(pagamentosMes),
                 salaSelecionada,
-                exibirTaxas
+                exibirTaxas,
+                exibirGanhosConsulta,
+                totalGanhosMes,
+                consultasComValorGanhos
         );
     }
 
@@ -165,6 +192,25 @@ public class RelatorioProfissionalService {
     public String rotuloSalaFiltro(String salaFiltro) {
         String sala = resolverSalaFiltro(salaFiltro);
         return sala != null ? sala : "Todas as salas";
+    }
+
+    /** Valor que o profissional fica (recebe do cliente menos taxa da clinica/sala). */
+    BigDecimal resolverValorLiquidoConsulta(Agendamento agendamento) {
+        if (agendamento == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal liquido = agendamento.getValorLiquidoProfissional();
+        if (liquido != null) {
+            return liquido.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal recebe = agendamento.getValorProfissionalRecebe();
+        if (recebe == null || recebe.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal taxaClinica = agendamento.getValorClinicaCobra() != null
+                ? agendamento.getValorClinicaCobra()
+                : BigDecimal.ZERO;
+        return recebe.subtract(taxaClinica).setScale(2, RoundingMode.HALF_UP);
     }
 
     private ResumoHistorico calcularMelhorMes(Long profissionalId) {

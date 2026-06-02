@@ -20,9 +20,13 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class FinanceiroReceitaPixService {
@@ -44,27 +48,31 @@ public class FinanceiroReceitaPixService {
     private final UsuarioRepository usuarioRepository;
     private final SalaRepository salaRepository;
     private final InfinitePayService infinitePayService;
+    private final AuthService authService;
 
     public FinanceiroReceitaPixService(
             AgendamentoRepository agendamentoRepository,
             UsuarioRepository usuarioRepository,
             SalaRepository salaRepository,
-            InfinitePayService infinitePayService
+            InfinitePayService infinitePayService,
+            AuthService authService
     ) {
         this.agendamentoRepository = agendamentoRepository;
         this.usuarioRepository = usuarioRepository;
         this.salaRepository = salaRepository;
         this.infinitePayService = infinitePayService;
+        this.authService = authService;
     }
 
     public ReceitaPixMesView montarResumoMes(YearMonth mesSelecionado) {
+        Set<Long> profissionaisExcluidos = carregarIdsProfissionaisExcluidosDaReceitaClinica();
         LocalDateTime inicio = mesSelecionado.atDay(1).atStartOfDay();
         LocalDateTime fim = mesSelecionado.plusMonths(1).atDay(1).atStartOfDay();
 
         List<ReceitaPixLinhaView> linhas = agendamentoRepository
                 .findPagosPorDataPagamentoNoPeriodo(inicio, fim)
                 .stream()
-                .filter(this::contaParaReceitaClinica)
+                .filter(agendamento -> contaParaReceitaClinica(agendamento, profissionaisExcluidos))
                 .map(this::paraLinha)
                 .toList();
 
@@ -72,11 +80,11 @@ public class FinanceiroReceitaPixService {
                 .map(ReceitaPixLinhaView::getValorTaxa)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<ReceitaPendenteLinhaView> pendentes = montarPendentesMes(inicio, fim);
+        List<ReceitaPendenteLinhaView> pendentes = montarPendentesMes(inicio, fim, profissionaisExcluidos);
         Map<String, ResumoPendenteProfissional> pendentesPorChave = agregarPendentesPorChave(pendentes);
 
         List<ProfissionalReceitaPainelView> profissionaisPainel = enriquecerPainelComPendentes(
-                mesclarEquipeCompleta(montarPainelProfissionais(mesSelecionado)),
+                mesclarEquipeCompleta(montarPainelProfissionais(mesSelecionado, profissionaisExcluidos), profissionaisExcluidos),
                 pendentesPorChave
         );
 
@@ -91,12 +99,16 @@ public class FinanceiroReceitaPixService {
         return new ReceitaPixMesView(mesSelecionado, linhas, total, profissionaisPainel, salasFiltro, pendentes, totalAReceber);
     }
 
-    private List<ReceitaPendenteLinhaView> montarPendentesMes(LocalDateTime inicio, LocalDateTime fim) {
+    private List<ReceitaPendenteLinhaView> montarPendentesMes(
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            Set<Long> profissionaisExcluidos
+    ) {
         try {
             return agendamentoRepository
                     .findPorDataConsultaEStatusPagamentoNoPeriodo(inicio, fim, STATUS_TAXA_A_RECEBER)
                     .stream()
-                    .filter(this::contaParaReceitaClinica)
+                    .filter(agendamento -> contaParaReceitaClinica(agendamento, profissionaisExcluidos))
                     .map(agendamento -> new ReceitaPendenteLinhaView(
                             agendamento,
                             infinitePayService.resolverValorTaxaClinica(agendamento)
@@ -108,12 +120,15 @@ public class FinanceiroReceitaPixService {
         }
     }
 
-    private List<ProfissionalReceitaPainelView> montarPainelProfissionais(YearMonth mesSelecionado) {
+    private List<ProfissionalReceitaPainelView> montarPainelProfissionais(
+            YearMonth mesSelecionado,
+            Set<Long> profissionaisExcluidos
+    ) {
         Map<String, String> nomesPorChave = new HashMap<>();
         Map<String, Map<YearMonth, ResumoMensalProfissional>> resumosPorProfissional = new HashMap<>();
 
         for (Agendamento agendamento : agendamentoRepository.findTodosPagosComDataPagamento()) {
-            if (!contaParaReceitaClinica(agendamento) || agendamento.getDataPagamento() == null) {
+            if (!contaParaReceitaClinica(agendamento, profissionaisExcluidos) || agendamento.getDataPagamento() == null) {
                 continue;
             }
             if (agendamento.getProfissional() == null || agendamento.getProfissional().getNome() == null) {
@@ -185,7 +200,8 @@ public class FinanceiroReceitaPixService {
     }
 
     private List<ProfissionalReceitaPainelView> mesclarEquipeCompleta(
-            List<ProfissionalReceitaPainelView> painelComDados
+            List<ProfissionalReceitaPainelView> painelComDados,
+            Set<Long> profissionaisExcluidos
     ) {
         Map<String, ProfissionalReceitaPainelView> porChave = new HashMap<>();
         for (ProfissionalReceitaPainelView item : painelComDados) {
@@ -193,7 +209,7 @@ public class FinanceiroReceitaPixService {
         }
 
         for (Usuario profissional : usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL")) {
-            if (Boolean.TRUE.equals(profissional.getDonaClinica())) {
+            if (profissional.getId() != null && profissionaisExcluidos.contains(profissional.getId())) {
                 continue;
             }
             String chave = normalizarChave(profissional.getNome());
@@ -244,11 +260,26 @@ public class FinanceiroReceitaPixService {
         );
     }
 
-    private boolean contaParaReceitaClinica(Agendamento agendamento) {
-        if (agendamento.getProfissional() == null) {
+    private Set<Long> carregarIdsProfissionaisExcluidosDaReceitaClinica() {
+        return usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL").stream()
+                .filter(authService::profissionalIgnoraValoresEPagamento)
+                .map(Usuario::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Receita da clinica = taxas PIX dos demais profissionais.
+     * Consultas da dona (Polyana) nao entram: ela nao paga taxa de sala e o ganho pessoal fica no Meu relatorio.
+     */
+    private boolean contaParaReceitaClinica(Agendamento agendamento, Set<Long> profissionaisExcluidos) {
+        if (agendamento == null) {
+            return false;
+        }
+        if (agendamento.getProfissional() == null || agendamento.getProfissional().getId() == null) {
             return true;
         }
-        return !Boolean.TRUE.equals(agendamento.getProfissional().getDonaClinica());
+        return !profissionaisExcluidos.contains(agendamento.getProfissional().getId());
     }
 
     private ReceitaPixLinhaView paraLinha(Agendamento agendamento) {

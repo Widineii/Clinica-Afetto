@@ -1533,6 +1533,7 @@
                                     <option th:each="profissional : ${profissionais}"
                                             th:value="${profissional.id}"
                                             th:text="${profissional.nome}"
+                                            th:selected="${podeAcompanharGanhosConsultaPropria and profissional.id == usuarioLogado.id}"
                                             th:attr="data-sem-valores=${profissional.donaClinica != null and profissional.donaClinica ? 'true' : 'false'}">Profissional</option>
                                 </select>
                                 <div class="form-text">A administração ou a dona da clínica podem escolher qual profissional será vinculado ao agendamento.</div>
@@ -1601,8 +1602,10 @@
                             </div>
                         </div>
 
-                        <div class="col-12 valores-consulta-panel" id="valoresConsultaPanel"
-                             th:if="${exibirPainelValoresConsulta}">
+                        <div class="col-12 valores-consulta-panel"
+                             id="valoresConsultaPanel"
+                             th:if="${exibirPainelValoresConsulta}"
+                             th:classappend="${podeAcompanharGanhosConsultaPropria ? ' d-none' : ''}">
                             <h3 class="h6 mb-3">Valores desta consulta (por cliente)</h3>
 
                             <div class="form-check mb-3">
@@ -1655,6 +1658,22 @@
                                     <li><strong>Indicação:</strong> 30% do valor da consulta</li>
                                 </ul>
                             </div>
+                        </div>
+
+                        <div class="col-12 valores-consulta-panel" id="painelValorConsultaPolyana"
+                             th:if="${podeAcompanharGanhosConsultaPropria}">
+                            <h3 class="h6 mb-2">Valor da sua consulta</h3>
+                            <p class="small text-muted mb-3">
+                                Somente para acompanhar quanto você recebe do cliente. A clínica não cobra taxa de sala nas suas consultas.
+                            </p>
+                            <label class="form-label" for="valorConsultaPolyana">Quanto você recebe nesta consulta (R$)</label>
+                            <input type="text"
+                                   name="valorProfissionalRecebe"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   placeholder="0,00"
+                                   class="form-control valor-moeda-brl"
+                                   id="valorConsultaPolyana">
                         </div>
 
                         <div class="col-12 d-grid">
@@ -1839,23 +1858,23 @@
                                             </div>
                                         </div>
                                         <div class="slot-card__footer">
+                                            <span th:if="${!pagamentoService.exibirIndicadoresPagamentoNaGrade(item, usuarioLogado) and !#strings.isEmpty(pagamentoService.rotuloStatusPagamentoResumido(item, usuarioLogado))}"
+                                                  class="badge rounded-pill text-bg-secondary slot-status-pill"
+                                                  th:text="${pagamentoService.rotuloStatusPagamentoResumido(item, usuarioLogado)}">Sala confirmada</span>
+                                            <th:block th:if="${pagamentoService.exibirIndicadoresPagamentoNaGrade(item, usuarioLogado)}">
                                             <span th:if="${pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado)}"
                                                   class="slot-aguardando-pill slot-status-pill"
                                                   th:title="${pagamentoService.rotuloEsperandoNaGrade(item, usuarioLogado)}"
                                                   th:text="${pagamentoService.rotuloEsperandoNaGradeResumido(item, usuarioLogado)}">Aguardando confirmacoes</span>
                                             <span th:if="${pagamentoService.exibirSalaConfirmadaNaGrade(item, usuarioLogado)}"
                                                   class="badge rounded-pill text-bg-success slot-status-pill">Sala confirmada</span>
-                                            <span th:if="${item.fixo == true and !item.reservaPendenteNaGrade}" class="fixed-badge slot-status-pill" th:text="${item.recorrenciaLabel}">Fixo</span>
-                                            <span th:if="${item.mensal}" class="fixed-badge slot-status-pill">Mensal</span>
-                                            <span th:if="${item.indicacaoDona == true and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}"
-                                                  class="slot-indicacao-pill slot-status-pill">Ind. 30%</span>
-                                            <span th:if="${item.statusPagamento != null and pagamentoService.bloqueadoPorPagamento(item)}"
+                                            <span th:if="${pagamentoService.exibirNaoPagoNaGrade(item, usuarioLogado)}"
                                                   class="badge rounded-pill text-bg-danger slot-status-pill">Não pago</span>
                                             <span th:if="${item.pagamentoPago}"
                                                   class="badge rounded-pill text-bg-success slot-status-pill"
                                                   th:title="${pagamentoService.rotuloPagoNaGrade(item, usuarioLogado)}"
-                                                  th:text="${pagamentoService.rotuloPagoNaGradeResumido(item, usuarioLogado)}">Sala confirmada</span>
-                                            <form th:if="${pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}"
+                                                  th:text="${pagamentoService.rotuloPagoNaGradeResumido(item, usuarioLogado)}">Pago</span>
+                                            <form th:if="${pagamentoService.podePagarAgora(item)}"
                                                   th:action="@{/pagamentos/{id}/gerar-link(id=${item.id})}"
                                                   method="post"
                                                   class="d-inline">
@@ -1864,6 +1883,11 @@
                                                         class="slot-pagar-agora-link border-0 bg-transparent p-0"
                                                         onclick="event.stopPropagation();">Pagar agora</button>
                                             </form>
+                                            </th:block>
+                                            <span th:if="${item.fixo == true and !item.reservaPendenteNaGrade}" class="fixed-badge slot-status-pill" th:text="${item.recorrenciaLabel}">Fixo</span>
+                                            <span th:if="${item.mensal}" class="fixed-badge slot-status-pill">Mensal</span>
+                                            <span th:if="${item.indicacaoDona == true and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}"
+                                                  class="slot-indicacao-pill slot-status-pill">Ind. 30%</span>
                                         </div>
                                     </div>
                                     <div th:if="${item == null}" class="slot-empty-label">Disponível</div>
@@ -2207,11 +2231,14 @@
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
     var podeEscolherProfissionalAgendamento = /*[[${isAdmin or isDonaClinica}]]*/ false;
     var idsProfissionaisSemValores = /*[[${idsProfissionaisSemValores}]]*/ [];
+    var podeAcompanharGanhosConsultaPropria = /*[[${podeAcompanharGanhosConsultaPropria}]]*/ false;
+    var idProfissionalPolyana = /*[[${podeAcompanharGanhosConsultaPropria ? usuarioLogado.id : null}]]*/ null;
 
     document.addEventListener('DOMContentLoaded', function () {
         (function initFormularioAgendamentoValores() {
             var painel = document.getElementById('valoresConsultaPanel');
-            if (!painel) {
+            var painelPolyana = document.getElementById('painelValorConsultaPolyana');
+            if (!painel && !painelPolyana) {
                 return;
             }
 
@@ -2223,11 +2250,18 @@
             var hintRecorrenciaMensalAgenda = document.getElementById('recorrenciaHintMensalAgenda');
             var indicacaoInput = document.getElementById('indicacaoDona');
             var recebeInput = document.getElementById('valorProfissionalRecebe');
+            var inputPolyana = document.getElementById('valorConsultaPolyana');
             var clinicaInput = document.getElementById('valorClinicaCobra');
             var liquidoSpan = document.getElementById('valorLiquidoProfissional');
             var clinicaManual = false;
 
             function profissionalSemValores(profissionalId) {
+                if (podeAcompanharGanhosConsultaPropria && idProfissionalPolyana != null) {
+                    if (!profissionalId || String(profissionalId) === String(idProfissionalPolyana)) {
+                        return true;
+                    }
+                    return false;
+                }
                 if (!profissionalId) {
                     return podeEscolherProfissionalAgendamento;
                 }
@@ -2338,30 +2372,58 @@
             }
 
             function alternarPainelValores() {
-                var exibir = profissionalExigeValores();
-                painel.classList.toggle('d-none', !exibir);
-                painel.querySelectorAll('input.valor-moeda-brl').forEach(function (input) {
-                    input.required = exibir;
-                    if (!exibir) {
-                        input.value = '';
-                    }
-                });
-                if (!exibir) {
-                    var indicacaoCheckbox = painel.querySelector('input[type="checkbox"]');
-                    if (indicacaoCheckbox) {
-                        indicacaoCheckbox.checked = false;
+                var profissionalIdAtual = selectProf ? selectProf.value : idProfissionalPolyana;
+                var exibirPolyana = podeAcompanharGanhosConsultaPropria
+                        && painelPolyana
+                        && profissionalSemValores(profissionalIdAtual);
+                var exibirCompleto = painel && profissionalExigeValores() && !exibirPolyana;
+
+                if (painelPolyana) {
+                    painelPolyana.classList.toggle('d-none', !exibirPolyana);
+                    if (inputPolyana) {
+                        inputPolyana.required = exibirPolyana;
+                        inputPolyana.disabled = !exibirPolyana;
+                        if (!exibirPolyana) {
+                            inputPolyana.value = '';
+                        }
                     }
                 }
+
+                if (painel) {
+                    painel.classList.toggle('d-none', !exibirCompleto);
+                    painel.querySelectorAll('input.valor-moeda-brl').forEach(function (input) {
+                        input.required = exibirCompleto;
+                        input.disabled = !exibirCompleto;
+                        if (!exibirCompleto) {
+                            input.value = '';
+                        }
+                    });
+                    if (!exibirCompleto) {
+                        var indicacaoCheckbox = painel.querySelector('input[type="checkbox"]');
+                        if (indicacaoCheckbox) {
+                            indicacaoCheckbox.checked = false;
+                            indicacaoCheckbox.disabled = true;
+                        }
+                    } else if (indicacaoInput) {
+                        indicacaoInput.disabled = false;
+                    }
+                }
+
                 if (hintPagamento) {
-                    hintPagamento.classList.toggle('d-none', !exibir);
+                    hintPagamento.classList.toggle('d-none', !exibirCompleto);
                 }
-                if (exibir) {
+                if (exibirCompleto) {
                     clinicaManual = false;
                     atualizarClinicaAutomatica();
                 }
             }
 
             function prepararValoresParaEnvio() {
+                if (inputPolyana && !inputPolyana.disabled) {
+                    var valorPolyana = parseMoney(inputPolyana.value);
+                    inputPolyana.value = valorPolyana > 0 ? valorPolyana.toFixed(2) : '';
+                    return;
+                }
                 if (!recebeInput || !clinicaInput) {
                     return;
                 }
@@ -2387,6 +2449,10 @@
                         onChange();
                     }
                 });
+            }
+
+            if (inputPolyana) {
+                aplicarMascaraMoeda(inputPolyana);
             }
 
             if (recebeInput) {
@@ -2440,6 +2506,10 @@
 
             if (selectProf) {
                 selectProf.addEventListener('change', alternarPainelValores);
+            }
+
+            if (selectProf && podeAcompanharGanhosConsultaPropria && idProfissionalPolyana != null && !selectProf.value) {
+                selectProf.value = String(idProfissionalPolyana);
             }
 
             if (recebeInput && recebeInput.value) {

@@ -40,13 +40,50 @@ class FinanceiroReceitaPixServiceTest {
     @Mock
     private SalaRepository salaRepository;
 
+    @Mock
+    private AuthService authService;
+
     private FinanceiroReceitaPixService service;
 
     @BeforeEach
     void setUp() {
-        service = new FinanceiroReceitaPixService(repository, usuarioRepository, salaRepository, infinitePayService);
+        service = new FinanceiroReceitaPixService(
+                repository,
+                usuarioRepository,
+                salaRepository,
+                infinitePayService,
+                authService
+        );
         when(salaRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(sala("Sala 1"), sala("Sala 2")));
         when(usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL")).thenReturn(List.of());
+    }
+
+    @Test
+    void naoContaConsultasDaDonaClinicaNaReceita() {
+        Agendamento daJulia = agendamentoPago(LocalDateTime.of(2026, 5, 10, 14, 0));
+        Agendamento daPolyana = agendamentoPago(LocalDateTime.of(2026, 5, 11, 10, 0));
+        Usuario julia = daJulia.getProfissional();
+        julia.setId(1L);
+        Usuario polyana = daPolyana.getProfissional();
+        polyana.setId(99L);
+        polyana.setLogin("polyana");
+        polyana.setDonaClinica(false);
+
+        when(repository.findPagosPorDataPagamentoNoPeriodo(any(), any()))
+                .thenReturn(List.of(daJulia, daPolyana));
+        when(repository.findTodosPagosComDataPagamento()).thenReturn(List.of(daJulia, daPolyana));
+        when(repository.findPorDataConsultaEStatusPagamentoNoPeriodo(any(), any(), any()))
+                .thenReturn(List.of());
+        when(usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL"))
+                .thenReturn(List.of(julia, polyana));
+        when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(polyana)).thenReturn(true);
+        when(infinitePayService.resolverValorTaxaClinica(daJulia)).thenReturn(new BigDecimal("35.00"));
+
+        ReceitaPixMesView resumo = service.montarResumoMes(YearMonth.of(2026, 5));
+
+        assertEquals(1, resumo.getQuantidadePagamentos());
+        assertEquals(0, new BigDecimal("35.00").compareTo(resumo.getTotalRecebido()));
     }
 
     @Test

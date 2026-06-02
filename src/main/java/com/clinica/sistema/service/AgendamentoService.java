@@ -350,6 +350,28 @@ public class AgendamentoService {
         novo.setHistoricoDatasMensal(serializarHistoricoDatasMensal(historico));
     }
 
+    private void registrarValoresConsulta(
+            Agendamento agendamento,
+            AgendamentoForm form,
+            Sala sala,
+            String recorrencia,
+            Usuario profissional,
+            boolean primeiraConsultaSerie
+    ) {
+        if (!authService.profissionalIgnoraValoresEPagamento(profissional)) {
+            valorConsultaService.aplicarValores(agendamento, form, sala, recorrencia, primeiraConsultaSerie);
+            return;
+        }
+        if (authService.podeAcompanharGanhosConsultaPropria(profissional)
+                && profissional.getId() != null
+                && form.getProfissionalId() != null
+                && profissional.getId().equals(form.getProfissionalId())) {
+            valorConsultaService.aplicarValorConsultaPropriaDona(agendamento, form);
+            return;
+        }
+        agendamento.setIndicacaoDona(form.isIndicacaoDona() && primeiraConsultaSerie);
+    }
+
     private String chaveMensalCliente(Agendamento agendamento) {
         Long profissionalId = agendamento.getProfissional() != null ? agendamento.getProfissional().getId() : 0L;
         String cliente = agendamento.getNomeCliente() != null
@@ -372,15 +394,7 @@ public class AgendamentoService {
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(limite))
                 .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
-                .map(agendamento -> new SerieAgendamentoOcorrencia(
-                        agendamento.getId(),
-                        agendamento.getDataHoraInicio().format(formatoData),
-                        agendamento.getStatusPagamento(),
-                        pagamentoConsultaService.exibirBotaoPagar(agendamento),
-                        agendamento.isPagamentoPago(),
-                        podeRealocar(agendamento, usuarioLogado),
-                        podeCancelarAgendamento(agendamento, usuarioLogado)
-                ))
+                .map(agendamento -> montarOcorrenciaSerie(agendamento, formatoData, usuarioLogado))
                 .limit(obterLimiteOcorrenciasFuturas(recorrenciaDoAgendamento(representante)))
                 .toList();
 
@@ -396,6 +410,23 @@ public class AgendamentoService {
                 diaSemanaRotulo,
                 proximasOcorrencias != null ? proximasOcorrencias : List.of(),
                 representante.getValoresConsultaResumo()
+        );
+    }
+
+    private SerieAgendamentoOcorrencia montarOcorrenciaSerie(
+            Agendamento agendamento,
+            DateTimeFormatter formatoData,
+            Usuario usuarioLogado
+    ) {
+        boolean podeVerPagamento = pagamentoConsultaService.podeVerPagamento(agendamento, usuarioLogado);
+        return new SerieAgendamentoOcorrencia(
+                agendamento.getId(),
+                agendamento.getDataHoraInicio().format(formatoData),
+                agendamento.getStatusPagamento(),
+                pagamentoConsultaService.exibirBotaoPagar(agendamento) && podeVerPagamento,
+                agendamento.isPagamentoPago() && podeVerPagamento,
+                podeRealocar(agendamento, usuarioLogado),
+                podeCancelarAgendamento(agendamento, usuarioLogado)
         );
     }
 
@@ -779,11 +810,7 @@ public class AgendamentoService {
             novo.setTipoRecorrencia(recorrencia);
             novo.setRecorrencia(recorrencia);
             boolean primeiraConsultaSerie = indice == 0;
-            if (!authService.profissionalIgnoraValoresEPagamento(profissional)) {
-                valorConsultaService.aplicarValores(novo, form, sala, recorrencia, primeiraConsultaSerie);
-            } else {
-                novo.setIndicacaoDona(form.isIndicacaoDona() && primeiraConsultaSerie);
-            }
+            registrarValoresConsulta(novo, form, sala, recorrencia, profissional, primeiraConsultaSerie);
             novosAgendamentos.add(novo);
         }
 

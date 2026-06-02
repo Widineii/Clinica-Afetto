@@ -30,7 +30,7 @@ public class ClinicaAuthenticationProvider implements AuthenticationProvider {
                 ? authentication.getCredentials().toString()
                 : "";
 
-        Usuario usuario = usuarioRepository.findByLogin(login)
+        Usuario usuario = usuarioRepository.findByLogin(ClinicaUserDetailsService.normalizarLogin(login))
                 .orElseThrow(() -> new BadCredentialsException("Login ou senha invalidos."));
 
         if (!verificarSenha(usuario, senhaInformada)) {

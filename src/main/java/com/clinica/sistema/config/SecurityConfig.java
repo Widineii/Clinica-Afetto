@@ -2,6 +2,7 @@ package com.clinica.sistema.config;
 
 import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
 import com.clinica.sistema.security.ClinicaAuthenticationProvider;
+import com.clinica.sistema.security.ClinicaUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,7 +19,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             ClinicaAuthenticationProvider clinicaAuthenticationProvider,
-            ClinicaAuthenticationSuccessHandler authenticationSuccessHandler
+            ClinicaAuthenticationSuccessHandler authenticationSuccessHandler,
+            ClinicaUserDetailsService clinicaUserDetailsService,
+            SegurancaProperties segurancaProperties
     ) throws Exception {
         http
                 .authenticationProvider(clinicaAuthenticationProvider)
@@ -29,6 +32,13 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/webhooks/**"))
+                .rememberMe(remember -> remember
+                        .key(segurancaProperties.getRememberMeKey())
+                        .tokenValiditySeconds(segurancaProperties.getRememberMeValiditySeconds())
+                        .rememberMeParameter("remember-me")
+                        .rememberMeCookieName("remember-me")
+                        .userDetailsService(clinicaUserDetailsService)
+                )
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
@@ -41,6 +51,9 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout=1")
+                        .deleteCookies("remember-me", "JSESSIONID")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
                         .permitAll()
                 );
 

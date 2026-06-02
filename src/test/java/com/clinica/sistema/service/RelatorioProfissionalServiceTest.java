@@ -75,6 +75,58 @@ class RelatorioProfissionalServiceTest {
     }
 
     @Test
+    void montarRelatorio_profissionalSomaGanhosDoMes() {
+        Usuario carol = new Usuario();
+        carol.setId(10L);
+        carol.setNome("Carol");
+        carol.setCargo("ROLE_PROFISSIONAL");
+
+        YearMonth maio = YearMonth.of(2026, 5);
+        Agendamento comValor = criarAtendimento(carol, maio.atDay(10).atTime(19, 0), PagamentoStatus.PAGO);
+        comValor.setValorProfissionalRecebe(new BigDecimal("100.00"));
+        comValor.setValorClinicaCobra(new BigDecimal("35.00"));
+        comValor.setValorLiquidoProfissional(new BigDecimal("65.00"));
+        Agendamento semValor = criarAtendimento(carol, maio.atDay(12).atTime(10, 0), PagamentoStatus.PAGO, "Sala 2");
+        semValor.setId(2L);
+
+        when(agendamentoService.listarAtendimentosProfissionalNoMes(10L, maio))
+                .thenReturn(List.of(comValor, semValor));
+        when(agendamentoRepository.findPagosPorProfissionalEDataPagamentoNoPeriodo(
+                eq(10L), any(), any()
+        )).thenReturn(List.of());
+        when(agendamentoRepository.findPagosPorProfissionalComDataPagamento(10L)).thenReturn(List.of());
+
+        RelatorioProfissionalMesView relatorio = service.montarRelatorio(carol, maio, null, true, true);
+
+        assertTrue(relatorio.isExibirGanhosConsulta());
+        assertEquals(new BigDecimal("65.00"), relatorio.getTotalGanhosMes());
+        assertEquals(1, relatorio.getConsultasComValorGanhos());
+        assertTrue(relatorio.getTotalGanhosMesFormatado().contains("65,00"));
+    }
+
+    @Test
+    void montarRelatorio_calculaLiquidoQuandoCampoNaoPersistido() {
+        Usuario carol = new Usuario();
+        carol.setId(10L);
+        carol.setCargo("ROLE_PROFISSIONAL");
+
+        YearMonth maio = YearMonth.of(2026, 5);
+        Agendamento legado = criarAtendimento(carol, maio.atDay(10).atTime(19, 0), PagamentoStatus.PAGO);
+        legado.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        legado.setValorClinicaCobra(new BigDecimal("35.00"));
+
+        when(agendamentoService.listarAtendimentosProfissionalNoMes(10L, maio)).thenReturn(List.of(legado));
+        when(agendamentoRepository.findPagosPorProfissionalEDataPagamentoNoPeriodo(
+                eq(10L), any(), any()
+        )).thenReturn(List.of());
+        when(agendamentoRepository.findPagosPorProfissionalComDataPagamento(10L)).thenReturn(List.of());
+
+        RelatorioProfissionalMesView relatorio = service.montarRelatorio(carol, maio, null, true, true);
+
+        assertEquals(new BigDecimal("115.00"), relatorio.getTotalGanhosMes());
+    }
+
+    @Test
     void montarRelatorio_filtraPorSala() {
         Usuario carol = new Usuario();
         carol.setId(10L);
@@ -120,13 +172,76 @@ class RelatorioProfissionalServiceTest {
 
         when(agendamentoService.listarAtendimentosProfissionalNoMes(20L, maio)).thenReturn(List.of(atendimento));
 
-        RelatorioProfissionalMesView relatorio = service.montarRelatorio(polyana, maio, null, false);
+        RelatorioProfissionalMesView relatorio = service.montarRelatorio(polyana, maio, null, false, true);
 
         assertEquals(1, relatorio.getTotalAtendimentos());
         assertEquals(0, relatorio.getTotalPixPagos());
         assertEquals(BigDecimal.ZERO, relatorio.getTotalTaxasPagas());
         assertTrue(relatorio.getPagamentosPix().isEmpty());
         assertFalse(relatorio.isExibirTaxas());
+        assertTrue(relatorio.isExibirGanhosConsulta());
+        assertEquals(0, relatorio.getConsultasComValorGanhos());
+        assertEquals(BigDecimal.ZERO, relatorio.getTotalGanhosMes());
+    }
+
+    @Test
+    void montarRelatorio_donaClinicaSomaGanhosInformados() {
+        Usuario polyana = new Usuario();
+        polyana.setId(20L);
+        polyana.setNome("Polyana");
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        YearMonth maio = YearMonth.of(2026, 5);
+        Agendamento comValor = criarAtendimento(polyana, maio.atDay(10).atTime(10, 0), PagamentoStatus.PAGO);
+        comValor.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        comValor.setValorLiquidoProfissional(new BigDecimal("150.00"));
+        Agendamento semValor = criarAtendimento(polyana, maio.atDay(12).atTime(11, 0), PagamentoStatus.PAGO);
+        semValor.setId(2L);
+
+        when(agendamentoService.listarAtendimentosProfissionalNoMes(20L, maio))
+                .thenReturn(List.of(comValor, semValor));
+
+        RelatorioProfissionalMesView relatorio = service.montarRelatorio(polyana, maio, null, false, true);
+
+        assertEquals(2, relatorio.getTotalAtendimentos());
+        assertEquals(1, relatorio.getConsultasComValorGanhos());
+        assertEquals(new BigDecimal("150.00"), relatorio.getTotalGanhosMes());
+        assertTrue(relatorio.getTotalGanhosMesFormatado().contains("150,00"));
+    }
+
+    @Test
+    void montarRelatorio_agregaAtendimentosPorSalaNoGrafico() {
+        Usuario carol = new Usuario();
+        carol.setId(10L);
+        carol.setNome("Carol");
+        carol.setCargo("ROLE_PROFISSIONAL");
+
+        YearMonth junho = YearMonth.of(2026, 6);
+        Agendamento maria1 = criarAtendimento(carol, junho.atDay(3).atTime(9, 0), PagamentoStatus.PAGO, "Sala 1");
+        maria1.setNomeCliente("Maria");
+        Agendamento maria2 = criarAtendimento(carol, junho.atDay(10).atTime(9, 0), PagamentoStatus.PAGO, "Sala 1");
+        maria2.setId(2L);
+        maria2.setNomeCliente("Maria");
+        Agendamento joao = criarAtendimento(carol, junho.atDay(12).atTime(11, 0), PagamentoStatus.PAGO, "Sala 2");
+        joao.setId(3L);
+        joao.setNomeCliente("Joao");
+
+        when(agendamentoService.listarAtendimentosProfissionalNoMes(10L, junho))
+                .thenReturn(List.of(maria1, maria2, joao));
+        when(agendamentoRepository.findPagosPorProfissionalEDataPagamentoNoPeriodo(
+                eq(10L), any(), any()
+        )).thenReturn(List.of());
+        when(agendamentoRepository.findPagosPorProfissionalComDataPagamento(10L)).thenReturn(List.of());
+
+        RelatorioProfissionalMesView relatorio = service.montarRelatorio(carol, junho);
+
+        assertEquals(3, relatorio.getTotalAtendimentos());
+        assertTrue(relatorio.getGraficoSalasJson().contains("\"Sala 1\""));
+        assertTrue(relatorio.getGraficoSalasJson().contains("\"Sala 2\""));
+        assertTrue(relatorio.getGraficoSalasJson().contains("\"valor\":2"));
+        assertTrue(relatorio.getGraficoSalasJson().contains("\"valor\":1"));
     }
 
     private Agendamento criarAtendimento(

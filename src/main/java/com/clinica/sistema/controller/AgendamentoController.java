@@ -35,6 +35,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.List;
@@ -216,6 +217,9 @@ public class AgendamentoController {
         );
         model.addAttribute("podeGerenciarEquipe", podeGerenciarEquipe);
         model.addAttribute("podeVerRelatorioProprio", authService.podeVerRelatorioProprio(usuarioLogado));
+        boolean podeAcompanharGanhosConsultaPropria =
+                authService.podeAcompanharGanhosConsultaPropria(usuarioLogado);
+        model.addAttribute("podeAcompanharGanhosConsultaPropria", podeAcompanharGanhosConsultaPropria);
         model.addAttribute("podeVerValoresDeTodos", podeGerenciarEquipe);
         model.addAttribute(
                 "exibirPainelValoresConsulta",

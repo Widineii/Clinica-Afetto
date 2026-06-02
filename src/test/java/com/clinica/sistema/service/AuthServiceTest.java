@@ -130,4 +130,59 @@ class AuthServiceTest {
         assertTrue(authService.profissionalIgnoraValoresEPagamento(polyana));
         assertFalse(authService.profissionalIgnoraValoresEPagamento(julia));
     }
+
+    @Test
+    void donaClinicaPodeAcompanharGanhosConsultaPropria() {
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario admin = new Usuario();
+        admin.setLogin("admin");
+        admin.setCargo("ROLE_ADMIN");
+
+        assertTrue(authService.podeAcompanharGanhosConsultaPropria(polyana));
+        assertFalse(authService.podeAcompanharGanhosConsultaPropria(admin));
+    }
+
+    @Test
+    void profissionalComumVeGanhosNoRelatorio() {
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        assertTrue(authService.podeVerGanhosConsultaRelatorio(julia));
+        assertTrue(authService.podeVerGanhosConsultaRelatorio(polyana));
+        assertFalse(authService.podeAcompanharGanhosConsultaPropria(julia));
+    }
+
+    @Test
+    void somenteAdminPolyanaETesteVePagamentoDeTodos() throws Exception {
+        var campoLoginTeste = AuthService.class.getDeclaredField("testUserLogin");
+        campoLoginTeste.setAccessible(true);
+        campoLoginTeste.set(authService, "teste");
+
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+        assertTrue(authService.podeVerPagamentoDeTodos(admin));
+
+        Usuario polyana = new Usuario();
+        polyana.setDonaClinica(true);
+        assertTrue(authService.podeVerPagamentoDeTodos(polyana));
+
+        Usuario teste = new Usuario();
+        teste.setLogin("teste");
+        assertTrue(authService.podeVerPagamentoDeTodos(teste));
+
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+        assertFalse(authService.podeVerPagamentoDeTodos(julia));
+    }
 }

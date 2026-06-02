@@ -1,0 +1,66 @@
+/* Fundo completo — halftone + espiral/gradiente (altere ?v= ao trocar imagem) */
+html.login-page-root,
+body.login-page {
+    min-height: 100vh;
+    margin: 0;
+}
+
+body.login-page {
+    position: relative;
+    isolation: isolate;
+    background-color: #087270;
+    background-image:
+        radial-gradient(ellipse 92% 88% at 38% 42%, rgba(26, 212, 203, 0.42) 0%, rgba(14, 168, 162, 0.18) 38%, transparent 68%),
+        radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.14) 0%, transparent 42%),
+        radial-gradient(circle at 12% 88%, rgba(0, 48, 46, 0.35) 0%, transparent 48%),
+        url("/images/login-halftone-bg.png?v=3");
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+/* Vinheta suave + brilho central (efeito “espiral” do layout) */
+body.login-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 110% 95% at 50% 48%, transparent 32%, rgba(4, 58, 56, 0.38) 100%),
+        radial-gradient(circle at 50% 50%, rgba(18, 198, 189, 0.12) 0%, transparent 55%);
+}
+
+body.login-page::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.55;
+    background: radial-gradient(circle at 85% 12%, rgba(255, 255, 255, 0.09) 0%, transparent 28%);
+}
+
+body.login-page .page-shell {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+}
+
+body.login-page .login-shell {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.login-page .login-panel {
+    box-shadow:
+        0 24px 56px rgba(0, 0, 0, 0.18),
+        0 8px 24px rgba(10, 135, 133, 0.12) !important;
+}
+
+body.login-page .feature-item {
+    background: rgba(6, 72, 70, 0.42);
+    border-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(8px);
+}

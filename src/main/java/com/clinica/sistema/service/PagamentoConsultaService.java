@@ -1287,11 +1287,20 @@ public class PagamentoConsultaService {
         if (agendamento == null || usuarioLogado == null) {
             return false;
         }
-        if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
+        if (authService.podeVerPagamentoDeTodos(usuarioLogado)) {
             return true;
         }
         return agendamento.getProfissional() != null
                 && agendamento.getProfissional().getId().equals(usuarioLogado.getId());
+    }
+
+    public boolean exibirNaoPagoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
+        return bloqueadoPorPagamento(agendamento) && podeVerPagamento(agendamento, usuarioLogado);
+    }
+
+    /** Profissional comum: indicadores de pagamento (pago, nao pago, aguardando PIX) so nos proprios horarios. */
+    public boolean exibirIndicadoresPagamentoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
+        return podeVerPagamento(agendamento, usuarioLogado);
     }
 
     public boolean modoTestePagamento() {
@@ -1354,6 +1363,9 @@ public class PagamentoConsultaService {
     public String rotuloStatusPagamento(Agendamento agendamento, Usuario usuarioLogado) {
         if (agendamento == null) {
             return "Sem pagamento";
+        }
+        if (usuarioLogado != null && !podeVerPagamento(agendamento, usuarioLogado)) {
+            return rotuloStatusPagamentoVisaoColega(agendamento);
         }
         if (usuarioLogado != null && gestorVisualizandoAgendamentoDeOutro(agendamento, usuarioLogado)) {
             if (agendamento.isPagamentoPago()) {
@@ -1443,6 +1455,9 @@ public class PagamentoConsultaService {
 
     public boolean exibirEstiloAguardandoPagamentoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
         if (agendamento == null) {
+            return false;
+        }
+        if (!podeVerPagamento(agendamento, usuarioLogado)) {
             return false;
         }
         if (PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO.equals(agendamento.getStatusPagamento())
@@ -1547,11 +1562,24 @@ public class PagamentoConsultaService {
         return completo;
     }
 
+    private String rotuloStatusPagamentoVisaoColega(Agendamento agendamento) {
+        if (agendamento.isPagamentoPago()) {
+            return "Sala confirmada";
+        }
+        if (reservaConfirmadaParaVisaoPublica(agendamento)) {
+            return "Sala confirmada";
+        }
+        if (agendamento.isReservaPendenteNaGrade()) {
+            return "Aguardando confirmações";
+        }
+        return "";
+    }
+
     private boolean gestorVisualizandoAgendamentoDeOutro(Agendamento agendamento, Usuario usuarioLogado) {
         if (agendamento == null || usuarioLogado == null) {
             return false;
         }
-        if (!authService.isAdmin(usuarioLogado) && !authService.isDonaClinica(usuarioLogado)) {
+        if (!authService.podeVerPagamentoDeTodos(usuarioLogado)) {
             return false;
         }
         if (agendamento.getProfissional() == null || agendamento.getProfissional().getId() == null) {

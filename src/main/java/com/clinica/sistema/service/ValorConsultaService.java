@@ -25,6 +25,17 @@ public class ValorConsultaService {
         aplicarValores(agendamento, form, sala, recorrencia, true);
     }
 
+    public void aplicarValorConsultaPropriaDona(Agendamento agendamento, AgendamentoForm form) {
+        BigDecimal valorRecebe = normalizarValor(
+                form.getValorProfissionalRecebe(),
+                "Informe o valor da sua consulta."
+        );
+        agendamento.setValorProfissionalRecebe(valorRecebe);
+        agendamento.setValorClinicaCobra(BigDecimal.ZERO);
+        agendamento.setValorLiquidoProfissional(valorRecebe);
+        agendamento.setIndicacaoDona(false);
+    }
+
     public void aplicarValores(
             Agendamento agendamento,
             AgendamentoForm form,

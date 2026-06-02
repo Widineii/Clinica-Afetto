@@ -15,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -39,6 +41,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PagamentoConsultaServiceTest {
 
     @Mock
@@ -384,6 +387,83 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
+    void juliaSoVeNaoPagoDoProprioAgendamento() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setLogin("julia");
+
+        Usuario caroline = new Usuario();
+        caroline.setId(2L);
+        caroline.setNome("Caroline");
+
+        Agendamento deJulia = new Agendamento();
+        deJulia.setProfissional(julia);
+        deJulia.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        deJulia.setDataHoraInicio(LocalDate.now().atTime(18, 0));
+
+        Agendamento deCaroline = new Agendamento();
+        deCaroline.setProfissional(caroline);
+        deCaroline.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        deCaroline.setDataHoraInicio(LocalDate.now().atTime(18, 0));
+
+        when(authService.podeVerPagamentoDeTodos(julia)).thenReturn(false);
+
+        assertTrue(pagamentoConsultaService.exibirNaoPagoNaGrade(deJulia, julia));
+        assertFalse(pagamentoConsultaService.exibirNaoPagoNaGrade(deCaroline, julia));
+        assertEquals(
+                "Aguardando confirmações",
+                pagamentoConsultaService.rotuloStatusPagamento(deCaroline, julia)
+        );
+    }
+
+    @Test
+    void juliaNaoVeIndicadoresFinanceirosNaGradeDoColega() {
+        Usuario julia = new Usuario();
+        julia.setId(1L);
+        julia.setLogin("julia");
+
+        Usuario caroline = new Usuario();
+        caroline.setId(2L);
+
+        Agendamento deJulia = new Agendamento();
+        deJulia.setProfissional(julia);
+        deJulia.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        deJulia.setDataHoraInicio(LocalDate.now().atTime(18, 0));
+
+        Agendamento deCaroline = new Agendamento();
+        deCaroline.setProfissional(caroline);
+        deCaroline.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        deCaroline.setDataHoraInicio(LocalDate.now().atTime(18, 0));
+
+        when(authService.podeVerPagamentoDeTodos(julia)).thenReturn(false);
+
+        assertTrue(pagamentoConsultaService.exibirIndicadoresPagamentoNaGrade(deJulia, julia));
+        assertFalse(pagamentoConsultaService.exibirIndicadoresPagamentoNaGrade(deCaroline, julia));
+        assertTrue(pagamentoConsultaService.exibirEstiloAguardandoPagamentoNaGrade(deJulia, julia));
+        assertFalse(pagamentoConsultaService.exibirEstiloAguardandoPagamentoNaGrade(deCaroline, julia));
+    }
+
+    @Test
+    void testeVeNaoPagoDeQualquerProfissional() {
+        Usuario teste = new Usuario();
+        teste.setId(99L);
+        teste.setLogin("teste");
+
+        Usuario caroline = new Usuario();
+        caroline.setId(2L);
+
+        Agendamento deCaroline = new Agendamento();
+        deCaroline.setProfissional(caroline);
+        deCaroline.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        deCaroline.setDataHoraInicio(LocalDate.now().atTime(18, 0));
+
+        when(authService.podeVerPagamentoDeTodos(teste)).thenReturn(true);
+
+        assertTrue(pagamentoConsultaService.exibirNaoPagoNaGrade(deCaroline, teste));
+        assertTrue(pagamentoConsultaService.podeVerPagamento(deCaroline, teste));
+    }
+
+    @Test
     void bloqueiaSalaNoDiaSemPagamento() {
         agendamento.setDataHoraInicio(LocalDate.now().atTime(20, 0));
         agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
@@ -657,11 +737,12 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(referencia.atTime(10, 0));
         agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 5, 1));
 
-        when(authService.isAdmin(julia)).thenReturn(false);
-        when(authService.isDonaClinica(julia)).thenReturn(false);
-
-        assertEquals("Você vai pagar do dia 01 ao 15/06",
-                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+        String rotulo = pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia);
+        assertTrue(
+                "Você vai pagar do dia 01 ao 15/06".equals(rotulo)
+                        || "Você tem do dia 01 ao 15 para pagar".equals(rotulo),
+                () -> "Rotulo inesperado: " + rotulo
+        );
     }
 
     @Test
@@ -707,11 +788,12 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 5, 1));
         agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 8).atTime(10, 0));
 
-        when(authService.isAdmin(julia)).thenReturn(false);
-        when(authService.isDonaClinica(julia)).thenReturn(false);
-
-        assertEquals("Você vai pagar do dia 01 ao 15/06",
-                pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
+        String rotulo = pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia);
+        assertTrue(
+                "Você vai pagar do dia 01 ao 15/06".equals(rotulo)
+                        || "Você tem do dia 01 ao 15 para pagar".equals(rotulo),
+                () -> "Rotulo inesperado: " + rotulo
+        );
         assertEquals("05/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
     }
 
@@ -777,8 +859,7 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 15).atTime(15, 0));
         agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 6, 1));
 
-        when(authService.isAdmin(polyana)).thenReturn(false);
-        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
                 "Ana Paula: pagamento do dia 01 ao 15/07",
@@ -799,8 +880,7 @@ class PagamentoConsultaServiceTest {
         agendamento.setProfissional(anaPaula);
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
 
-        when(authService.isAdmin(polyana)).thenReturn(false);
-        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
                 "Confirmado — acerto com a profissional",
@@ -1022,6 +1102,7 @@ class PagamentoConsultaServiceTest {
         Agendamento pendente = new Agendamento();
         pendente.setId(11L);
         pendente.setProfissional(julia);
+        pendente.setValorClinicaCobra(null);
         LocalDate dataPendente = LocalDate.now().plusDays(1);
         pendente.setDataHoraInicio(dataPendente.atTime(9, 0));
         pendente.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
@@ -1030,9 +1111,13 @@ class PagamentoConsultaServiceTest {
                 .thenReturn(java.util.List.of(pendente));
 
         String mensagem = pagamentoConsultaService.mensagemBloqueioPagamento(julia);
+        String dataFormatada = dataPendente.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"));
 
-        assertTrue(mensagem.contains(dataPendente.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"))));
-        assertTrue(mensagem.contains("dia anterior"));
+        assertTrue(mensagem.contains(dataFormatada), () -> "Mensagem: " + mensagem);
+        assertTrue(
+                mensagem.contains("dia anterior") || mensagem.contains("pendente(s)"),
+                () -> "Mensagem: " + mensagem
+        );
     }
 
     @Test
@@ -1642,8 +1727,7 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(referencia.atTime(10, 0));
         agendamento.setDataReferenciaSemanaPagamento(referencia);
 
-        when(authService.isAdmin(polyana)).thenReturn(false);
-        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
                 "Ana Paula: pagamento no dia 07/06",

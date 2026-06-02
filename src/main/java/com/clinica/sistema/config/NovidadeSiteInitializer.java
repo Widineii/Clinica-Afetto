@@ -30,6 +30,24 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.6-login-renovado",
+                        "2.6",
+                        "Nova tela de login",
+                        "Login em tela cheia com fundo teal, blocos centralizados e area de acesso renovada para entrar mais rapido na agenda.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        482,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.6-login-renovado-dona",
+                        "2.6",
+                        "Nova tela de login",
+                        "Tela de acesso com visual da clinica, layout centralizado e lembrar acesso no mesmo padrao dos profissionais.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        482,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.481-novidades-aba",
                         "2.481",
                         "Aba Novidades",

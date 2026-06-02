@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class SiteProperties {
 
     /** Formato esperado: 2.xxx (ex.: 2.478). Maximo 2.999 — 3.0 e o redesign visual. */
-    private String version = "2.478";
+    private String version = "2.6";
 
     public String getVersion() {
         return version;

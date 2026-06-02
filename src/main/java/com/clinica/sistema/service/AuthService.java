@@ -96,6 +96,21 @@ public class AuthService {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }
 
+    /**
+     * Ve status de pagamento (pago / nao pago) de todos os profissionais na grade.
+     * Demais usuarios veem apenas os proprios agendamentos.
+     */
+    public boolean podeVerPagamentoDeTodos(Usuario usuario) {
+        if (usuario == null) {
+            return false;
+        }
+        if (isAdmin(usuario) || isDonaClinica(usuario)) {
+            return true;
+        }
+        String login = usuario.getLogin();
+        return login != null && testUserLogin.equalsIgnoreCase(login.trim());
+    }
+
     /** Cadastro, senhas e periodicidade de pagamento — dona da clinica e administracao. */
     public boolean podeAcessarCentralProfissionais(Usuario usuario) {
         return podeGerenciarEquipe(usuario);
@@ -111,5 +126,18 @@ public class AuthService {
         return usuario != null
                 && !isAdmin(usuario)
                 && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
+    }
+
+    /** Dona da clinica acompanha somente o valor que ela recebe nas proprias consultas (formulario da agenda). */
+    public boolean podeAcompanharGanhosConsultaPropria(Usuario usuario) {
+        return isDonaClinica(usuario) && !isAdmin(usuario);
+    }
+
+    /** Card "Voce ganhou no mes" no relatorio individual de cada profissional com valores na consulta. */
+    public boolean podeVerGanhosConsultaRelatorio(Usuario usuario) {
+        if (!podeVerRelatorioProprio(usuario)) {
+            return false;
+        }
+        return isDonaClinica(usuario) || !profissionalIgnoraValoresEPagamento(usuario);
     }
 }

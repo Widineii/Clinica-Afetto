@@ -36,13 +36,17 @@ public class RelatorioProfissionalMesView {
     private final String salaFiltro;
     private final String salaFiltroRotulo;
     private final boolean exibirTaxas;
+    private final boolean exibirGanhosConsulta;
+    private final BigDecimal totalGanhosMes;
+    private final String totalGanhosMesFormatado;
+    private final int consultasComValorGanhos;
 
     public static RelatorioProfissionalMesView vazio(YearMonth mes, String profissionalNome) {
-        return vazio(mes, profissionalNome, null, true);
+        return vazio(mes, profissionalNome, null, true, false);
     }
 
     public static RelatorioProfissionalMesView vazio(YearMonth mes, String profissionalNome, String salaFiltro) {
-        return vazio(mes, profissionalNome, salaFiltro, true);
+        return vazio(mes, profissionalNome, salaFiltro, true, false);
     }
 
     public static RelatorioProfissionalMesView vazio(
@@ -50,6 +54,16 @@ public class RelatorioProfissionalMesView {
             String profissionalNome,
             String salaFiltro,
             boolean exibirTaxas
+    ) {
+        return vazio(mes, profissionalNome, salaFiltro, exibirTaxas, false);
+    }
+
+    public static RelatorioProfissionalMesView vazio(
+            YearMonth mes,
+            String profissionalNome,
+            String salaFiltro,
+            boolean exibirTaxas,
+            boolean exibirGanhosConsulta
     ) {
         return new RelatorioProfissionalMesView(
                 mes,
@@ -66,7 +80,10 @@ public class RelatorioProfissionalMesView {
                 "[]",
                 "[]",
                 salaFiltro,
-                exibirTaxas
+                exibirTaxas,
+                exibirGanhosConsulta,
+                BigDecimal.ZERO,
+                0
         );
     }
 
@@ -101,7 +118,10 @@ public class RelatorioProfissionalMesView {
                 graficoTiposJson,
                 pagamentosGraficoJson,
                 salaFiltro,
-                true
+                true,
+                false,
+                BigDecimal.ZERO,
+                0
         );
     }
 
@@ -120,7 +140,10 @@ public class RelatorioProfissionalMesView {
             String graficoTiposJson,
             String pagamentosGraficoJson,
             String salaFiltro,
-            boolean exibirTaxas
+            boolean exibirTaxas,
+            boolean exibirGanhosConsulta,
+            BigDecimal totalGanhosMes,
+            int consultasComValorGanhos
     ) {
         this.mesSelecionado = mesSelecionado;
         this.mesAnoLabel = capitalize(mesSelecionado.format(MES_ANO_LABEL));
@@ -142,6 +165,10 @@ public class RelatorioProfissionalMesView {
         this.salaFiltro = salaFiltro != null ? salaFiltro : "";
         this.salaFiltroRotulo = this.salaFiltro.isBlank() ? "Todas as salas" : this.salaFiltro;
         this.exibirTaxas = exibirTaxas;
+        this.exibirGanhosConsulta = exibirGanhosConsulta;
+        this.totalGanhosMes = totalGanhosMes != null ? totalGanhosMes : BigDecimal.ZERO;
+        this.totalGanhosMesFormatado = MoedaBrasilUtil.formatar(this.totalGanhosMes);
+        this.consultasComValorGanhos = consultasComValorGanhos;
     }
 
     private static String capitalize(String texto) {
