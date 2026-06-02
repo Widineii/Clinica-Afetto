@@ -9,7 +9,7 @@ body.login-page {
     position: relative;
     isolation: isolate;
     background-color: #12b5b2;
-    background-image: url("/images/login-halftone-bg.png?v=8");
+    background-image: url("/images/login-halftone-bg.png?v=9");
     background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
@@ -37,6 +37,13 @@ body.login-page .page-shell {
     position: relative;
     z-index: 1;
     background: transparent;
+    padding: clamp(28px, 5vw, 56px) clamp(18px, 4vw, 40px);
+}
+
+body.login-page .login-shell {
+    box-shadow:
+        0 32px 64px rgba(0, 48, 46, 0.5),
+        0 12px 32px rgba(0, 0, 0, 0.28);
 }
 
 body.login-page .feature-item {
