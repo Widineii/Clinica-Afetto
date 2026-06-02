@@ -29,6 +29,14 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
 
     boolean existsByProfissionalId(Long profissionalId);
 
+    @Query("""
+            SELECT a.profissional.id, COUNT(a)
+            FROM Agendamento a
+            WHERE a.profissional IS NOT NULL
+            GROUP BY a.profissional.id
+            """)
+    List<Object[]> contarAgendamentosPorProfissional();
+
     @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
             LocalDateTime inicio,

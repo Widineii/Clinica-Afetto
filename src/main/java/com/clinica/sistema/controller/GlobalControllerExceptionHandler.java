@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,6 +37,13 @@ public class GlobalControllerExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public Object tratarExcecaoGlobal(Exception ex, HttpServletRequest request, HttpServletResponse response) {
+        if (deveResponderDownload(request)) {
+            String mensagem = mensagemUsuario(ex);
+            log.warn("Falha em download {}: {}", request.getRequestURI(), ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(mensagem);
+        }
         if (deveResponderJson(request)) {
             String mensagem = mensagemUsuario(ex);
             HttpStatus status = ex instanceof PagamentoWebhookNaoAutorizadoException
@@ -53,6 +61,11 @@ public class GlobalControllerExceptionHandler {
 
         log.warn("Excecao tratada globalmente em {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
         return "redirect:" + destino;
+    }
+
+    private boolean deveResponderDownload(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri != null && uri.contains("/download");
     }
 
     private boolean deveResponderJson(HttpServletRequest request) {

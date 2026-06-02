@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Contrato de Licenciamento e Prestação de Serviços - Agenda Afetto</title>
+    <style>
+        @page { size: A4; margin: 2cm 2.2cm; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.45;
+            color: #111;
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 1.5cm;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0a8785;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 14pt;
+            margin: 0 0 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .header p { margin: 2px 0; font-size: 10pt; color: #333; }
+        h2 {
+            font-size: 11.5pt;
+            margin: 18px 0 8px;
+            color: #0a8785;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 3px;
+        }
+        p, li { text-align: justify; }
+        ul { margin: 6px 0 10px 18px; padding: 0; }
+        li { margin-bottom: 4px; }
+        .clause { margin-bottom: 10px; }
+        .clause-title { font-weight: bold; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 14px;
+            font-size: 10pt;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+        th { background: #f4f8f8; text-align: left; }
+        .signatures {
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+        .sign-block {
+            display: inline-block;
+            width: 46%;
+            vertical-align: top;
+            margin-top: 30px;
+        }
+        .sign-line {
+            border-top: 1px solid #000;
+            margin-top: 50px;
+            padding-top: 6px;
+            font-size: 10pt;
+        }
+        .footer-note {
+            margin-top: 24px;
+            font-size: 9pt;
+            color: #555;
+            border-top: 1px dashed #bbb;
+            padding-top: 10px;
+        }
+        .highlight-box {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Contrato de Licenciamento de Software<br>e Prestação de Serviços de Suporte</h1>
+    <p><strong>Sistema:</strong> Agenda Afetto — Plataforma Web de Gestão Clínica</p>
+    <p><strong>Versão entregue:</strong> 2.6 | Documento gerado em maio/2026</p>
+</div>
+
+<p>
+    Pelo presente instrumento particular, de um lado <strong>_______________________________________________</strong>,
+    brasileiro(a), inscrito(a) no CPF sob nº <strong>_______________________</strong>, residente e domiciliado(a) em
+    <strong>_______________________________________________</strong>, doravante denominado(a) <strong>CONTRATADO</strong>
+    ou <strong>DESENVOLVEDOR</strong>; e, de outro lado, <strong>_______________________________________________</strong>,
+    inscrito(a) no CPF/CNPJ sob nº <strong>_______________________</strong>, com endereço em
+    <strong>_______________________________________________</strong>, representado(a) neste ato por
+    <strong>_______________________________________________</strong>, doravante denominado(a) <strong>CONTRATANTE</strong>
+    ou <strong>CLÍNICA</strong>, têm entre si justo e contratado o seguinte:
+</p>
+
+<h2>CLÁUSULA 1 — DO OBJETO</h2>
+<div class="clause">
+    <p><span class="clause-title">1.1.</span> O presente contrato tem por objeto a <strong>licença de uso exclusiva</strong> do software web denominado <strong>“Agenda Afetto”</strong>, bem como a <strong>prestação de serviços de implantação, entrega técnica e suporte</strong> pelo prazo de <strong>3 (três) meses</strong>, contados a partir da data de assinatura deste instrumento ou do pagamento integral, o que ocorrer por último.</p>
+    <p><span class="clause-title">1.2.</span> O software é uma aplicação web desenvolvida em Java (Spring Boot), com interface em Thymeleaf/HTML, destinada à gestão operacional, financeira e administrativa de clínica de saúde, incluindo controle de agenda por profissional, sala e paciente.</p>
+</div>
+
+<h2>CLÁUSULA 2 — DESCRIÇÃO DETALHADA DO SISTEMA ENTREGUE</h2>
+<div class="highlight-box">
+    O CONTRATADO entrega licença de uso do sistema com os módulos e funcionalidades abaixo descritos, na versão vigente à data da assinatura:
+</div>
+
+<p><span class="clause-title">2.1. Módulo de Autenticação e Acesso</span></p>
+<ul>
+    <li>Tela de login personalizada com identidade visual da clínica;</li>
+    <li>Controle de acesso por perfil: <strong>Administrador</strong> e <strong>Profissional</strong>;</li>
+    <li>Usuários individuais por profissional da equipe;</li>
+    <li>Opção “lembrar-me” e sessão segura;</li>
+    <li>Proteção CSRF e tratamento de erros de acesso.</li>
+</ul>
+
+<p><span class="clause-title">2.2. Módulo de Agenda</span></p>
+<ul>
+    <li>Agendamento de consultas com data, horário, profissional, sala e paciente;</li>
+    <li>Visualização em calendário/agenda operacional;</li>
+    <li>Edição, cancelamento e realocação de agendamentos;</li>
+    <li>Controle de séries recorrentes de atendimento;</li>
+    <li>Registro de status de atendimento e pagamento vinculado ao agendamento;</li>
+    <li>Caderno de agendamentos e filtros por profissional/período.</li>
+</ul>
+
+<p><span class="clause-title">2.3. Módulo Financeiro</span></p>
+<ul>
+    <li>Painel financeiro com receitas e despesas;</li>
+    <li>Controle de status de pagamento (pago, pendente, aguardando confirmação, indicação etc.);</li>
+    <li>Registro de despesas por tipo;</li>
+    <li>Integração com pagamentos via PIX;</li>
+    <li>Integração com gateway <strong>InfinitePay</strong> (checkout, webhook e confirmação);</li>
+    <li>Pagamentos por consulta, por semana e em lote;</li>
+    <li>Prazos e regras automáticas de confirmação e expiração de pagamento;</li>
+    <li>Área “Meus pagamentos” para acompanhamento.</li>
+</ul>
+
+<p><span class="clause-title">2.4. Módulo de Indicações e Reservas</span></p>
+<ul>
+    <li>Fluxo de indicação/reserva de pacientes entre profissionais;</li>
+    <li>Painel de indicações pendentes para aprovação da administração;</li>
+    <li>Regras de prazo e status específicos para indicações.</li>
+</ul>
+
+<p><span class="clause-title">2.5. Módulo de Relatórios</span></p>
+<ul>
+    <li>Relatório mensal consolidado da clínica;</li>
+    <li>Relatório semanal;</li>
+    <li>Relatório individual por profissional (“Meu relatório”);</li>
+    <li>Arquivamento automático de relatórios mensais em PDF;</li>
+    <li>Rotinas automáticas de fechamento e geração conforme calendário configurado.</li>
+</ul>
+
+<p><span class="clause-title">2.6. Central de Profissionais (Administrador)</span></p>
+<ul>
+    <li>Visão centralizada de agendamentos de todos os profissionais;</li>
+    <li>Ferramentas administrativas para gestão da operação clínica;</li>
+    <li>Painel de uso do banco de dados (admin).</li>
+</ul>
+
+<p><span class="clause-title">2.7. Notificações</span></p>
+<ul>
+    <li>Sino de notificações no sistema;</li>
+    <li>Alertas de novos agendamentos para perfil administrativo;</li>
+    <li>Notificações relacionadas a relatório mensal;</li>
+    <li>Interface de popup com layout responsivo.</li>
+</ul>
+
+<p><span class="clause-title">2.8. Manual, Ajuda e Novidades</span></p>
+<ul>
+    <li>Manual de uso integrado ao sistema;</li>
+    <li>Seção de ajuda e suporte com link para WhatsApp configurável;</li>
+    <li>Sistema de novidades do site para comunicação de atualizações aos usuários.</li>
+</ul>
+
+<p><span class="clause-title">2.9. Infraestrutura e Tecnologia</span></p>
+<ul>
+    <li>Aplicação web em produção na nuvem (Railway) com banco PostgreSQL gerenciado (Neon), conforme Cláusula 3;</li>
+    <li>Ambiente de desenvolvimento local (perfil local com H2);</li>
+    <li>Código-fonte completo do projeto entregue via repositório Git ou arquivo compactado;</li>
+    <li>Documentação básica de execução (README) e variáveis de ambiente necessárias.</li>
+</ul>
+
+<h2>CLÁUSULA 3 — DA INFRAESTRUTURA EM NUVEM (HOSPEDAGEM E BANCO DE DADOS)</h2>
+<div class="highlight-box">
+    O sistema <strong>Agenda Afetto</strong> opera em produção com o site (aplicação web) e o banco de dados em serviços
+    distintos na nuvem. Os dados da clínica ficam no banco; reiniciar ou atualizar o site <strong>não apaga</strong>
+    agendamentos, relatórios nem cadastros.
+</div>
+
+<p><span class="clause-title">3.1. Hospedagem do site (aplicação web) — Railway</span></p>
+<table>
+    <tr>
+        <th>Item</th>
+        <th>Detalhe</th>
+    </tr>
+    <tr>
+        <td>Provedor</td>
+        <td><strong>Railway</strong> (<a href="https://railway.app">railway.app</a>) — plataforma de hospedagem em nuvem</td>
+    </tr>
+    <tr>
+        <td>Serviço</td>
+        <td>Web Service em container <strong>Docker</strong>, com deploy automático a partir do repositório GitHub</td>
+    </tr>
+    <tr>
+        <td>Nome do projeto / serviço</td>
+        <td><strong>clinica-agenda</strong></td>
+    </tr>
+    <tr>
+        <td>Sistema disponibilizado</td>
+        <td><strong>Agenda Afetto</strong> — Plataforma Web de Gestão Clínica (versão 2.6)</td>
+    </tr>
+    <tr>
+        <td>URL pública de acesso</td>
+        <td><strong>https://clinica-agenda-production-e992.up.railway.app</strong></td>
+    </tr>
+    <tr>
+        <td>Região</td>
+        <td>Estados Unidos (US East), alinhada ao banco de dados Neon</td>
+    </tr>
+    <tr>
+        <td>Recursos</td>
+        <td>Memória RAM configurada em <strong>1 GB</strong> para operação estável com vários profissionais logados ao mesmo tempo</td>
+    </tr>
+    <tr>
+        <td>Plano contratado</td>
+        <td><strong>Railway Hobby</strong> (cobrança mensal conforme uso de computação e memória)</td>
+    </tr>
+    <tr>
+        <td><strong>Custo mensal estimado</strong></td>
+        <td><strong>R$ 28,00 a R$ 55,00</strong> por mês (valores de referência em reais; a fatura exata depende do consumo do mês e da cotação USD/BRL no cartão cadastrado)</td>
+    </tr>
+    <tr>
+        <td>Responsável pelo pagamento</td>
+        <td><strong>CONTRATANTE (Clínica)</strong>, conforme Cláusula 8 deste contrato</td>
+    </tr>
+</table>
+<p>
+    <span class="clause-title">3.1.1.</span> O Railway mantém o site no ar 24 horas por dia, 7 dias por semana, executando a
+    aplicação Java (Spring Boot) que entrega as telas de agenda, financeiro, relatórios e demais módulos descritos na
+    Cláusula 2. Atualizações do sistema são publicadas por novo deploy (push no repositório ou redeploy manual no painel
+    Railway), sem necessidade de instalar software na clínica — o acesso é feito pelo navegador (computador, tablet ou celular).
+</p>
+<p>
+    <span class="clause-title">3.1.2.</span> Por estar no plano pago Hobby (e não em plano gratuito de teste), o serviço
+    permanece disponível para uso diário da equipe. Eventual lentidão pontual pode ocorrer na primeira requisição após
+    longo período sem acesso, comportamento comum em ambientes cloud de baixo custo.
+</p>
+
+<p><span class="clause-title">3.2. Banco de dados — Neon (PostgreSQL)</span></p>
+<table>
+    <tr>
+        <th>Item</th>
+        <th>Detalhe</th>
+    </tr>
+    <tr>
+        <td>Provedor</td>
+        <td><strong>Neon</strong> (<a href="https://neon.tech">neon.tech</a>) — PostgreSQL gerenciado na nuvem (serverless)</td>
+    </tr>
+    <tr>
+        <td>Serviço</td>
+        <td>Banco relacional <strong>PostgreSQL 16</strong>, projeto <strong>clinica-agenda</strong>, região <strong>US East (AWS)</strong></td>
+    </tr>
+    <tr>
+        <td>Plano contratado</td>
+        <td><strong>Free (gratuito)</strong></td>
+    </tr>
+    <tr>
+        <td><strong>Custo mensal</strong></td>
+        <td><strong>R$ 0,00</strong> (zero reais por mês, na data deste contrato)</td>
+    </tr>
+    <tr>
+        <td>Limite de armazenamento do plano</td>
+        <td><strong>512 MB (0,5 GB)</strong> de espaço em disco para dados, índices e metadados do banco</td>
+    </tr>
+    <tr>
+        <td>Uso atual aproximado</td>
+        <td><strong>cerca de 30 MB</strong> — equivalente a aproximadamente <strong>6%</strong> do limite de 512 MB (medido pelo painel administrativo «Uso do banco (Neon)» do sistema, via consulta <em>pg_database_size</em>)</td>
+    </tr>
+    <tr>
+        <td>Conexão com o site</td>
+        <td>O Railway conecta-se ao Neon por variáveis seguras de ambiente (<code>PGHOST</code>, <code>PGPORT</code>, <code>PGDATABASE</code>, <code>PGUSER</code>, <code>PGPASSWORD</code>, <code>PGSSLMODE=require</code>), com comunicação criptografada (SSL)</td>
+    </tr>
+    <tr>
+        <td>Responsável pelo pagamento</td>
+        <td><strong>CONTRATANTE (Clínica)</strong> — atualmente sem cobrança; futuro upgrade conforme item 3.2.4</td>
+    </tr>
+</table>
+
+<p><span class="clause-title">3.2.1. Como o banco funciona na prática</span></p>
+<ul>
+    <li>Todos os dados operacionais da clínica — agendamentos, usuários, salas, financeiro, relatórios arquivados e notificações — são gravados e lidos no PostgreSQL hospedado no Neon;</li>
+    <li>O banco é <strong>independente</strong> da hospedagem do site: se o Railway reiniciar, fizer deploy ou ficar temporariamente indisponível, os dados permanecem intactos no Neon;</li>
+    <li>Após o site voltar, a aplicação reconecta automaticamente ao mesmo banco, sem perda de histórico;</li>
+    <li>O sistema inclui painel exclusivo do administrador («Uso do banco») que exibe tamanho real do banco, percentual do limite de 512 MB e alertas visuais (tranquilo, atenção a partir de 60%, crítico a partir de 85%).</li>
+</ul>
+
+<p><span class="clause-title">3.2.2. Por que o banco está no Neon (e não em plano pago maior, por enquanto)</span></p>
+<ul>
+    <li>Para uma clínica com o volume atual de agendamentos e relatórios, o consumo de armazenamento é <strong>muito inferior</strong> ao teto gratuito de 0,5 GB (512 MB);</li>
+    <li>Na data deste contrato, o uso real gira em torno de <strong>30 MB (~6%)</strong>, sobrando ampla margem para crescimento de pacientes, profissionais e histórico de meses/anos;</li>
+    <li>O plano gratuito do Neon oferece PostgreSQL profissional com persistência duradoura, sem o risco de bancos “de cortesia” que expiram em poucos dias (como o PostgreSQL free de alguns provedores de hospedagem);</li>
+    <li>Separar banco (Neon) e site (Railway) é a arquitetura recomendada para este sistema: custo baixo hoje, dados seguros e possibilidade de escalar só quando necessário.</li>
+</ul>
+
+<p><span class="clause-title">3.2.3. Limitações conhecidas do plano gratuito Neon</span></p>
+<ul>
+    <li>Em períodos longos sem nenhuma consulta ao banco, a instância free pode “dormir”; a primeira conexão do dia pode levar alguns segundos a mais — recomenda-se abrir o sistema alguns minutos antes do expediente;</li>
+    <li>Backups automáticos existem, mas com retenção limitada no plano free; a CONTRATANTE deve evitar apagar o projeto Neon sem exportar dados.</li>
+</ul>
+
+<p><span class="clause-title">3.2.4. Quando poderá ser necessário aumentar o plano ou o tamanho do banco</span></p>
+<ul>
+    <li>Se o uso ultrapassar cerca de <strong>60%</strong> do limite (307 MB) ou se a clínica crescer muito em volume de PDFs arquivados, séries longas de agendamentos ou muitos anos de histórico;</li>
+    <li>Nesse caso, a CONTRATANTE poderá migrar para plano pago do Neon (ex.: Launch, com mais GB e recursos), com custo mensal adicional em dólares, a ser orçado na época;</li>
+    <li>O CONTRATADO orientará a CONTRATANTE quando o painel «Uso do banco» indicar nível de atenção ou crítico, ou mediante solicitação.</li>
+</ul>
+
+<p><span class="clause-title">3.3. Resumo dos custos mensais de infraestrutura (serviços de terceiros)</span></p>
+<table>
+    <tr>
+        <th>Serviço</th>
+        <th>Provedor</th>
+        <th>Plano</th>
+        <th>Custo mensal (R$)</th>
+    </tr>
+    <tr>
+        <td>Hospedagem do site Agenda Afetto</td>
+        <td>Railway</td>
+        <td>Hobby</td>
+        <td><strong>28,00 a 55,00</strong> (estimativa)</td>
+    </tr>
+    <tr>
+        <td>Banco de dados PostgreSQL</td>
+        <td>Neon</td>
+        <td>Free</td>
+        <td><strong>0,00</strong></td>
+    </tr>
+    <tr>
+        <td colspan="3"><strong>Total estimado de infraestrutura</strong></td>
+        <td><strong>R$ 28,00 a R$ 55,00/mês</strong> (+ eventual upgrade futuro do Neon, se necessário)</td>
+    </tr>
+</table>
+<p>
+    <span class="clause-title">3.4.</span> Os valores acima <strong>não estão incluídos</strong> no preço de licenciamento da
+    Cláusula 4 (R$ 3.000,00). São despesas operacionais contínuas da CONTRATANTE, necessárias para manter o sistema acessível
+    na internet. Domínio personalizado (ex.: <em>agenda.suaclinica.com.br</em>), se contratado no futuro, terá custo à parte.
+</p>
+<p>
+    <span class="clause-title">3.5.</span> Credenciais de acesso ao painel Railway, Neon e administrador do sistema serão
+    entregues à CONTRATANTE conforme combinado na entrega técnica, para gestão de faturas e acompanhamento de uso.
+</p>
+
+<h2>CLÁUSULA 4 — DO PREÇO E FORMA DE PAGAMENTO</h2>
+<div class="clause">
+    <p><span class="clause-title">4.1.</span> Pelo licenciamento do software e pelos serviços descritos neste contrato, a CONTRATANTE pagará ao CONTRATADO o valor total de:</p>
+    <table>
+        <tr>
+            <th>Item</th>
+            <th>Descrição</th>
+            <th>Valor (R$)</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>Licença de uso exclusiva do sistema Agenda Afetto (versão 2.6) + entrega técnica</td>
+            <td>2.500,00</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Suporte técnico por 3 (três) meses (correções, orientação e ajustes conforme Cláusula 6)</td>
+            <td>500,00</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>TOTAL</strong></td>
+            <td><strong>3.000,00</strong></td>
+        </tr>
+    </table>
+    <p><span class="clause-title">4.2.</span> Forma de pagamento: ☐ À vista &nbsp; ☐ Parcelado em _____ vezes &nbsp; | Meio: ☐ PIX &nbsp; ☐ Transferência &nbsp; ☐ Outro: __________</p>
+    <p><span class="clause-title">4.3.</span> Chave PIX / dados bancários do CONTRATADO: <strong>_______________________________________________</strong></p>
+    <p><span class="clause-title">4.4.</span> A entrega definitiva do acesso, credenciais e código-fonte ocorrerá após a confirmação do pagamento integral ou do primeiro pagamento acordado, conforme combinado entre as partes.</p>
+</div>
+
+<h2>CLÁUSULA 5 — DA LICENÇA E PROPRIEDADE INTELECTUAL</h2>
+<div class="clause">
+    <p><span class="clause-title">5.1.</span> O CONTRATADO concede à CONTRATANTE licença de uso <strong>exclusiva e perpetua</strong> do sistema Agenda Afetto para operação da clínica contratante, incluindo direito de hospedar, utilizar e manter o software em produção.</p>
+    <p><span class="clause-title">5.2.</span> Com o pagamento integral, a CONTRATANTE recebe o código-fonte e passa a ser titular do direito de uso exclusivo na sua operação, não podendo o CONTRATADO revender ou licenciar o mesmo código, customizado para esta clínica, a terceiros concorrentes diretos, salvo novo acordo.</p>
+    <p><span class="clause-title">5.3.</span> Bibliotecas de terceiros, frameworks open source e serviços externos (InfinitePay, Railway, Neon, PostgreSQL etc.) permanecem regidos por suas respectivas licenças e termos de uso.</p>
+    <p><span class="clause-title">5.4.</span> Marcas, logotipos e identidade visual da clínica pertencem à CONTRATANTE. A marca “Agenda Afetto” e componentes genéricos reutilizáveis permanecem de titularidade do CONTRATADO, salvo renúncia expressa.</p>
+</div>
+
+<h2>CLÁUSULA 6 — DO SUPORTE TÉCNICO (3 MESES)</h2>
+<div class="clause">
+    <p><span class="clause-title">6.1.</span> O CONTRATADO prestará suporte técnico por <strong>90 (noventa) dias</strong> corridos, incluindo:</p>
+    <ul>
+        <li>Correção de bugs e erros de funcionamento do sistema entregue;</li>
+        <li>Orientação sobre uso das funcionalidades existentes;</li>
+        <li>Ajustes menores de configuração (usuários, variáveis de ambiente, deploy);</li>
+        <li>Atendimento via WhatsApp e/ou e-mail em horário comercial (segunda a sexta, 9h às 18h).</li>
+    </ul>
+    <p><span class="clause-title">6.2.</span> <strong>Não estão incluídos</strong> no suporte (salvo orçamento à parte):</p>
+    <ul>
+        <li>Desenvolvimento de novas funcionalidades ou módulos;</li>
+        <li>Redesign completo de telas;</li>
+        <li>Migração para outro servidor/provedor não acordado;</li>
+        <li>Custos de hospedagem, domínio, banco de dados e taxas de gateway de pagamento;</li>
+        <li>Treinamento presencial ou visitas à clínica;</li>
+        <li>Problemas causados por mau uso, alteração não autorizada do código por terceiros ou indisponibilidade de serviços externos.</li>
+    </ul>
+    <p><span class="clause-title">6.3.</span> Prazo de resposta: até <strong>48 (quarenta e oito) horas úteis</strong> para demandas normais; urgências operacionais (sistema fora do ar) com prioridade em até <strong>24 horas úteis</strong>.</p>
+    <p><span class="clause-title">6.4.</span> Após o período de 3 meses, eventuais manutenções poderão ser contratadas separadamente mediante proposta comercial.</p>
+</div>
+
+<h2>CLÁUSULA 7 — DAS OBRIGAÇÕES DO CONTRATADO</h2>
+<ul>
+    <li>Entregar o sistema funcional conforme descrito na Cláusula 2;</li>
+    <li>Fornecer código-fonte, instruções de deploy e credenciais acordadas;</li>
+    <li>Prestar suporte pelo prazo de 3 meses;</li>
+    <li>Manter sigilo sobre dados da clínica e pacientes a que tiver acesso;</li>
+    <li>Informar limitações conhecidas do sistema no momento da entrega.</li>
+</ul>
+
+<h2>CLÁUSULA 8 — DAS OBRIGAÇÕES DA CONTRATANTE</h2>
+<ul>
+    <li>Efetuar o pagamento nos prazos acordados;</li>
+    <li>Fornecer dados, logotipos e informações necessários à operação;</li>
+    <li>Manter backup de dados e credenciais de acesso;</li>
+    <li>Contratar e pagar hospedagem (Railway), banco de dados (Neon), domínio e serviços de pagamento (InfinitePay etc.), conforme Cláusula 3;</li>
+    <li>Utilizar o sistema em conformidade com a LGPD e demais normas aplicáveis à área da saúde;</li>
+    <li>Não sublicenciar, revender ou distribuir o sistema a terceiros sem autorização.</li>
+</ul>
+
+<h2>CLÁUSULA 9 — DA LGPD E PROTEÇÃO DE DADOS</h2>
+<div class="clause">
+    <p><span class="clause-title">9.1.</span> A CONTRATANTE é <strong>controladora</strong> dos dados pessoais de pacientes e profissionais inseridos no sistema.</p>
+    <p><span class="clause-title">9.2.</span> O CONTRATADO atua como <strong>operador técnico</strong> apenas durante o suporte, tratando dados estritamente para correção e manutenção, observando confidencialidade.</p>
+    <p><span class="clause-title">9.3.</span> A CONTRATANTE declara possuir base legal para tratamento dos dados e responsabiliza-se por consentimentos, políticas de privacidade e segurança operacional.</p>
+</div>
+
+<h2>CLÁUSULA 10 — DA GARANTIA</h2>
+<div class="clause">
+    <p><span class="clause-title">10.1.</span> O CONTRATADO garante que o software, na data da entrega, executa as funcionalidades descritas neste contrato, ressalvadas limitações de serviços de terceiros.</p>
+    <p><span class="clause-title">10.2.</span> Bugs reportados durante o período de suporte serão corrigidos sem custo adicional, desde que relacionados ao escopo entregue.</p>
+    <p><span class="clause-title">10.3.</span> O software é entregue “como está” após o término do suporte, cabendo à CONTRATANTE contratar manutenção evolutiva se desejar.</p>
+</div>
+
+<h2>CLÁUSULA 11 — DA RESCISÃO</h2>
+<div class="clause">
+    <p><span class="clause-title">11.1.</span> O descumprimento de obrigações essenciais autoriza a parte prejudicada a rescindir o contrato, mediante notificação escrita com prazo de 10 (dez) dias para saneamento.</p>
+    <p><span class="clause-title">11.2.</span> Em caso de rescisão por inadimplência da CONTRATANTE, o CONTRATADO poderá suspender suporte e acesso técnico até regularização.</p>
+    <p><span class="clause-title">11.3.</span> Valores já pagos por serviços efetivamente prestados não serão restituídos.</p>
+</div>
+
+<h2>CLÁUSULA 12 — DISPOSIÇÕES GERAIS</h2>
+<ul>
+    <li>Este contrato substitui acordos verbais anteriores sobre o mesmo objeto;</li>
+    <li>Alterações só terão validade se feitas por escrito e assinadas por ambas as partes;</li>
+    <li>A tolerância de uma parte não implica renúncia de direitos;</li>
+    <li>O CONTRATADO presta serviços como <strong>pessoa física (CPF)</strong>, emitindo recibo ou nota fiscal conforme legislação aplicável à sua situação;</li>
+    <li>Fica eleito o foro da comarca de <strong>___________________________________</strong>, renunciando-se a qualquer outro, por mais privilegiado que seja.</li>
+</ul>
+
+<p style="margin-top: 24px;">
+    E, por estarem de pleno acordo, assinam o presente instrumento em 2 (duas) vias de igual teor e forma.
+</p>
+
+<p><strong>Local e data:</strong> _________________________, _____ de _________________ de 2026.</p>
+
+<div class="signatures">
+    <div class="sign-block">
+        <div class="sign-line">
+            <strong>CONTRATADO (Desenvolvedor)</strong><br>
+            Nome: _______________________________________<br>
+            CPF: ________________________________________
+        </div>
+    </div>
+    <div class="sign-block" style="margin-left: 6%;">
+        <div class="sign-line">
+            <strong>CONTRATANTE (Clínica)</strong><br>
+            Nome/Razão Social: ___________________________<br>
+            CPF/CNPJ: ___________________________________
+        </div>
+    </div>
+</div>
+
+<div class="signatures">
+    <div class="sign-block">
+        <div class="sign-line">
+            <strong>Testemunha 1</strong><br>
+            Nome: _______________________________________<br>
+            CPF: ________________________________________
+        </div>
+    </div>
+    <div class="sign-block" style="margin-left: 6%;">
+        <div class="sign-line">
+            <strong>Testemunha 2</strong><br>
+            Nome: _______________________________________<br>
+            CPF: ________________________________________
+        </div>
+    </div>
+</div>
+
+<div class="footer-note">
+    <strong>Observação:</strong> Este documento é um modelo contratual. Recomenda-se revisão por advogado antes da assinatura.
+    O CONTRATADO atua como pessoa física; não possui CNPJ. Emissão de recibo ou documento fiscal conforme orientação contábil local.
+</div>
+
+</body>
+</html>

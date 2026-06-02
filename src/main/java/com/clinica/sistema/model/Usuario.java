@@ -29,4 +29,8 @@ public class Usuario {
 
     @Column(name = "deve_trocar_senha")
     private Boolean deveTrocarSenha = false;
+
+    /** Registrado apenas no perfil local (ultimo login no sistema). */
+    @Column(name = "ultimo_acesso_em")
+    private LocalDateTime ultimoAcessoEm;
 }

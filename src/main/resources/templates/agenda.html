@@ -1436,6 +1436,9 @@
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
                    class="btn btn-warning">Uso do banco</a>
+                <a th:if="${isAdmin and @environment.acceptsProfiles('local')}"
+                   th:href="@{/agendamentos/admin/relatorio-uso-site}"
+                   class="btn btn-warning">Uso do site</a>
                 <a th:if="${podeGerenciarEquipe}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>
@@ -1485,6 +1488,7 @@
         <div th:replace="~{fragments/periodicidade-pagamento-resumo :: bloco(periodicidadeAtual=${periodicidadePagamento}, retornoUrl=@{/agendamentos/dashboard})}"></div>
     </th:block>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+    <div th:if="${erro != null and erroContexto == 'uso-site'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${pagamentoBloqueioAtivo}" class="alert alert-warning shell-card">
         <strong>Você tem pagamento pendente.</strong>
         <span th:text="${pagamentoBloqueioMensagem}">Sem quitar, não pode usar sala nem fazer novo agendamento.</span>
