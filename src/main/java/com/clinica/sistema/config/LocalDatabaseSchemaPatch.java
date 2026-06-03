@@ -42,6 +42,10 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaUsuariosSeNecessario("periodicidade_pagamento", "VARCHAR(20) DEFAULT 'DIARIO'");
             adicionarColunaUsuariosSeNecessario("periodicidade_alterada_em", "TIMESTAMP");
             adicionarColunaUsuariosSeNecessario("ultimo_acesso_em", "TIMESTAMP");
+            adicionarColunaUsuariosSeNecessario("valor_consulta_avulso", "DECIMAL(10,2)");
+            adicionarColunaUsuariosSeNecessario("valor_consulta_semanal", "DECIMAL(10,2)");
+            adicionarColunaUsuariosSeNecessario("valor_consulta_quinzenal", "DECIMAL(10,2)");
+            adicionarColunaUsuariosSeNecessario("valor_consulta_mensal", "DECIMAL(10,2)");
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");
             adicionarColunaSeNecessario("data_referencia_mes_pagamento", "DATE");
             adicionarColunaSeNecessario("historico_datas_mensal", "VARCHAR(120)");
@@ -110,7 +114,7 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
         jdbcTemplate.update(
                 """
                 UPDATE agendamentos
-                SET data_referencia_mes_pagamento = TRUNC(CAST(data_hora_inicio AS DATE), 'MONTH')
+                SET data_referencia_mes_pagamento = DATE_TRUNC('MONTH', CAST(data_hora_inicio AS DATE))
                 WHERE data_referencia_mes_pagamento IS NULL
                   AND data_hora_inicio IS NOT NULL
                 """

@@ -3,6 +3,7 @@ package com.clinica.sistema.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,4 +34,17 @@ public class Usuario {
     /** Ultimo login bem-sucedido no sistema. */
     @Column(name = "ultimo_acesso_em")
     private LocalDateTime ultimoAcessoEm;
+
+    /** Valores padrao da consulta (quanto o cliente paga ao profissional), por tipo de agendamento. */
+    @Column(name = "valor_consulta_avulso", precision = 10, scale = 2)
+    private BigDecimal valorConsultaAvulso;
+
+    @Column(name = "valor_consulta_semanal", precision = 10, scale = 2)
+    private BigDecimal valorConsultaSemanal;
+
+    @Column(name = "valor_consulta_quinzenal", precision = 10, scale = 2)
+    private BigDecimal valorConsultaQuinzenal;
+
+    @Column(name = "valor_consulta_mensal", precision = 10, scale = 2)
+    private BigDecimal valorConsultaMensal;
 }

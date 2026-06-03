@@ -402,7 +402,7 @@ public class AgendamentoService {
         if (!authService.profissionalIgnoraValoresEPagamento(profissional)) {
             boolean permitirIndicacao = primeiraConsultaSerie
                     && !TurnoLocacao.isTurno(form.getTurnoLocacao());
-            valorConsultaService.aplicarValores(agendamento, form, sala, recorrencia, permitirIndicacao);
+            valorConsultaService.aplicarValores(agendamento, form, sala, recorrencia, permitirIndicacao, profissional);
             return;
         }
         if (authService.podeAcompanharGanhosConsultaPropria(profissional)

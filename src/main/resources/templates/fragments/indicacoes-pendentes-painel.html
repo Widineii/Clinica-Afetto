@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
-<section th:fragment="painel (pendentes, pagamentoService)"
+<section th:fragment="painel (pendentes, pagamentoService, abaCentral)"
          class="central-pane"
          id="central-pane-indicacoes"
          role="tabpanel"
          aria-labelledby="tabIndicacoes"
-         th:hidden="${abaAtiva != 'indicacoes'}">
+         th:hidden="${abaCentral != 'indicacoes'}">
     <div class="central-panel__head">
         <div>
             <h2 class="central-panel__title">Indicações pendentes</h2>

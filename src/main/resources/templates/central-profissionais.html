@@ -139,6 +139,77 @@
             display: none !important;
         }
 
+        .valores-prof-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .valores-prof-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .valores-prof-toggle {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 14px;
+            padding: 14px 16px;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .valores-prof-toggle:hover {
+            background: #f8fafc;
+        }
+
+        .valores-prof-nome {
+            font-weight: 600;
+            color: #0f172a;
+            min-width: 8rem;
+        }
+
+        .valores-prof-resumo {
+            flex: 1;
+            font-size: 0.82rem;
+            color: #64748b;
+            line-height: 1.45;
+        }
+
+        .valores-prof-resumo strong {
+            color: #0f766e;
+            font-weight: 600;
+        }
+
+        .valores-prof-sep {
+            margin: 0 4px;
+            opacity: 0.5;
+        }
+
+        .valores-prof-chevron {
+            color: #94a3b8;
+            transition: transform 0.2s ease;
+        }
+
+        .valores-prof-item.is-open .valores-prof-chevron {
+            transform: rotate(180deg);
+        }
+
+        .valores-prof-detalhe {
+            padding: 0 16px 16px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .valores-prof-detalhe[hidden] {
+            display: none !important;
+        }
+
         .config-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -702,6 +773,15 @@
                     <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
                     Encerramentos
                 </a>
+                <a th:if="${podeGerenciarValoresConsulta}"
+                   th:href="@{/agendamentos/central-profissionais(aba='valores')}"
+                   th:class="${abaCentral == 'valores' ? 'central-tab active' : 'central-tab'}"
+                   id="tabValores"
+                   data-aba="valores"
+                   th:attr="aria-current=${abaCentral == 'valores' ? 'page' : null}">
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                    Valores
+                </a>
                 <a th:if="${podeVerRelatorioUsoSite}"
                    th:href="@{/agendamentos/central-profissionais(aba='uso-site')}"
                    th:class="${abaCentral == 'uso-site' ? 'central-tab active' : 'central-tab'}"
@@ -883,7 +963,10 @@
                 </div>
             </section>
 
-            <div th:replace="~{fragments/indicacoes-pendentes-painel :: painel(pendentes=${indicacoesPendentes}, pagamentoService=${pagamentoService})}"></div>
+            <div th:replace="~{fragments/indicacoes-pendentes-painel :: painel(pendentes=${indicacoesPendentes}, pagamentoService=${pagamentoService}, abaCentral=${abaCentral})}"></div>
+
+            <div th:if="${podeGerenciarValoresConsulta}"
+                 th:replace="~{fragments/central-valores-profissionais-painel :: painel(profissionais=${profissionaisValoresConsulta}, abaCentral=${abaCentral})}"></div>
 
             <section class="central-pane"
                      id="central-pane-uso-site"
@@ -1136,7 +1219,9 @@
             equipe: document.getElementById('central-pane-equipe'),
             configuracao: document.getElementById('central-pane-configuracao'),
             indicacoes: document.getElementById('central-pane-indicacoes'),
-            encerramentos: document.getElementById('central-pane-encerramentos')
+            encerramentos: document.getElementById('central-pane-encerramentos'),
+            valores: document.getElementById('central-pane-valores'),
+            'uso-site': document.getElementById('central-pane-uso-site')
         };
 
         function ativarAbaCentral(aba) {
@@ -1168,6 +1253,22 @@
                 var destino = tab.getAttribute('href');
                 if (destino && window.history && window.history.replaceState) {
                     window.history.replaceState(null, '', destino);
+                }
+            });
+        });
+
+        document.querySelectorAll('.valores-prof-toggle').forEach(function (botao) {
+            botao.addEventListener('click', function () {
+                var item = botao.closest('.valores-prof-item');
+                var detalhe = item ? item.querySelector('.valores-prof-detalhe') : null;
+                if (!detalhe) {
+                    return;
+                }
+                var aberto = !detalhe.hidden;
+                detalhe.hidden = aberto;
+                botao.setAttribute('aria-expanded', aberto ? 'false' : 'true');
+                if (item) {
+                    item.classList.toggle('is-open', !aberto);
                 }
             });
         });

@@ -2,6 +2,7 @@ package com.clinica.sistema.service;
 
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.model.Sala;
+import com.clinica.sistema.model.Usuario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -147,5 +148,35 @@ class ValorConsultaServiceTest {
         assertEquals(BigDecimal.ZERO, agendamento.getValorClinicaCobra());
         assertEquals(new BigDecimal("180.00"), agendamento.getValorLiquidoProfissional());
         assertFalse(agendamento.getIndicacaoDona());
+    }
+
+    @Test
+    void deveRetornarValorPadraoCadastradoNoProfissional() {
+        Usuario julia = new Usuario();
+        julia.setValorConsultaAvulso(new BigDecimal("150.00"));
+        julia.setValorConsultaSemanal(new BigDecimal("140.00"));
+        julia.setValorConsultaQuinzenal(new BigDecimal("130.00"));
+        julia.setValorConsultaMensal(new BigDecimal("120.00"));
+
+        assertEquals(new BigDecimal("150.00"), service.valorPadraoProfissionalRecebe(julia, "AVULSO").orElseThrow());
+        assertEquals(new BigDecimal("140.00"), service.valorPadraoProfissionalRecebe(julia, "SEMANAL").orElseThrow());
+        assertEquals(new BigDecimal("130.00"), service.valorPadraoProfissionalRecebe(julia, "QUINZENAL").orElseThrow());
+        assertEquals(new BigDecimal("120.00"), service.valorPadraoProfissionalRecebe(julia, "MENSAL").orElseThrow());
+        assertEquals(new BigDecimal("150.00"), service.valorPadraoProfissionalRecebe(julia, "OUTRO").orElseThrow());
+        assertTrue(service.valorPadraoProfissionalRecebe(null, "AVULSO").isEmpty());
+    }
+
+    @Test
+    void aplicarValoresDeveUsarValorPadraoCadastradoQuandoFormularioVazio() {
+        Usuario julia = new Usuario();
+        julia.setValorConsultaAvulso(new BigDecimal("180.00"));
+
+        AgendamentoForm form = new AgendamentoForm();
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+
+        service.aplicarValores(agendamento, form, sala1, "AVULSO", true, julia);
+
+        assertEquals(new BigDecimal("180.00"), agendamento.getValorProfissionalRecebe());
+        assertEquals(new BigDecimal("35.00"), agendamento.getValorClinicaCobra());
     }
 }

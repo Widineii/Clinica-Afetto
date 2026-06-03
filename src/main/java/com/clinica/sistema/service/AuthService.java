@@ -121,6 +121,22 @@ public class AuthService {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }
 
+    /** Valores padrao de consulta por profissional — somente Polyana (dona da clinica). */
+    public boolean podeGerenciarValoresConsultaProfissionais(Usuario usuario) {
+        return isDonaClinica(usuario) && !isAdmin(usuario);
+    }
+
+    /** Lista da aba Valores: profissionais comuns, sem admin, Polyana nem perfil de teste. */
+    public boolean elegivelParaGestaoValoresConsulta(Usuario profissional) {
+        if (profissional == null || isAdmin(profissional)) {
+            return false;
+        }
+        if (!"ROLE_PROFISSIONAL".equals(profissional.getCargo())) {
+            return false;
+        }
+        return !isDonaClinica(profissional) && !profissionalIgnoraValoresEPagamento(profissional);
+    }
+
     /** Layout caderno (Avulso / Fixo / Quinzenal) para profissionais e dona da clinica; admin mantem a grade completa. */
     public boolean deveUsarMeusAgendamentosResumido(Usuario usuario) {
         return usuario != null && !isAdmin(usuario);

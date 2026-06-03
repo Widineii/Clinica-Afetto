@@ -1,6 +1,8 @@
 package com.clinica.sistema.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public final class GraficoJsonUtil {
 
@@ -131,6 +133,30 @@ public final class GraficoJsonUtil {
                     .append('}');
         }
         json.append(']');
+        return json.toString();
+    }
+
+    public static String serializarValoresConsultaPadrao(Map<String, Map<String, BigDecimal>> mapa) {
+        if (mapa == null || mapa.isEmpty()) {
+            return "{}";
+        }
+        StringBuilder json = new StringBuilder("{");
+        int indiceProfissional = 0;
+        for (Map.Entry<String, Map<String, BigDecimal>> profissional : mapa.entrySet()) {
+            if (indiceProfissional++ > 0) {
+                json.append(',');
+            }
+            json.append(texto(profissional.getKey())).append(':').append('{');
+            int indiceValor = 0;
+            for (Map.Entry<String, BigDecimal> valor : profissional.getValue().entrySet()) {
+                if (indiceValor++ > 0) {
+                    json.append(',');
+                }
+                json.append(texto(valor.getKey())).append(':').append(valor(valor.getValue()));
+            }
+            json.append('}');
+        }
+        json.append('}');
         return json.toString();
     }
 

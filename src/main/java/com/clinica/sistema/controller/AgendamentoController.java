@@ -7,6 +7,7 @@ import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.NovidadeSiteView;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
+import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
@@ -119,6 +120,11 @@ public class AgendamentoController {
         return Collections.emptyMap();
     }
 
+    @ModelAttribute("valoresConsultaPorProfissionalJson")
+    public String valoresConsultaPorProfissionalJson() {
+        return usuarioService.jsonValoresConsultaPadraoPorProfissional();
+    }
+
     @ModelAttribute
     public void prepararAjudaSuporte(Model model) {
         model.addAttribute("manualWhatsappAtivo", manualProperties.temWhatsappSuporte());
@@ -198,15 +204,20 @@ public class AgendamentoController {
         boolean isDonaClinica = authService.isDonaClinica(usuarioLogado);
         boolean podeTrocarPropriaSenha = authService.podeTrocarPropriaSenha(usuarioLogado);
 
+        boolean podeGerenciarEquipe = authService.podeGerenciarEquipe(usuarioLogado);
         if (!model.containsAttribute("agendamentoForm")) {
             AgendamentoForm form = new AgendamentoForm();
-            form.setProfissionalId(usuarioLogado.getId());
+            if (!podeGerenciarEquipe) {
+                form.setProfissionalId(usuarioLogado.getId());
+            }
             LocalDate dataSugerida = agendaDataSugerida(semana);
             form.setDataAtendimento(dataSugerida);
             form.setHorarioAtendimento(service.listarHorariosDisponiveis().get(0));
+            if (!podeGerenciarEquipe) {
+                usuarioService.preencherValorConsultaPadraoNoForm(form, usuarioLogado.getId(), "AVULSO");
+            }
             model.addAttribute("agendamentoForm", form);
         }
-        boolean podeGerenciarEquipe = authService.podeGerenciarEquipe(usuarioLogado);
         if (podeTrocarPropriaSenha && !model.containsAttribute("trocarSenhaForm")) {
             model.addAttribute("trocarSenhaForm", new com.clinica.sistema.dto.TrocarSenhaForm());
         }
@@ -383,7 +394,33 @@ public class AgendamentoController {
         }
         aplicarModalPixConfirmadoSeNecessario(model);
         popularNovidades(model, usuarioLogado, session);
+        aplicarValorPadraoAgendamentoSeNecessario(model, usuarioLogado, podeGerenciarEquipe);
         return "agenda";
+    }
+
+    private void aplicarValorPadraoAgendamentoSeNecessario(
+            Model model,
+            Usuario usuarioLogado,
+            boolean podeGerenciarEquipe
+    ) {
+        Object attr = model.getAttribute("agendamentoForm");
+        if (!(attr instanceof AgendamentoForm form)) {
+            return;
+        }
+        if (form.getValorProfissionalRecebe() != null && form.getValorProfissionalRecebe().signum() > 0) {
+            return;
+        }
+        Long profissionalId = form.getProfissionalId();
+        if (profissionalId == null && !podeGerenciarEquipe) {
+            profissionalId = usuarioLogado.getId();
+        }
+        if (profissionalId == null) {
+            return;
+        }
+        String recorrencia = form.getRecorrencia() != null && !form.getRecorrencia().isBlank()
+                ? form.getRecorrencia()
+                : "AVULSO";
+        usuarioService.preencherValorConsultaPadraoNoForm(form, profissionalId, recorrencia);
     }
 
     private void popularNovidades(Model model, Usuario usuarioLogado, HttpSession session) {
@@ -483,8 +520,12 @@ public class AgendamentoController {
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         boolean podeVerRelatorioUsoSite = authService.podeVerRelatorioUsoSite(usuarioLogado);
+        boolean podeGerenciarValoresConsulta = authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado);
         String abaSolicitada = aba != null ? aba.toLowerCase() : "equipe";
         if ("uso-site".equals(abaSolicitada) && !podeVerRelatorioUsoSite) {
+            abaSolicitada = "equipe";
+        }
+        if ("valores".equals(abaSolicitada) && !podeGerenciarValoresConsulta) {
             abaSolicitada = "equipe";
         }
         String abaAtiva = switch (abaSolicitada) {
@@ -492,6 +533,7 @@ public class AgendamentoController {
             case "encerramentos" -> "encerramentos";
             case "indicacoes" -> "indicacoes";
             case "uso-site" -> "uso-site";
+            case "valores" -> "valores";
             default -> "equipe";
         };
         if (!"uso-site".equals(abaAtiva)) {
@@ -499,6 +541,13 @@ public class AgendamentoController {
         }
         model.addAttribute("abaAtiva", abaAtiva);
         model.addAttribute("podeVerRelatorioUsoSite", podeVerRelatorioUsoSite);
+        model.addAttribute("podeGerenciarValoresConsulta", podeGerenciarValoresConsulta);
+        if (podeGerenciarValoresConsulta) {
+            model.addAttribute(
+                    "profissionaisValoresConsulta",
+                    usuarioService.listarProfissionaisParaGestaoValoresConsulta()
+            );
+        }
         if ("uso-site".equals(abaAtiva)) {
             model.addAttribute("relatorioUsoSite", relatorioUsoSiteSessaoService.obter(session).orElse(null));
             model.addAttribute("relatorioUsoSiteGerado", relatorioUsoSiteSessaoService.possuiRelatorioGerado(session));
@@ -539,6 +588,24 @@ public class AgendamentoController {
             );
         }
         return "redirect:/agendamentos/central-profissionais?aba=uso-site";
+    }
+
+    @PostMapping("/central-profissionais/valores/salvar")
+    public String salvarValoresConsultaProfissional(
+            @ModelAttribute AtualizarValoresConsultaProfissionalForm form,
+            RedirectAttributes redirectAttributes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        try {
+            usuarioService.atualizarValoresConsultaProfissional(form, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Valores salvos com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais?aba=valores";
     }
 
     @GetMapping(value = "/central-profissionais/uso-site/download", produces = MediaType.APPLICATION_PDF_VALUE)

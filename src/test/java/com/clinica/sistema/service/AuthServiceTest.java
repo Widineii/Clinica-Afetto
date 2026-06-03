@@ -164,6 +164,27 @@ class AuthServiceTest {
     }
 
     @Test
+    void polyanaGerenciaValoresConsultaProfissionais() {
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+
+        assertTrue(authService.podeGerenciarValoresConsultaProfissionais(polyana));
+        assertTrue(authService.elegivelParaGestaoValoresConsulta(julia));
+        assertFalse(authService.elegivelParaGestaoValoresConsulta(polyana));
+        assertFalse(authService.elegivelParaGestaoValoresConsulta(admin));
+        assertFalse(authService.podeGerenciarValoresConsultaProfissionais(admin));
+    }
+
+    @Test
     void somenteAdminPolyanaETesteVePagamentoDeTodos() throws Exception {
         var campoLoginTeste = AuthService.class.getDeclaredField("testUserLogin");
         campoLoginTeste.setAccessible(true);

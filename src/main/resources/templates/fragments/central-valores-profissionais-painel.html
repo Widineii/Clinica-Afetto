@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="painel (profissionais, abaCentral)"
+         class="central-pane"
+         id="central-pane-valores"
+         role="tabpanel"
+         aria-labelledby="tabValores"
+         th:hidden="${abaCentral != 'valores'}">
+    <div class="central-panel__head">
+        <div>
+            <h2 class="central-panel__title">Valores</h2>
+            <p class="central-panel__hint mb-0">
+                Quanto o cliente paga em cada tipo de consulta, por profissional. Clique no nome para editar.
+            </p>
+        </div>
+        <div class="central-stat" th:if="${profissionais != null and !#lists.isEmpty(profissionais)}">
+            <span class="central-stat__num" th:text="${#lists.size(profissionais)}">0</span>
+            <span th:text="${#lists.size(profissionais) == 1 ? 'profissional' : 'profissionais'}">profissionais</span>
+        </div>
+    </div>
+
+    <div th:if="${profissionais == null or #lists.isEmpty(profissionais)}" class="central-empty">
+        <div class="central-empty__icon"><i class="fa-solid fa-coins" aria-hidden="true"></i></div>
+        <h3 class="h5 mb-2">Nenhum profissional na lista</h3>
+        <p class="text-muted mb-0">Admin, Polyana e perfil de teste nao aparecem aqui.</p>
+    </div>
+
+    <div class="valores-prof-list" th:if="${profissionais != null and !#lists.isEmpty(profissionais)}">
+        <article class="valores-prof-item" th:each="linha : ${profissionais}" th:attr="data-id=${linha.id}">
+            <button type="button"
+                    class="valores-prof-toggle"
+                    th:attr="aria-expanded='false', aria-controls=${'valores-detalhe-' + linha.id}">
+                <span class="valores-prof-nome" th:text="${linha.nome}">Nome</span>
+                <span class="valores-prof-resumo">
+                    <span>avulso = <strong th:text="${linha.valorAvulsoFormatado()}">—</strong></span>
+                    <span class="valores-prof-sep" aria-hidden="true">·</span>
+                    <span>semanal = <strong th:text="${linha.valorSemanalFormatado()}">—</strong></span>
+                    <span class="valores-prof-sep" aria-hidden="true">·</span>
+                    <span>quinzenal = <strong th:text="${linha.valorQuinzenalFormatado()}">—</strong></span>
+                    <span class="valores-prof-sep" aria-hidden="true">·</span>
+                    <span>mensal = <strong th:text="${linha.valorMensalFormatado()}">—</strong></span>
+                </span>
+                <i class="fa-solid fa-chevron-down valores-prof-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="valores-prof-detalhe"
+                 th:id="${'valores-detalhe-' + linha.id}"
+                 hidden>
+                <form th:action="@{/agendamentos/central-profissionais/valores/salvar}" method="post" class="valores-prof-form">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <input type="hidden" name="usuarioId" th:value="${linha.id}">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" th:attr="for=${'valorAvulso-' + linha.id}">Avulso (R$)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   name="valorAvulso"
+                                   step="0.01"
+                                   min="0.01"
+                                   th:id="${'valorAvulso-' + linha.id}"
+                                   th:value="${linha.valorAvulso()}">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" th:attr="for=${'valorSemanal-' + linha.id}">Semanal (R$)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   name="valorSemanal"
+                                   step="0.01"
+                                   min="0.01"
+                                   th:id="${'valorSemanal-' + linha.id}"
+                                   th:value="${linha.valorSemanal()}">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" th:attr="for=${'valorQuinzenal-' + linha.id}">Quinzenal (R$)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   name="valorQuinzenal"
+                                   step="0.01"
+                                   min="0.01"
+                                   th:id="${'valorQuinzenal-' + linha.id}"
+                                   th:value="${linha.valorQuinzenal()}">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" th:attr="for=${'valorMensal-' + linha.id}">Mensal (R$)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   name="valorMensal"
+                                   step="0.01"
+                                   min="0.01"
+                                   th:id="${'valorMensal-' + linha.id}"
+                                   th:value="${linha.valorMensal()}">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-teal btn-sm">Salvar valores</button>
+                    </div>
+                </form>
+            </div>
+        </article>
+    </div>
+</section>
+</body>
+</html>

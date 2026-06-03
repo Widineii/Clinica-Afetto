@@ -1,8 +1,12 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.config.SegurancaProperties;
+import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
+import com.clinica.sistema.dto.GraficoJsonUtil;
+import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.dto.ProfissionalValoresConsultaLinhaView;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.PeriodicidadePagamento;
@@ -15,10 +19,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UsuarioService {
@@ -32,6 +40,7 @@ public class UsuarioService {
     private final PasswordEncoder passwordEncoder;
     private final PagamentoConsultaService pagamentoConsultaService;
     private final SegurancaProperties segurancaProperties;
+    private final ValorConsultaService valorConsultaService;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
@@ -39,7 +48,8 @@ public class UsuarioService {
             AuthService authService,
             PasswordEncoder passwordEncoder,
             PagamentoConsultaService pagamentoConsultaService,
-            SegurancaProperties segurancaProperties
+            SegurancaProperties segurancaProperties,
+            ValorConsultaService valorConsultaService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
@@ -47,10 +57,94 @@ public class UsuarioService {
         this.passwordEncoder = passwordEncoder;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.segurancaProperties = segurancaProperties;
+        this.valorConsultaService = valorConsultaService;
     }
 
     public List<Usuario> listarProfissionaisDaEquipe() {
         return usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL");
+    }
+
+    public String jsonValoresConsultaPadraoPorProfissional() {
+        return GraficoJsonUtil.serializarValoresConsultaPadrao(mapaValoresConsultaPadraoPorProfissional());
+    }
+
+    public void preencherValorConsultaPadraoNoForm(AgendamentoForm form, Long profissionalId, String recorrencia) {
+        if (form == null || profissionalId == null || form.getValorProfissionalRecebe() != null) {
+            return;
+        }
+        usuarioRepository.findById(profissionalId).ifPresent(profissional ->
+                valorConsultaService.valorPadraoProfissionalRecebe(profissional, recorrencia)
+                        .ifPresent(form::setValorProfissionalRecebe)
+        );
+    }
+
+    public Map<String, Map<String, BigDecimal>> mapaValoresConsultaPadraoPorProfissional() {
+        Map<String, Map<String, BigDecimal>> mapa = new LinkedHashMap<>();
+        for (Usuario profissional : listarProfissionaisDaEquipe()) {
+            if (!authService.elegivelParaGestaoValoresConsulta(profissional)) {
+                continue;
+            }
+            Map<String, BigDecimal> valores = valoresConsultaDoProfissional(profissional);
+            if (!valores.isEmpty()) {
+                mapa.put(String.valueOf(profissional.getId()), valores);
+            }
+        }
+        return mapa;
+    }
+
+    private Map<String, BigDecimal> valoresConsultaDoProfissional(Usuario profissional) {
+        Map<String, BigDecimal> valores = new LinkedHashMap<>();
+        adicionarValorSePresente(valores, "AVULSO", profissional.getValorConsultaAvulso());
+        adicionarValorSePresente(valores, "SEMANAL", profissional.getValorConsultaSemanal());
+        adicionarValorSePresente(valores, "QUINZENAL", profissional.getValorConsultaQuinzenal());
+        adicionarValorSePresente(valores, "MENSAL", profissional.getValorConsultaMensal());
+        return valores;
+    }
+
+    private void adicionarValorSePresente(Map<String, BigDecimal> valores, String chave, BigDecimal valor) {
+        if (valor != null && valor.signum() > 0) {
+            valores.put(chave, valor.setScale(2, RoundingMode.HALF_UP));
+        }
+    }
+
+    public List<ProfissionalValoresConsultaLinhaView> listarProfissionaisParaGestaoValoresConsulta() {
+        return listarProfissionaisDaEquipe().stream()
+                .filter(authService::elegivelParaGestaoValoresConsulta)
+                .map(ProfissionalValoresConsultaLinhaView::from)
+                .toList();
+    }
+
+    @Transactional
+    public void atualizarValoresConsultaProfissional(
+            AtualizarValoresConsultaProfissionalForm form,
+            Usuario usuarioLogado
+    ) {
+        if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
+            throw new RuntimeException("Apenas a Polyana pode alterar os valores de consulta.");
+        }
+        if (form == null || form.getUsuarioId() == null) {
+            throw new RuntimeException("Selecione o profissional.");
+        }
+        Usuario profissional = usuarioRepository.findById(form.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Profissional nao encontrado."));
+        if (!authService.elegivelParaGestaoValoresConsulta(profissional)) {
+            throw new RuntimeException("Este usuario nao pode ter valores de consulta cadastrados.");
+        }
+        profissional.setValorConsultaAvulso(normalizarValorOpcional(form.getValorAvulso(), "avulso"));
+        profissional.setValorConsultaSemanal(normalizarValorOpcional(form.getValorSemanal(), "semanal"));
+        profissional.setValorConsultaQuinzenal(normalizarValorOpcional(form.getValorQuinzenal(), "quinzenal"));
+        profissional.setValorConsultaMensal(normalizarValorOpcional(form.getValorMensal(), "mensal"));
+        usuarioRepository.save(profissional);
+    }
+
+    private BigDecimal normalizarValorOpcional(BigDecimal valor, String rotulo) {
+        if (valor == null) {
+            return null;
+        }
+        if (valor.signum() <= 0) {
+            throw new RuntimeException("Informe um valor positivo para " + rotulo + ".");
+        }
+        return valor.setScale(2, RoundingMode.HALF_UP);
     }
 
     public List<Usuario> listarUsuariosParaTrocaSenha() {

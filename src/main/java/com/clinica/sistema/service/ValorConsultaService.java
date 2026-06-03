@@ -4,10 +4,12 @@ import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.TurnoLocacao;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
+import com.clinica.sistema.model.Usuario;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 
 @Service
 public class ValorConsultaService {
@@ -45,7 +47,18 @@ public class ValorConsultaService {
             String recorrencia,
             boolean permitirIndicacao
     ) {
-        BigDecimal valorRecebe = normalizarValor(form.getValorProfissionalRecebe(), "Informe quanto o cliente paga ao profissional.");
+        aplicarValores(agendamento, form, sala, recorrencia, permitirIndicacao, null);
+    }
+
+    public void aplicarValores(
+            Agendamento agendamento,
+            AgendamentoForm form,
+            Sala sala,
+            String recorrencia,
+            boolean permitirIndicacao,
+            Usuario profissional
+    ) {
+        BigDecimal valorRecebe = resolverValorProfissionalRecebe(form, profissional, recorrencia);
         boolean indicacao = permitirIndicacao
                 && !TurnoLocacao.isTurno(form.getTurnoLocacao())
                 && form.isIndicacaoDona();
@@ -132,6 +145,35 @@ public class ValorConsultaService {
             throw new RuntimeException(mensagemErro);
         }
         return valor.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal resolverValorProfissionalRecebe(
+            AgendamentoForm form,
+            Usuario profissional,
+            String recorrencia
+    ) {
+        BigDecimal informado = form != null ? form.getValorProfissionalRecebe() : null;
+        if (informado != null && informado.signum() > 0) {
+            return normalizarValor(informado, "Informe quanto o cliente paga ao profissional.");
+        }
+        return valorPadraoProfissionalRecebe(profissional, recorrencia)
+                .orElseThrow(() -> new RuntimeException("Informe quanto o cliente paga ao profissional."));
+    }
+
+    public Optional<BigDecimal> valorPadraoProfissionalRecebe(Usuario profissional, String recorrencia) {
+        if (profissional == null || recorrencia == null) {
+            return Optional.empty();
+        }
+        BigDecimal valor = switch (recorrencia.toUpperCase()) {
+            case "SEMANAL" -> profissional.getValorConsultaSemanal();
+            case "QUINZENAL" -> profissional.getValorConsultaQuinzenal();
+            case "MENSAL" -> profissional.getValorConsultaMensal();
+            default -> profissional.getValorConsultaAvulso();
+        };
+        if (valor == null || valor.signum() <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(valor.setScale(2, RoundingMode.HALF_UP));
     }
 
     public boolean isSala4(Sala sala) {

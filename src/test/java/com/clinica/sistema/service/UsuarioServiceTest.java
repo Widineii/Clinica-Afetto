@@ -50,6 +50,9 @@ class UsuarioServiceTest {
     @Mock
     private SegurancaProperties segurancaProperties;
 
+    @Mock
+    private ValorConsultaService valorConsultaService;
+
     @InjectMocks
     private UsuarioService usuarioService;
 
