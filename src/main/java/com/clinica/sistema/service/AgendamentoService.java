@@ -571,6 +571,12 @@ public class AgendamentoService {
                         fimConsulta
                 );
 
+        List<Agendamento> agendamentosProfissionalSemana = carregarAgendamentosProfissionalNaSemana(
+                profissionalIdParaDisponibilidade,
+                inicioConsulta,
+                fimConsulta
+        );
+
         List<LocalDate> diasSemana = inicioSemana.datesUntil(fimSemana.plusDays(1)).toList();
         List<AgendaSalaLinha> linhas = new ArrayList<>();
 
@@ -579,10 +585,10 @@ public class AgendamentoService {
             for (LocalDate dia : diasSemana) {
                 porDia.add(resolverCelulaGrade(
                         agendamentosSemana,
+                        agendamentosProfissionalSemana,
                         dia,
                         horario,
-                        sala.getId(),
-                        profissionalIdParaDisponibilidade
+                        sala.getId()
                 ));
             }
             linhas.add(new AgendaSalaLinha(horario, porDia));
@@ -893,9 +899,6 @@ public class AgendamentoService {
             pagamentoConsultaService.configurarPagamentosAoSalvar(novosAgendamentos, profissional, usuarioLogado);
         }
         repository.saveAll(novosAgendamentos);
-        if (isRecorrenciaComSerie(recorrencia)) {
-            renovarSeriesRecorrentesAtivas();
-        }
         novoAgendamentoNotificacaoService.registrarNovosAgendamentos(novosAgendamentos, usuarioLogado);
         return novosAgendamentos.get(0);
     }
@@ -2181,12 +2184,27 @@ public class AgendamentoService {
         );
     }
 
+    private List<Agendamento> carregarAgendamentosProfissionalNaSemana(
+            Long profissionalId,
+            LocalDateTime inicioSemana,
+            LocalDateTime fimSemana
+    ) {
+        if (profissionalId == null) {
+            return List.of();
+        }
+        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                profissionalId,
+                inicioSemana,
+                fimSemana
+        );
+    }
+
     private AgendaGradeCelula resolverCelulaGrade(
             List<Agendamento> agendamentosSemana,
+            List<Agendamento> agendamentosProfissionalSemana,
             LocalDate dia,
             LocalTime horario,
-            Long salaIdAtual,
-            Long profissionalIdParaDisponibilidade
+            Long salaIdAtual
     ) {
         Agendamento agendamento = agendamentosSemana.stream()
                 .filter(item -> pagamentoConsultaService.ocupaVagaNaGrade(item))
@@ -2205,24 +2223,41 @@ public class AgendamentoService {
                 .min(Comparator.comparing(Agendamento::getDataHoraInicio))
                 .orElse(null);
         AgendaGradeCelula celula = AgendaGradeCelula.resolver(agendamento, dia, horario);
-        if (celula != null || profissionalIdParaDisponibilidade == null || salaIdAtual == null) {
+        if (celula != null || salaIdAtual == null || agendamentosProfissionalSemana.isEmpty()) {
             return celula;
         }
         LocalDateTime inicioCelula = LocalDateTime.of(dia, horario);
         LocalDateTime fimCelula = inicioCelula.plusHours(1);
-        return resolverConflitoProfissionalNoHorario(
-                profissionalIdParaDisponibilidade,
+        return resolverConflitoProfissionalEmMemoria(
+                agendamentosProfissionalSemana,
+                salaIdAtual,
                 inicioCelula,
-                fimCelula,
-                -1L
+                fimCelula
         )
-                .filter(conflito -> conflito.getSala() != null
-                        && conflito.getSala().getId() != null
-                        && !conflito.getSala().getId().equals(salaIdAtual))
                 .map(conflito -> AgendaGradeCelula.profissionalOcupadoEmOutraSala(
                         conflito.getSala().getNome()
                 ))
                 .orElse(null);
+    }
+
+    private Optional<Agendamento> resolverConflitoProfissionalEmMemoria(
+            List<Agendamento> agendamentosProfissional,
+            Long salaIdAtual,
+            LocalDateTime inicio,
+            LocalDateTime fim
+    ) {
+        return agendamentosProfissional.stream()
+                .filter(pagamentoConsultaService::agendamentoOcupaHorarioParaNovaReserva)
+                .filter(candidato -> intervalosSobrepoem(
+                        resolverInicioAgendamento(candidato),
+                        resolverFimAgendamento(candidato),
+                        inicio,
+                        fim
+                ))
+                .filter(candidato -> candidato.getSala() != null
+                        && candidato.getSala().getId() != null
+                        && !candidato.getSala().getId().equals(salaIdAtual))
+                .findFirst();
     }
 
     private boolean intervalosSobrepoem(

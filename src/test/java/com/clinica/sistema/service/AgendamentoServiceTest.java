@@ -1818,8 +1818,8 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.findBySalaIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
         )).thenReturn(List.of());
-        when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
+        when(agendamentoRepository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
         )).thenReturn(List.of(naSala1));
         when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(naSala1)).thenReturn(true);
 
