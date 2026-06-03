@@ -812,7 +812,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
 
-        assertEquals("Você vai pagar no dia 07/06",
+        assertEquals("Você vai pagar no dia 06/06",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
     }
 
@@ -1390,9 +1390,61 @@ class PagamentoConsultaServiceTest {
 
     @Test
     void janelaPagamentoMensalDoDia01Ao15() {
-        int dia = LocalDate.now().getDayOfMonth();
-        boolean esperado = dia >= 1 && dia <= 15;
+        LocalDate hoje = LocalDate.now();
+        int dia = hoje.getDayOfMonth();
+        boolean esperado = dia >= 1 && dia <= 15 || dia == hoje.lengthOfMonth();
         assertEquals(esperado, pagamentoConsultaService.estaEmJanelaPagamentoMensal());
+    }
+
+    @Test
+    void janelaPagamentoSemanalAbreNaVesperaDaConsulta() {
+        comDataReferencia(LocalDate.of(2026, 6, 5), LocalTime.of(10, 0), () -> {
+            Usuario julia = new Usuario();
+            julia.setId(3L);
+            julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+            Agendamento consulta = new Agendamento();
+            consulta.setId(31L);
+            consulta.setProfissional(julia);
+            consulta.setDataHoraInicio(LocalDate.of(2026, 6, 6).atTime(9, 0));
+            consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+            consulta.setDataReferenciaSemanaPagamento(LocalDate.of(2026, 6, 6));
+
+            when(authService.isAdmin(julia)).thenReturn(false);
+            when(authService.isDonaClinica(julia)).thenReturn(false);
+            when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
+            when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(3L))
+                    .thenReturn(java.util.List.of(consulta));
+
+            assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
+            assertTrue(pagamentoConsultaService.estaEmJanelaPagamentoSemanal(julia));
+            assertFalse(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
+        });
+    }
+
+    @Test
+    void janelaPagamentoSemanalFechadaTresDiasAntesDaConsulta() {
+        comDataReferencia(LocalDate.of(2026, 6, 3), LocalTime.of(10, 0), () -> {
+            Usuario julia = new Usuario();
+            julia.setId(3L);
+            julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+            Agendamento consulta = new Agendamento();
+            consulta.setId(31L);
+            consulta.setProfissional(julia);
+            consulta.setDataHoraInicio(LocalDate.of(2026, 6, 6).atTime(9, 0));
+            consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+            consulta.setDataReferenciaSemanaPagamento(LocalDate.of(2026, 6, 6));
+
+            when(authService.isAdmin(julia)).thenReturn(false);
+            when(authService.isDonaClinica(julia)).thenReturn(false);
+            when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
+            when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(3L))
+                    .thenReturn(java.util.List.of(consulta));
+
+            assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal(julia));
+            assertTrue(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
+        });
     }
 
     @Test
@@ -1451,7 +1503,10 @@ class PagamentoConsultaServiceTest {
                 RuntimeException.class,
                 () -> pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(julia)
         );
-        assertEquals("Pagamento semanal disponível apenas sábado e domingo.", ex.getMessage());
+        assertEquals(
+                "Pagamento semanal disponível a partir de um dia antes da consulta, ou no sábado e domingo.",
+                ex.getMessage()
+        );
     }
 
     @Test
@@ -1730,7 +1785,7 @@ class PagamentoConsultaServiceTest {
         when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
-                "Ana Paula: pagamento no dia 07/06",
+                "Ana Paula: pagamento no dia 06/06",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
         );
     }

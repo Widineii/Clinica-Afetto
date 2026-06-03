@@ -62,6 +62,7 @@ class AuthServiceTest {
         julia.setCargo("ROLE_PROFISSIONAL");
 
         assertTrue(authService.podeAcessarCentralProfissionais(polyana));
+        assertTrue(authService.podeVerRelatorioUsoSite(polyana));
         assertTrue(authService.podeAcessarCentralProfissionais(admin));
         assertFalse(authService.podeAcessarCentralProfissionais(julia));
     }

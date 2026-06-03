@@ -53,6 +53,27 @@ class ValorConsultaServiceTest {
     }
 
     @Test
+    void turnoLocacaoDeveCobrarQuinhentos() {
+        assertEquals(new BigDecimal("500.00"), service.calcularTarifaClinicaPadrao(sala1, "AVULSO", "TURNO_MANHA"));
+        assertEquals(new BigDecimal("500.00"), service.calcularTarifaClinicaPadrao(sala4, "SEMANAL", "TURNO_TARDE"));
+    }
+
+    @Test
+    void turnoLocacaoIgnoraIndicacaoMesmoComCheckboxMarcado() {
+        AgendamentoForm form = new AgendamentoForm();
+        form.setTurnoLocacao("TURNO_MANHA");
+        form.setValorProfissionalRecebe(new BigDecimal("800.00"));
+        form.setIndicacaoDona(true);
+
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+        service.aplicarValores(agendamento, form, sala1, "SEMANAL", true);
+
+        assertEquals(new BigDecimal("500.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("300.00"), agendamento.getValorLiquidoProfissional());
+        assertFalse(agendamento.getIndicacaoDona());
+    }
+
+    @Test
     void indicacaoDeveCobrarTrintaPorCento() {
         assertEquals(new BigDecimal("60.00"), service.calcularTarifaClinicaIndicacao(new BigDecimal("200.00")));
     }

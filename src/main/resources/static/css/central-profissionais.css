@@ -1,0 +1,67 @@
+/**
+ * Central dos profissionais — layout compacto (equipe).
+ * Carregado com ?v= versao do site para evitar cache antigo.
+ */
+.central-page-shell.app-shell.afetto-page-shell {
+    --afetto-shell-max: 1080px;
+    width: min(1080px, 100%);
+    margin-inline: auto;
+}
+
+@media (min-width: 1200px) {
+    .central-page-shell.app-shell.afetto-page-shell {
+        --afetto-shell-max: 1080px !important;
+        width: min(1080px, 100%) !important;
+    }
+}
+
+.central-page-shell .shell-card .card-body {
+    padding: 1.25rem 1.35rem !important;
+}
+
+.central-page-shell #tabelaProfissionais.prof-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+}
+
+.central-page-shell #tabelaProfissionais .prof-pagamento-cell {
+    width: 10.75rem !important;
+    min-width: 10.75rem !important;
+    max-width: 10.75rem !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+.central-page-shell #tabelaProfissionais .periodicidade-opcoes {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    width: 100% !important;
+    max-width: 10.75rem !important;
+}
+
+.central-page-shell #tabelaProfissionais .periodicidade-btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 5px 4px !important;
+    font-size: 0.65rem !important;
+    line-height: 1.15 !important;
+}
+
+@media (max-width: 767.98px) {
+    .central-page-shell #tabelaProfissionais .periodicidade-opcoes {
+        flex-direction: column !important;
+        max-width: none !important;
+    }
+
+    .central-page-shell #tabelaProfissionais .periodicidade-btn {
+        width: 100% !important;
+        font-size: 0.82rem !important;
+        padding: 10px 12px !important;
+    }
+}

@@ -1,6 +1,7 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.dto.AgendamentoForm;
+import com.clinica.sistema.dto.TurnoLocacao;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class ValorConsultaService {
     public static final BigDecimal CLINICA_AVULSO = new BigDecimal("35.00");
     public static final BigDecimal CLINICA_QUINZENAL = new BigDecimal("35.00");
     public static final BigDecimal CLINICA_MENSAL = new BigDecimal("32.00");
+    public static final BigDecimal CLINICA_TURNO_LOCACAO = new BigDecimal("500.00");
     /** @deprecated use {@link #CLINICA_AVULSO} */
     @Deprecated
     public static final BigDecimal CLINICA_AVULSO_QUINZENAL = CLINICA_AVULSO;
@@ -44,7 +46,9 @@ public class ValorConsultaService {
             boolean permitirIndicacao
     ) {
         BigDecimal valorRecebe = normalizarValor(form.getValorProfissionalRecebe(), "Informe quanto o cliente paga ao profissional.");
-        boolean indicacao = permitirIndicacao && form.isIndicacaoDona();
+        boolean indicacao = permitirIndicacao
+                && !TurnoLocacao.isTurno(form.getTurnoLocacao())
+                && form.isIndicacaoDona();
         BigDecimal valorClinica = indicacao
                 ? calcularTarifaClinicaIndicacao(valorRecebe)
                 : resolverValorClinicaSemIndicacao(form, sala, recorrencia, valorRecebe);
@@ -60,13 +64,23 @@ public class ValorConsultaService {
             String recorrencia,
             BigDecimal valorRecebe
     ) {
+        if (TurnoLocacao.isTurno(form.getTurnoLocacao())) {
+            return CLINICA_TURNO_LOCACAO;
+        }
         if (form.getValorClinicaCobra() != null && form.getValorClinicaCobra().signum() > 0) {
             return normalizarValor(form.getValorClinicaCobra(), "Informe quanto a clinica cobra nesta sessao.");
         }
-        return calcularTarifaClinicaPadrao(sala, recorrencia);
+        return calcularTarifaClinicaPadrao(sala, recorrencia, form.getTurnoLocacao());
     }
 
     public BigDecimal calcularTarifaClinicaPadrao(Sala sala, String recorrencia) {
+        return calcularTarifaClinicaPadrao(sala, recorrencia, null);
+    }
+
+    public BigDecimal calcularTarifaClinicaPadrao(Sala sala, String recorrencia, String turnoLocacao) {
+        if (TurnoLocacao.isTurno(turnoLocacao)) {
+            return CLINICA_TURNO_LOCACAO;
+        }
         if (isSala4(sala)) {
             return CLINICA_SALA_4;
         }
@@ -94,10 +108,13 @@ public class ValorConsultaService {
         if (form.isIndicacaoDona()) {
             return calcularTarifaClinicaIndicacao(valorRecebe);
         }
+        if (TurnoLocacao.isTurno(form.getTurnoLocacao())) {
+            return CLINICA_TURNO_LOCACAO;
+        }
         if (form.getValorClinicaCobra() != null && form.getValorClinicaCobra().signum() > 0) {
             return normalizarValor(form.getValorClinicaCobra(), "Informe quanto a clinica cobra nesta sessao.");
         }
-        return calcularTarifaClinicaPadrao(sala, recorrencia);
+        return calcularTarifaClinicaPadrao(sala, recorrencia, form.getTurnoLocacao());
     }
 
     public BigDecimal calcularTarifaClinicaIndicacao(BigDecimal valorConsulta) {
@@ -140,7 +157,7 @@ public class ValorConsultaService {
         BigDecimal valorRecebe = origem.getValorProfissionalRecebe();
         destino.setValorProfissionalRecebe(valorRecebe);
         destino.setIndicacaoDona(false);
-        BigDecimal valorClinica = calcularTarifaClinicaPadrao(sala, recorrencia);
+        BigDecimal valorClinica = calcularTarifaClinicaPadrao(sala, recorrencia, origem.getTurnoLocacao());
         destino.setValorClinicaCobra(valorClinica);
         if (valorRecebe != null) {
             destino.setValorLiquidoProfissional(calcularLiquido(valorRecebe, valorClinica));

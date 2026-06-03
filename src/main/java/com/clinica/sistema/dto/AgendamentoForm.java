@@ -13,6 +13,8 @@ public class AgendamentoForm {
     private String nomeCliente;
     private LocalDate dataAtendimento;
     private LocalTime horarioAtendimento;
+    /** Locação de sala: TURNO_MANHA (8h–13h) ou TURNO_TARDE (13h–18h). */
+    private String turnoLocacao;
     private boolean fixo;
     private String recorrencia = "AVULSO";
     private BigDecimal valorProfissionalRecebe;

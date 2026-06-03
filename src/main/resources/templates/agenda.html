@@ -338,6 +338,48 @@
             border-color: rgba(37, 99, 235, 0.14);
         }
 
+        .slot-turno-inicio,
+        .slot-turno-meio {
+            padding-bottom: 0 !important;
+        }
+
+        .slot-turno-meio,
+        .slot-turno-fim {
+            padding-top: 0 !important;
+        }
+
+        .slot-turno-inicio .slot-card,
+        .slot-turno-meio .slot-card {
+            min-height: 34px;
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            box-shadow: none;
+        }
+
+        .slot-turno-meio .slot-card {
+            border-radius: 0;
+            border-top: none;
+        }
+
+        .slot-turno-fim .slot-card {
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            margin-top: 0;
+        }
+
+        .slot-card--turno-parte .slot-card__valores,
+        .slot-card--turno-parte .slot-card__footer {
+            display: none !important;
+        }
+
+        .slot-card__continua-turno {
+            font-size: 0.58rem;
+            font-weight: 600;
+            color: #64748b;
+            text-align: center;
+            padding: 2px 0 0;
+        }
+
         .slot-card__head {
             display: flex;
             align-items: center;
@@ -538,6 +580,37 @@
 
         .agenda-section + .agenda-section {
             margin-top: 16px;
+        }
+
+        .agenda-opcao-extra {
+            background: #f8fafc;
+            border: 1px solid #dbe7f0;
+            border-radius: 14px;
+        }
+
+        .agenda-opcao-extra .form-check-input {
+            width: 2.6em;
+            height: 1.3em;
+            cursor: pointer;
+        }
+
+        .agenda-opcao-extra .form-check-input:checked {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .agenda-opcao-extra .form-check-label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #0f172a;
+            cursor: pointer;
+            line-height: 1.35;
+        }
+
+        .agenda-opcao-extra .hint-opcao-extra {
+            font-size: 0.82rem;
+            color: #64748b;
+            line-height: 1.45;
         }
 
         .agenda-toggle {
@@ -957,6 +1030,23 @@
             margin-top: 0.85rem;
             padding-top: 0.85rem;
             border-top: 1px dashed rgba(16, 59, 76, 0.18);
+        }
+
+        .painel-locacao-turno {
+            border-color: rgba(10, 135, 133, 0.28);
+            background: linear-gradient(180deg, rgba(224, 242, 241, 0.35) 0%, rgba(248, 251, 252, 0.95) 100%);
+        }
+
+        .painel-locacao-turno__taxa-fixa {
+            font-size: 0.88rem;
+            color: #475569;
+            margin-bottom: 1rem;
+        }
+
+        .valores-consulta-campo input.valor-moeda-brl[readonly] {
+            background-color: #f1f5f9;
+            cursor: not-allowed;
+            color: #334155;
         }
 
         .valores-consulta-referencia .titulo {
@@ -1436,9 +1526,6 @@
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
                    class="btn btn-warning">Uso do banco</a>
-                <a th:if="${isAdmin}"
-                   th:href="@{/agendamentos/admin/relatorio-uso-site}"
-                   class="btn btn-warning">Uso do site</a>
                 <a th:if="${podeGerenciarEquipe}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>
@@ -1518,7 +1605,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h2 class="h4 mb-0">Novo agendamento</h2>
-                        <span class="badge text-bg-info">1 hora</span>
+                        <span class="badge text-bg-info" id="badgeTipoAgendamento">1 hora</span>
                     </div>
 
                     <div th:if="${infoProximaMensal != null}"
@@ -1531,6 +1618,28 @@
                     <form id="formNovoAgendamento" th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                         <input type="hidden" th:field="*{continuacaoMensal}" id="continuacaoMensalAgenda">
+
+                        <div class="col-12">
+                            <div class="agenda-opcao-extra p-3">
+                                <div class="form-check form-switch mb-0 ps-0 d-flex align-items-start gap-2">
+                                    <input class="form-check-input ms-0 mt-1 flex-shrink-0" type="checkbox"
+                                           id="usarLocacaoTurno" autocomplete="off"
+                                           th:checked="${agendamentoForm.turnoLocacao != null and !#strings.isEmpty(agendamentoForm.turnoLocacao)}">
+                                    <div class="flex-grow-1">
+                                        <label class="form-check-label d-block" for="usarLocacaoTurno">
+                                            Locação da sala por turno (meio período)
+                                        </label>
+                                        <p class="hint-opcao-extra mb-0 mt-2" id="hintLocacaoTurnoAgenda">
+                                            Opcional — quem não usa deixa desligado e marca só 1 hora (07:00–21:00).
+                                            Ligado: manhã 08:00–13:00 ou tarde 13:00–18:00, clínica R$ 500,00; bloqueia o turno inteiro na sala.
+                                            Avulso, semanal, quinzenal e mensal iguais à consulta normal.
+                                            Ex.: Sala 1 · João · 10/06 · turno tarde · semanal.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="col-12">
                             <label class="form-label">Profissional</label>
                             <div th:if="${isAdmin or isDonaClinica}">
@@ -1573,14 +1682,16 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Horário</label>
-                            <select th:field="*{horarioAtendimento}" class="form-select" required>
-                                <option value="">Selecione</option>
-                                <option th:each="horario : ${horariosDisponiveis}"
-                                        th:value="${horario}"
-                                        th:text="${#temporals.format(horario, 'HH:mm')}">07:00</option>
-                            </select>
-                            <div class="form-text">Atendimentos de segunda a sábado, com horários fixos de 07:00 até 21:00.</div>
+                            <div id="blocoHorarioConsulta">
+                                <label class="form-label" for="horarioConsultaSelect">Horário</label>
+                                <select th:field="*{horarioAtendimento}" class="form-select" id="horarioConsultaSelect" required>
+                                    <option value="">Selecione</option>
+                                    <option th:each="horario : ${horariosDisponiveis}"
+                                            th:value="${horario}"
+                                            th:text="${#temporals.format(horario, 'HH:mm')}">07:00</option>
+                                </select>
+                                <div class="form-text">Consulta de 1 hora, de segunda a sábado, entre 07:00 e 21:00.</div>
+                            </div>
                         </div>
 
                         <div class="col-12">
@@ -1612,16 +1723,32 @@
                              id="valoresConsultaPanel"
                              th:if="${exibirPainelValoresConsulta}"
                              th:classappend="${podeAcompanharGanhosConsultaPropria ? ' d-none' : ''}">
-                            <h3 class="h6 mb-3">Valores desta consulta (por cliente)</h3>
 
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" th:field="*{indicacaoDona}" id="indicacaoDona">
-                                <label class="form-check-label" for="indicacaoDona">
-                                    Indicação da clínica (30% do valor da consulta)
-                                </label>
+                            <div id="cabecalhoValoresConsultaNormal">
+                                <h3 class="h6 mb-3">Valores desta consulta (por cliente)</h3>
+                                <div class="form-check mb-3" id="blocoIndicacaoConsulta">
+                                    <input class="form-check-input" type="checkbox" th:field="*{indicacaoDona}" id="indicacaoDona">
+                                    <label class="form-check-label" for="indicacaoDona">
+                                        Indicação da clínica (30% do valor da consulta)
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="row g-3 valores-consulta-grid">
+                            <div id="cabecalhoValoresLocacaoTurno" class="painel-locacao-turno d-none">
+                                <h3 class="h6 mb-2">Locação da sala por turno</h3>
+                                <p class="painel-locacao-turno__taxa-fixa mb-3">
+                                    Taxa fixa da clínica: <strong>R$ 500,00</strong> no turno inteiro (manhã 08:00–13:00 ou tarde 13:00–18:00).
+                                </p>
+                                <label class="form-label" for="turnoLocacaoSelect">Turno</label>
+                                <select th:field="*{turnoLocacao}" class="form-select mb-3" id="turnoLocacaoSelect">
+                                    <option value="">Selecione o turno</option>
+                                    <option th:each="turno : ${turnosLocacao}"
+                                            th:value="${turno.codigo}"
+                                            th:text="${turno.rotulo + ' — R$ 500,00 (clínica)'}">Manhã</option>
+                                </select>
+                            </div>
+
+                            <div class="row g-3 valores-consulta-grid" id="blocoValoresLucroProfissional">
                                 <div class="col-12 col-md-6">
                                     <div class="valores-consulta-campo">
                                         <label class="form-label" for="valorProfissionalRecebe">Profissional recebe (R$)</label>
@@ -1830,26 +1957,38 @@
                             <tbody>
                             <tr th:each="linha : ${agendaSala.linhas}">
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
-                                <td th:each="item : ${linha.agendamentos}"
-                                    th:with="tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null}, podeAgir=${tipoAcao != null}"
-                                    th:class="${(item != null ? ((pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado) ? 'slot-booked slot-waiting-payment' : (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked'))) : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
+                                <td th:each="celula : ${linha.celulas}"
+                                    th:with="item=${celula != null and celula.ocupada ? celula.agendamento : null},
+                                             exibirCompleto=${celula != null and celula.exibirDetalhesCompletos},
+                                             tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null},
+                                             podeAgir=${tipoAcao != null}"
+                                    th:class="${(item != null ? ((pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado) ? 'slot-booked slot-waiting-payment' : (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked'))) : 'slot-empty')
+                                        + (celula != null and celula.blocoMultiHora and celula.primeiraCelulaDoBloco ? ' slot-turno-inicio' : '')
+                                        + (celula != null and celula.blocoMultiHora and !celula.primeiraCelulaDoBloco and !celula.ultimaCelulaDoBloco ? ' slot-turno-meio' : '')
+                                        + (celula != null and celula.blocoMultiHora and celula.ultimaCelulaDoBloco ? ' slot-turno-fim' : '')
+                                        + (podeAgir ? ' slot-own-actionable' : '')}"
                                     th:data-agendamento-id="${podeAgir ? item.id : null}"
                                     th:data-tipo="${tipoAcao}"
                                     th:data-cliente="${podeAgir ? item.nomeCliente : null}"
                                     th:data-inicio="${podeAgir ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') : null}"
                                     th:data-sala="${podeAgir and item.sala != null ? item.sala.nome : null}"
-                                    th:data-valores="${podeAgir and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id)) ? 'Prof. ' + item.valorProfissionalRecebeFormatado + ' | Clin. ' + item.valorClinicaCobraFormatado + ' | Liq. ' + item.valorLiquidoProfissionalFormatado : null}"
-                                    th:data-pode-pagar="${item != null and pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}">
-                                    <div th:if="${item != null}" class="slot-card" th:classappend="${pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado) ? ' slot-card--aguardando-pagamento' : ''}">
+                                    th:data-valores="${podeAgir and exibirCompleto and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id)) ? 'Prof. ' + item.valorProfissionalRecebeFormatado + ' | Clin. ' + item.valorClinicaCobraFormatado + ' | Liq. ' + item.valorLiquidoProfissionalFormatado : null}"
+                                    th:data-pode-pagar="${item != null and exibirCompleto and pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}">
+                                    <div th:if="${item != null}"
+                                         class="slot-card"
+                                         th:classappend="${(pagamentoService.exibirEstiloAguardandoPagamentoNaGrade(item, usuarioLogado) ? ' slot-card--aguardando-pagamento' : '')
+                                            + (!exibirCompleto ? ' slot-card--turno-parte' : '')}">
                                         <div class="slot-card__head">
                                             <span class="slot-card__prof"
                                                   th:text="${item.profissional != null ? item.profissional.nome : 'Profissional'}">Profissional</span>
                                             <span class="slot-card__hora"
-                                                  th:text="${#temporals.format(item.dataHoraInicio, 'HH:mm')}">08:00</span>
+                                                  th:if="${exibirCompleto or (celula != null and celula.primeiraCelulaDoBloco)}"
+                                                  th:text="${item.horarioExibicaoGrade}">08:00</span>
                                         </div>
                                         <div class="slot-card__cliente" th:text="${item.nomeCliente}">Cliente</div>
+                                        <div th:if="${!exibirCompleto}" class="slot-card__continua-turno">Turno em andamento</div>
                                         <div class="slot-card__valores"
-                                             th:if="${item.possuiValoresConsulta() and (item.profissional == null or item.profissional.donaClinica != true) and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}">
+                                             th:if="${exibirCompleto and item.possuiValoresConsulta() and (item.profissional == null or item.profissional.donaClinica != true) and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}">
                                             <div class="slot-card__valor-linha">
                                                 <span class="slot-card__valor-label">Prof.</span>
                                                 <span class="slot-card__valor-num" th:text="${item.valorProfissionalRecebeFormatado}">R$ 150,00</span>
@@ -1863,7 +2002,7 @@
                                                 <span class="slot-card__valor-num" th:text="${item.valorLiquidoProfissionalFormatado}">R$ 115,00</span>
                                             </div>
                                         </div>
-                                        <div class="slot-card__footer">
+                                        <div class="slot-card__footer" th:if="${exibirCompleto}">
                                             <span th:if="${!pagamentoService.exibirIndicadoresPagamentoNaGrade(item, usuarioLogado) and !#strings.isEmpty(pagamentoService.rotuloStatusPagamentoResumido(item, usuarioLogado))}"
                                                   class="badge rounded-pill text-bg-secondary slot-status-pill"
                                                   th:text="${pagamentoService.rotuloStatusPagamentoResumido(item, usuarioLogado)}">Sala confirmada</span>
@@ -2253,6 +2392,13 @@
             var hintPagamento = document.getElementById('pagamentoRecorrenciaHint');
             var salaSelect = formAgendamento ? formAgendamento.querySelector('[name="salaId"]') : null;
             var recorrenciaSelect = formAgendamento ? formAgendamento.querySelector('[name="recorrencia"]') : null;
+            var usarLocacaoTurnoInput = document.getElementById('usarLocacaoTurno');
+            var cabecalhoValoresConsultaNormal = document.getElementById('cabecalhoValoresConsultaNormal');
+            var cabecalhoValoresLocacaoTurno = document.getElementById('cabecalhoValoresLocacaoTurno');
+            var blocoIndicacaoConsulta = document.getElementById('blocoIndicacaoConsulta');
+            var blocoHorarioConsulta = document.getElementById('blocoHorarioConsulta');
+            var turnoSelect = document.getElementById('turnoLocacaoSelect');
+            var horarioConsultaSelect = document.getElementById('horarioConsultaSelect');
             var hintRecorrenciaMensalAgenda = document.getElementById('recorrenciaHintMensalAgenda');
             var indicacaoInput = document.getElementById('indicacaoDona');
             var recebeInput = document.getElementById('valorProfissionalRecebe');
@@ -2322,8 +2468,120 @@
                 return nome.trim().toLowerCase() === 'sala 4';
             }
 
+            function modoLocacaoTurnoAtivo() {
+                return usarLocacaoTurnoInput && usarLocacaoTurnoInput.checked;
+            }
+
+            function turnoLocacaoSelecionado() {
+                return modoLocacaoTurnoAtivo() && turnoSelect && turnoSelect.value && turnoSelect.value.length > 0;
+            }
+
+            function sincronizarHorarioDoTurno() {
+                if (!modoLocacaoTurnoAtivo() || !horarioConsultaSelect || !turnoSelect) {
+                    return;
+                }
+                var horaManha = null;
+                var horaTarde = null;
+                for (var i = 0; i < horarioConsultaSelect.options.length; i++) {
+                    var opt = horarioConsultaSelect.options[i];
+                    var texto = (opt.textContent || '').trim();
+                    if (texto === '08:00') {
+                        horaManha = opt.value;
+                    }
+                    if (texto === '13:00') {
+                        horaTarde = opt.value;
+                    }
+                }
+                if (turnoSelect.value === 'TURNO_MANHA' && horaManha) {
+                    horarioConsultaSelect.value = horaManha;
+                } else if (turnoSelect.value === 'TURNO_TARDE' && horaTarde) {
+                    horarioConsultaSelect.value = horaTarde;
+                }
+            }
+
+            function alternarModoHorarioAgendamento() {
+                var turno = modoLocacaoTurnoAtivo();
+                var badgeTipo = document.getElementById('badgeTipoAgendamento');
+                if (badgeTipo) {
+                    badgeTipo.textContent = turno ? 'Turno' : '1 hora';
+                }
+                aplicarModoPainelLocacaoTurno();
+                if (blocoHorarioConsulta) {
+                    blocoHorarioConsulta.classList.toggle('d-none', turno);
+                }
+                if (turnoSelect) {
+                    turnoSelect.disabled = !turno;
+                    turnoSelect.required = turno;
+                    if (!turno) {
+                        turnoSelect.value = '';
+                    }
+                }
+                if (horarioConsultaSelect) {
+                    horarioConsultaSelect.disabled = turno;
+                    horarioConsultaSelect.required = !turno;
+                    if (turno) {
+                        sincronizarHorarioDoTurno();
+                    }
+                }
+                clinicaManual = false;
+                atualizarClinicaAutomatica();
+            }
+
+            function aplicarModoPainelLocacaoTurno() {
+                var turno = modoLocacaoTurnoAtivo();
+                if (painel) {
+                    painel.classList.toggle('painel-locacao-turno', turno);
+                }
+                if (cabecalhoValoresConsultaNormal) {
+                    cabecalhoValoresConsultaNormal.classList.toggle('d-none', turno);
+                }
+                if (cabecalhoValoresLocacaoTurno) {
+                    cabecalhoValoresLocacaoTurno.classList.toggle('d-none', !turno);
+                }
+                if (blocoIndicacaoConsulta) {
+                    blocoIndicacaoConsulta.classList.toggle('d-none', turno);
+                }
+                if (indicacaoInput) {
+                    if (turno) {
+                        indicacaoInput.checked = false;
+                        indicacaoInput.disabled = true;
+                    } else {
+                        indicacaoInput.disabled = false;
+                    }
+                }
+                var hintTaxas = document.getElementById('valoresConsultaHint');
+                if (hintTaxas) {
+                    hintTaxas.classList.toggle('d-none', turno);
+                }
+                if (turno) {
+                    clinicaManual = false;
+                }
+                aplicarBloqueioEdicaoClinicaCobra();
+                if (turno) {
+                    atualizarClinicaAutomatica();
+                }
+            }
+
+            function clinicaCobraBloqueadaEdicao() {
+                return modoLocacaoTurnoAtivo()
+                        || (indicacaoInput && indicacaoInput.checked);
+            }
+
+            function aplicarBloqueioEdicaoClinicaCobra() {
+                if (!clinicaInput) {
+                    return;
+                }
+                var bloqueado = clinicaCobraBloqueadaEdicao();
+                clinicaInput.readOnly = bloqueado;
+                clinicaInput.setAttribute('aria-readonly', bloqueado ? 'true' : 'false');
+                clinicaInput.classList.toggle('valor-clinica-bloqueado', bloqueado);
+            }
+
             function calcularTarifaClinica() {
                 var recebe = recebeInput ? parseMoney(recebeInput.value) : 0;
+                if (modoLocacaoTurnoAtivo()) {
+                    return turnoLocacaoSelecionado() ? 500 : 0;
+                }
                 if (indicacaoInput && indicacaoInput.checked) {
                     if (recebe > 0) {
                         return Math.round(recebe * 0.30 * 100) / 100;
@@ -2356,9 +2614,13 @@
                 if (!clinicaInput || !recebeInput) {
                     return;
                 }
-                if (clinicaManual && !(indicacaoInput && indicacaoInput.checked)) {
+                if (clinicaManual && !clinicaCobraBloqueadaEdicao()) {
+                    aplicarBloqueioEdicaoClinicaCobra();
                     atualizarLiquido();
                     return;
+                }
+                if (modoLocacaoTurnoAtivo()) {
+                    clinicaManual = false;
                 }
                 var recebe = parseMoney(recebeInput.value);
                 var tarifa = calcularTarifaClinica();
@@ -2369,11 +2631,7 @@
                 } else {
                     clinicaInput.value = '';
                 }
-                if (indicacaoInput && indicacaoInput.checked) {
-                    clinicaInput.readOnly = true;
-                } else {
-                    clinicaInput.readOnly = false;
-                }
+                aplicarBloqueioEdicaoClinicaCobra();
                 atualizarLiquido();
             }
 
@@ -2410,10 +2668,11 @@
                             indicacaoCheckbox.checked = false;
                             indicacaoCheckbox.disabled = true;
                         }
-                    } else if (indicacaoInput) {
+                    } else if (indicacaoInput && !modoLocacaoTurnoAtivo()) {
                         indicacaoInput.disabled = false;
                     }
                 }
+                aplicarModoPainelLocacaoTurno();
 
                 if (hintPagamento) {
                     hintPagamento.classList.toggle('d-none', !exibirCompleto);
@@ -2425,6 +2684,17 @@
             }
 
             function prepararValoresParaEnvio() {
+                if (modoLocacaoTurnoAtivo() && indicacaoInput) {
+                    indicacaoInput.checked = false;
+                    indicacaoInput.disabled = false;
+                }
+                sincronizarHorarioDoTurno();
+                if (horarioConsultaSelect && modoLocacaoTurnoAtivo()) {
+                    horarioConsultaSelect.disabled = false;
+                }
+                if (turnoSelect && modoLocacaoTurnoAtivo()) {
+                    turnoSelect.disabled = false;
+                }
                 if (inputPolyana && !inputPolyana.disabled) {
                     var valorPolyana = parseMoney(inputPolyana.value);
                     inputPolyana.value = valorPolyana > 0 ? valorPolyana.toFixed(2) : '';
@@ -2472,6 +2742,11 @@
 
             if (clinicaInput) {
                 aplicarMascaraMoeda(clinicaInput, function () {
+                    if (clinicaCobraBloqueadaEdicao()) {
+                        clinicaManual = false;
+                        atualizarClinicaAutomatica();
+                        return;
+                    }
                     clinicaManual = true;
                     atualizarLiquido();
                 });
@@ -2488,6 +2763,19 @@
                 if (hintRecorrenciaMensalAgenda && recorrenciaSelect) {
                     hintRecorrenciaMensalAgenda.classList.toggle('d-none', recorrenciaSelect.value !== 'MENSAL');
                 }
+            }
+
+            if (usarLocacaoTurnoInput) {
+                usarLocacaoTurnoInput.addEventListener('change', alternarModoHorarioAgendamento);
+                alternarModoHorarioAgendamento();
+            }
+
+            if (turnoSelect) {
+                turnoSelect.addEventListener('change', function () {
+                    sincronizarHorarioDoTurno();
+                    clinicaManual = false;
+                    atualizarClinicaAutomatica();
+                });
             }
 
             if (recorrenciaSelect) {

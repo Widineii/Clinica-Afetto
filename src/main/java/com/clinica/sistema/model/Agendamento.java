@@ -49,6 +49,9 @@ public class Agendamento {
     @Column(name = "tipo_recorrencia")
     private String tipoRecorrencia;
 
+    @Column(name = "turno_locacao", length = 20)
+    private String turnoLocacao;
+
     @Column(name = "valor_profissional_recebe", precision = 12, scale = 2)
     private BigDecimal valorProfissionalRecebe;
 
@@ -174,6 +177,23 @@ public class Agendamento {
             return "Fixo";
         }
         return "Avulso";
+    }
+
+    @Transient
+    public boolean isLocacaoTurno() {
+        return turnoLocacao != null && !turnoLocacao.isBlank();
+    }
+
+    @Transient
+    public String getHorarioExibicaoGrade() {
+        if (dataHoraInicio == null) {
+            return "";
+        }
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("HH:mm");
+        if (dataHoraFim != null && dataHoraFim.isAfter(dataHoraInicio.plusHours(1))) {
+            return dataHoraInicio.format(formato) + "–" + dataHoraFim.format(formato);
+        }
+        return dataHoraInicio.format(formato);
     }
 
     @Transient

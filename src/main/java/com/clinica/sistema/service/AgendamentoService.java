@@ -2,10 +2,12 @@ package com.clinica.sistema.service;
 
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
+import com.clinica.sistema.dto.AgendaGradeCelula;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
 import com.clinica.sistema.dto.ProximaConsultaMensalPreparacao;
 import com.clinica.sistema.dto.MensalAgendamentoLinha;
+import com.clinica.sistema.dto.TurnoLocacao;
 import com.clinica.sistema.dto.ProfissionalAgendamentosResumo;
 import com.clinica.sistema.dto.SerieAgendamentoLinha;
 import com.clinica.sistema.dto.SerieAgendamentoOcorrencia;
@@ -362,7 +364,9 @@ public class AgendamentoService {
             boolean primeiraConsultaSerie
     ) {
         if (!authService.profissionalIgnoraValoresEPagamento(profissional)) {
-            valorConsultaService.aplicarValores(agendamento, form, sala, recorrencia, primeiraConsultaSerie);
+            boolean permitirIndicacao = primeiraConsultaSerie
+                    && !TurnoLocacao.isTurno(form.getTurnoLocacao());
+            valorConsultaService.aplicarValores(agendamento, form, sala, recorrencia, permitirIndicacao);
             return;
         }
         if (authService.podeAcompanharGanhosConsultaPropria(profissional)
@@ -508,6 +512,10 @@ public class AgendamentoService {
         return horarios;
     }
 
+    public List<TurnoLocacao> listarTurnosLocacao() {
+        return List.of(TurnoLocacao.values());
+    }
+
     public AgendaSalaView montarAgendaSala(Long salaId, LocalDate referencia) {
         Sala sala = buscarSalaPadrao(salaId);
         LocalDate inicioSemana = obterInicioSemana(referencia);
@@ -527,9 +535,9 @@ public class AgendamentoService {
         List<AgendaSalaLinha> linhas = new ArrayList<>();
 
         for (LocalTime horario = HORA_ABERTURA; horario.isBefore(HORA_FECHAMENTO); horario = horario.plusHours(1)) {
-            List<Agendamento> porDia = new ArrayList<>();
+            List<AgendaGradeCelula> porDia = new ArrayList<>();
             for (LocalDate dia : diasSemana) {
-                porDia.add(buscarAgendamentoNaCelula(agendamentosSemana, dia, horario));
+                porDia.add(resolverCelulaGrade(agendamentosSemana, dia, horario));
             }
             linhas.add(new AgendaSalaLinha(horario, porDia));
         }
@@ -773,13 +781,12 @@ public class AgendamentoService {
         Sala sala = salaRepository.findById(form.getSalaId())
                 .orElseThrow(() -> new RuntimeException("Sala não encontrada."));
 
-        LocalDateTime inicio = LocalDateTime.of(
-                form.getDataAtendimento(),
-                form.getHorarioAtendimento().withMinute(0).withSecond(0).withNano(0)
-        );
-        LocalDateTime fim = inicio.plusHours(1);
+        IntervaloAtendimento intervalo = resolverIntervaloAtendimento(form);
+        LocalDateTime inicio = LocalDateTime.of(form.getDataAtendimento(), intervalo.inicio());
+        LocalDateTime fim = LocalDateTime.of(form.getDataAtendimento(), intervalo.fim());
+        String turnoLocacao = intervalo.turnoCodigo();
 
-        validarHorario(inicio, fim);
+        validarHorario(inicio, fim, turnoLocacao);
 
         List<Agendamento> novosAgendamentos = new ArrayList<>();
         String recorrencia = normalizarRecorrencia(form);
@@ -812,6 +819,7 @@ public class AgendamentoService {
             novo.setSerieFixaId(serieFixaId);
             novo.setTipoRecorrencia(recorrencia);
             novo.setRecorrencia(recorrencia);
+            novo.setTurnoLocacao(turnoLocacao);
             boolean primeiraConsultaSerie = indice == 0;
             registrarValoresConsulta(novo, form, sala, recorrencia, profissional, primeiraConsultaSerie);
             novosAgendamentos.add(novo);
@@ -1173,8 +1181,15 @@ public class AgendamentoService {
                 form.getDataAtendimento(),
                 form.getHorarioAtendimento().withMinute(0).withSecond(0).withNano(0)
         );
-        LocalDateTime novoFim = novoInicio.plusHours(1);
-        validarHorario(novoInicio, novoFim);
+        java.time.Duration duracao = java.time.Duration.between(
+                agendamento.getDataHoraInicio(),
+                agendamento.getDataHoraFim()
+        );
+        if (duracao.isZero() || duracao.isNegative()) {
+            duracao = java.time.Duration.ofHours(1);
+        }
+        LocalDateTime novoFim = novoInicio.plus(duracao);
+        validarHorario(novoInicio, novoFim, agendamento.getTurnoLocacao());
 
         if (!novoInicio.isAfter(LocalDateTime.now())) {
             throw new RuntimeException("Não é possível realocar para data ou horário no passado.");
@@ -1419,10 +1434,14 @@ public class AgendamentoService {
             return acoes;
         }
         for (AgendaSalaLinha linha : agendaSala.getLinhas()) {
-            if (linha.getAgendamentos() == null) {
+            if (linha.getCelulas() == null) {
                 continue;
             }
-            for (Agendamento agendamento : linha.getAgendamentos()) {
+            for (AgendaGradeCelula celula : linha.getCelulas()) {
+                if (celula == null || !celula.isOcupada()) {
+                    continue;
+                }
+                Agendamento agendamento = celula.getAgendamento();
                 if (podeCancelarAgendamento(agendamento, usuarioLogado)
                         || podeEncerrarSerieFixa(agendamento, usuarioLogado)) {
                     acoes.put(agendamento.getId(), tipoAcaoGrade(agendamento));
@@ -1500,8 +1519,11 @@ public class AgendamentoService {
         if (form.getDataAtendimento() == null) {
             throw new RuntimeException("Informe a data da consulta.");
         }
-        if (form.getHorarioAtendimento() == null) {
-            throw new RuntimeException("Selecione um horário fixo.");
+        TurnoLocacao turno = TurnoLocacao.fromCodigo(form.getTurnoLocacao());
+        if (turno != null) {
+            form.setHorarioAtendimento(turno.getInicio());
+        } else if (form.getHorarioAtendimento() == null) {
+            throw new RuntimeException("Selecione o horário da consulta.");
         }
         if (normalizarRecorrencia(form) == null) {
             throw new RuntimeException("Selecione um tipo de recorrencia valido.");
@@ -1623,6 +1645,7 @@ public class AgendamentoService {
         String recorrencia = recorrenciaDoAgendamento(modelo);
         novo.setTipoRecorrencia(recorrencia);
         novo.setRecorrencia(recorrencia);
+        novo.setTurnoLocacao(modelo.getTurnoLocacao());
         valorConsultaService.copiarValoresOcorrenciaSerie(novo, modelo, modelo.getSala(), recorrencia);
         return novo;
     }
@@ -1772,11 +1795,15 @@ public class AgendamentoService {
         String nomeSala = sala != null && sala.getNome() != null && !sala.getNome().isBlank()
                 ? sala.getNome()
                 : "Sala";
+        String periodo = inicio.toLocalTime().equals(TurnoLocacao.TURNO_MANHA.getInicio())
+                ? "no turno da manhã (08:00 às 13:00)"
+                : inicio.toLocalTime().equals(TurnoLocacao.TURNO_TARDE.getInicio())
+                        ? "no turno da tarde (13:00 às 18:00)"
+                        : "às " + inicio.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
         return "Conflito de agenda: a Sala " + nomeSala
                 + " já está ocupada em "
                 + inicio.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                + " às "
-                + inicio.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                + " " + periodo
                 + ". Não é possível salvar este horário.";
     }
 
@@ -1810,6 +1837,10 @@ public class AgendamentoService {
     }
 
     private void validarHorario(LocalDateTime inicio, LocalDateTime fim) {
+        validarHorario(inicio, fim, null);
+    }
+
+    private void validarHorario(LocalDateTime inicio, LocalDateTime fim, String turnoLocacao) {
         DayOfWeek diaSemana = inicio.getDayOfWeek();
         if (diaSemana == DayOfWeek.SUNDAY) {
             throw new RuntimeException("A clínica funciona somente de segunda a sábado.");
@@ -1817,7 +1848,15 @@ public class AgendamentoService {
 
         LocalDate data = inicio.toLocalDate();
         if (!fim.toLocalDate().equals(data)) {
-            throw new RuntimeException("Cada consulta deve terminar no mesmo dia.");
+            throw new RuntimeException("Cada agendamento deve terminar no mesmo dia.");
+        }
+
+        TurnoLocacao turno = TurnoLocacao.fromCodigo(turnoLocacao);
+        if (turno != null) {
+            if (!inicio.toLocalTime().equals(turno.getInicio()) || !fim.toLocalTime().equals(turno.getFim())) {
+                throw new RuntimeException("Turno inválido para locação de sala.");
+            }
+            return;
         }
 
         if (inicio.getMinute() != 0 || inicio.getSecond() != 0 || inicio.getNano() != 0) {
@@ -1827,6 +1866,21 @@ public class AgendamentoService {
         if (inicio.toLocalTime().isBefore(HORA_ABERTURA) || fim.toLocalTime().isAfter(HORA_FECHAMENTO)) {
             throw new RuntimeException("Os atendimentos devem ficar entre 07:00 e 21:00.");
         }
+    }
+
+    private IntervaloAtendimento resolverIntervaloAtendimento(AgendamentoForm form) {
+        TurnoLocacao turno = TurnoLocacao.fromCodigo(form.getTurnoLocacao());
+        if (turno != null) {
+            return new IntervaloAtendimento(turno.getInicio(), turno.getFim(), turno.getCodigo());
+        }
+        LocalTime hora = form.getHorarioAtendimento()
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        return new IntervaloAtendimento(hora, hora.plusHours(1), null);
+    }
+
+    private record IntervaloAtendimento(LocalTime inicio, LocalTime fim, String turnoCodigo) {
     }
 
     private Sala buscarSalaPadrao(Long salaId) {
@@ -1927,17 +1981,40 @@ public class AgendamentoService {
         );
     }
 
-    private Agendamento buscarAgendamentoNaCelula(
+    private AgendaGradeCelula resolverCelulaGrade(
             List<Agendamento> agendamentosSemana,
             LocalDate dia,
             LocalTime horario
     ) {
-        LocalDateTime inicioCelula = LocalDateTime.of(dia, horario);
-        return agendamentosSemana.stream()
-                .filter(agendamento -> inicioHoraCheia(agendamento.getDataHoraInicio()).equals(inicioCelula))
-                .filter(agendamento -> pagamentoConsultaService.ocupaVagaNaGrade(agendamento))
-                .findFirst()
+        Agendamento agendamento = agendamentosSemana.stream()
+                .filter(item -> pagamentoConsultaService.ocupaVagaNaGrade(item))
+                .filter(item -> {
+                    if (item.getDataHoraInicio() == null) {
+                        return false;
+                    }
+                    LocalDateTime inicioCelula = LocalDateTime.of(dia, horario);
+                    LocalDateTime fimCelula = inicioCelula.plusHours(1);
+                    LocalDateTime inicioAg = inicioHoraCheia(item.getDataHoraInicio());
+                    LocalDateTime fimAg = item.getDataHoraFim() != null
+                            ? item.getDataHoraFim()
+                            : inicioAg.plusHours(1);
+                    return intervalosSobrepoem(inicioAg, fimAg, inicioCelula, fimCelula);
+                })
+                .min(Comparator.comparing(Agendamento::getDataHoraInicio))
                 .orElse(null);
+        return AgendaGradeCelula.resolver(agendamento, dia, horario);
+    }
+
+    private boolean intervalosSobrepoem(
+            LocalDateTime inicioA,
+            LocalDateTime fimA,
+            LocalDateTime inicioB,
+            LocalDateTime fimB
+    ) {
+        if (inicioA == null || fimA == null || inicioB == null || fimB == null) {
+            return false;
+        }
+        return inicioA.isBefore(fimB) && fimA.isAfter(inicioB);
     }
 
     private LocalDateTime inicioHoraCheia(LocalDateTime dataHora) {

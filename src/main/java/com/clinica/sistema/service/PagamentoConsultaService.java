@@ -575,6 +575,16 @@ public class PagamentoConsultaService {
         return dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY;
     }
 
+    /**
+     * Semanal: sábado/domingo ou a partir do dia anterior (D-1) à primeira consulta da semana em cobrança.
+     */
+    public boolean estaEmJanelaPagamentoSemanal(Usuario usuarioLogado) {
+        if (estaEmJanelaPagamentoSemanal()) {
+            return true;
+        }
+        return temConsultaSemanaCobrancaComVesperaAberta(usuarioLogado);
+    }
+
     public List<Agendamento> listarConsultasAdiantamentoSemanaAtual(Usuario usuarioLogado) {
         if (usuarioLogado == null
                 || authService.isAdmin(usuarioLogado)
@@ -585,7 +595,7 @@ public class PagamentoConsultaService {
 
         PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
         if (periodicidade == PeriodicidadePagamento.SEMANAL) {
-            if (!estaEmJanelaPagamentoSemanal()) {
+            if (!estaEmJanelaPagamentoSemanal(usuarioLogado)) {
                 return Collections.emptyList();
             }
             return listarConsultasNaoPagasNoPeriodo(
@@ -633,8 +643,27 @@ public class PagamentoConsultaService {
     }
 
     public boolean estaEmJanelaPagamentoMensal() {
-        int dia = LocalDate.now().getDayOfMonth();
-        return dia >= 1 && dia <= diaLimitePagamentoMensal();
+        LocalDate hoje = LocalDate.now();
+        int dia = hoje.getDayOfMonth();
+        if (dia >= 1 && dia <= diaLimitePagamentoMensal()) {
+            return true;
+        }
+        return dia == hoje.lengthOfMonth();
+    }
+
+    /**
+     * Mensal: dias 01–limite, último dia do mês (véspera do dia 01) ou D-1 de consulta do mês em cobrança.
+     */
+    public boolean estaEmJanelaPagamentoMensal(Usuario usuarioLogado) {
+        if (estaEmJanelaPagamentoMensal()) {
+            return true;
+        }
+        if (usuarioLogado == null) {
+            return false;
+        }
+        YearMonth mesReferencia = YearMonth.from(LocalDate.now()).minusMonths(1);
+        return listarConsultasNaoPagasNoMes(usuarioLogado, mesReferencia).stream()
+                .anyMatch(this::deveAbrirPagamentoAgora);
     }
 
     public String rotuloJanelaPagamentoMensalAtual() {
@@ -690,8 +719,10 @@ public class PagamentoConsultaService {
     @Transactional
     public String gerarPagamentoUnicoSemanaAtual(Usuario usuarioLogado) {
         PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
-        if (periodicidade == PeriodicidadePagamento.SEMANAL && !estaEmJanelaPagamentoSemanal()) {
-            throw new RuntimeException("Pagamento semanal disponível apenas sábado e domingo.");
+        if (periodicidade == PeriodicidadePagamento.SEMANAL && !estaEmJanelaPagamentoSemanal(usuarioLogado)) {
+            throw new RuntimeException(
+                    "Pagamento semanal disponível a partir de um dia antes da consulta, ou no sábado e domingo."
+            );
         }
         List<Agendamento> consultas = listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
         if (consultas.isEmpty()) {
@@ -1055,7 +1086,7 @@ public class PagamentoConsultaService {
     }
 
     private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoSemanal(Usuario usuarioLogado) {
-        if (!estaEmJanelaPagamentoSemanal()) {
+        if (!estaEmJanelaPagamentoSemanal(usuarioLogado)) {
             return Optional.empty();
         }
         List<Agendamento> consultas = listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
@@ -1072,7 +1103,7 @@ public class PagamentoConsultaService {
     }
 
     private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoMensal(Usuario usuarioLogado) {
-        if (!estaEmJanelaPagamentoMensal()) {
+        if (!estaEmJanelaPagamentoMensal(usuarioLogado)) {
             return Optional.empty();
         }
         List<Agendamento> consultas = listarConsultasPagamentoMensal(usuarioLogado);
@@ -1926,11 +1957,42 @@ public class PagamentoConsultaService {
     }
 
     private String formatarDiaPagamentoSemanal(Agendamento agendamento) {
-        LocalDate domingo = resolverDomingoPagamentoSemanal(agendamento);
-        if (domingo == null) {
+        LocalDate diaPagamento = resolverDiaAberturaPagamentoSemanal(agendamento);
+        if (diaPagamento == null) {
             return "—";
         }
-        return domingo.format(DateTimeFormatter.ofPattern("dd/MM"));
+        return diaPagamento.format(DateTimeFormatter.ofPattern("dd/MM"));
+    }
+
+    private LocalDate resolverDiaAberturaPagamentoSemanal(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return null;
+        }
+        LocalDate referencia = resolverDataReferenciaCobranca(agendamento);
+        PeriodoSemanaPagamento semana = resolverSemanaPorDataReferencia(referencia);
+        if (semana == null) {
+            return agendamento.getDataHoraInicio().toLocalDate().minusDays(1);
+        }
+        LocalDate consulta = agendamento.getDataHoraInicio().toLocalDate();
+        LocalDate vesperaConsulta = consulta.minusDays(1);
+        LocalDate vesperaFimSemana = semana.fim().minusDays(1);
+        if (!vesperaConsulta.isBefore(semana.inicio())) {
+            return vesperaConsulta;
+        }
+        return vesperaFimSemana;
+    }
+
+    private boolean temConsultaSemanaCobrancaComVesperaAberta(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)
+                || resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.SEMANAL) {
+            return false;
+        }
+        PeriodoSemanaPagamento periodo = resolverSemanaCorrenteParaCobranca(LocalDate.now());
+        return listarConsultasNaoPagasNoPeriodo(usuarioLogado, periodo).stream()
+                .anyMatch(this::deveAbrirPagamentoAgora);
     }
 
     private Agendamento marcarComoPago(Agendamento agendamento) {

@@ -11,5 +11,10 @@ import java.util.List;
 @AllArgsConstructor
 public class AgendaSalaLinha {
     private LocalTime horario;
-    private List<Agendamento> agendamentos;
+    private List<AgendaGradeCelula> celulas;
+
+    public static AgendaSalaLinha comAgendamentoUnico(LocalTime horario, Agendamento agendamento) {
+        AgendaGradeCelula celula = agendamento != null ? AgendaGradeCelula.completa(agendamento) : null;
+        return new AgendaSalaLinha(horario, List.of(celula));
+    }
 }

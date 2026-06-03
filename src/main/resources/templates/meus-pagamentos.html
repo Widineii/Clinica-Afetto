@@ -280,10 +280,10 @@
                 </div>
 
                 <div th:if="${#lists.isEmpty(consultasPagamentoSemana)}" class="alert alert-light border mb-0">
-                    <span th:if="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal()}">
-                        Pagamento semanal disponível apenas sábado e domingo.
+                    <span th:if="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal(usuarioLogado)}">
+                        Pagamento semanal disponível a partir de um dia antes da consulta, ou no sábado e domingo.
                     </span>
-                    <span th:unless="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal()}">
+                    <span th:unless="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal(usuarioLogado)}">
                         Nenhuma consulta da semana disponível para pagamento no momento.
                     </span>
                 </div>
@@ -351,15 +351,15 @@
                         do mês anterior — você tem do dia <strong th:text="|01 ao ${pagamentoService.diaLimitePagamentoMensal}|">01 ao 15</strong> para pagar.
                         Depois do dia <strong th:text="${pagamentoService.diaLimitePagamentoMensal}">15</strong> sem pagar, a agenda bloqueia.
                     </p>
-                    <span class="badge text-bg-primary" th:text="${pagamentoService.estaEmJanelaPagamentoMensal() ? pagamentoService.rotuloJanelaPagamentoMensalAtual() : rotuloMesPagamento}">abril/2026</span>
+                    <span class="badge text-bg-primary" th:text="${pagamentoService.estaEmJanelaPagamentoMensal(usuarioLogado) ? pagamentoService.rotuloJanelaPagamentoMensalAtual() : rotuloMesPagamento}">abril/2026</span>
                 </div>
 
                 <div th:if="${#lists.isEmpty(consultasPagamentoMes)}" class="alert alert-light border mb-0">
-                    <span th:if="${pagamentoService.estaEmJanelaPagamentoMensal()}">
+                    <span th:if="${pagamentoService.estaEmJanelaPagamentoMensal(usuarioLogado)}">
                         Nenhuma consulta do mês anterior pendente. Prazo de pagamento:
                         dia <span th:text="|01 ao ${pagamentoService.diaLimitePagamentoMensal}|">01 ao 15</span>.
                     </span>
-                    <span th:unless="${pagamentoService.estaEmJanelaPagamentoMensal()}">
+                    <span th:unless="${pagamentoService.estaEmJanelaPagamentoMensal(usuarioLogado)}">
                         Nenhuma consulta do mês anterior pendente de pagamento no momento.
                     </span>
                 </div>

@@ -892,6 +892,48 @@ class AgendamentoServiceTest {
     }
 
     @Test
+    void turnoLocacaoDeveMostrarValoresCompletosSomenteNaUltimaHoraDaGrade() {
+        LocalDate dia = LocalDate.of(2026, 6, 6);
+        LocalDate inicioSemana = dia.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        when(salaRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(sala));
+
+        Agendamento turno = new Agendamento();
+        turno.setId(200L);
+        turno.setSala(sala);
+        turno.setProfissional(profissional);
+        turno.setNomeCliente("Cliente turno");
+        turno.setTurnoLocacao("TURNO_MANHA");
+        turno.setDataHoraInicio(LocalDateTime.of(dia, LocalTime.of(8, 0)));
+        turno.setDataHoraFim(LocalDateTime.of(dia, LocalTime.of(13, 0)));
+
+        when(agendamentoRepository.findBySalaIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                eq(sala.getId()),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(turno));
+
+        AgendaSalaView view = agendamentoService.montarAgendaSala(sala.getId(), dia);
+        int indiceDia = view.getDiasSemana().indexOf(dia);
+
+        AgendaSalaLinha linha8 = linhaPorHorario(view, LocalTime.of(8, 0));
+        AgendaSalaLinha linha11 = linhaPorHorario(view, LocalTime.of(11, 0));
+        AgendaSalaLinha linha12 = linhaPorHorario(view, LocalTime.of(12, 0));
+
+        assertEquals(inicioSemana, view.getInicioSemana());
+        assertFalse(linha8.getCelulas().get(indiceDia).isExibirDetalhesCompletos());
+        assertFalse(linha11.getCelulas().get(indiceDia).isExibirDetalhesCompletos());
+        assertTrue(linha12.getCelulas().get(indiceDia).isExibirDetalhesCompletos());
+    }
+
+    private AgendaSalaLinha linhaPorHorario(AgendaSalaView view, LocalTime horario) {
+        return view.getLinhas().stream()
+                .filter(linha -> linha.getHorario().equals(horario))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    @Test
     void deveExibirAgendamentoNaGradeMesmoComSegundosNoHorario() {
         LocalDate sabado = LocalDate.of(2026, 5, 23);
         LocalDate inicioSemana = sabado.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -921,8 +963,8 @@ class AgendamentoServiceTest {
                 .orElseThrow();
 
         assertEquals(inicioSemana, view.getInicioSemana());
-        assertNotNull(linha17.getAgendamentos().get(indiceSabado));
-        assertEquals("gdsr", linha17.getAgendamentos().get(indiceSabado).getNomeCliente());
+        assertNotNull(linha17.getCelulas().get(indiceSabado));
+        assertEquals("gdsr", linha17.getCelulas().get(indiceSabado).getAgendamento().getNomeCliente());
     }
 
     @Test
@@ -1005,7 +1047,7 @@ class AgendamentoServiceTest {
         agendamento.setFixo(false);
 
         AgendaSalaView agenda = new AgendaSalaView();
-        agenda.setLinhas(List.of(new AgendaSalaLinha(LocalTime.of(9, 0), List.of(agendamento))));
+        agenda.setLinhas(List.of(AgendaSalaLinha.comAgendamentoUnico(LocalTime.of(9, 0), agendamento)));
 
         when(authService.isAdmin(admin)).thenReturn(true);
 
@@ -1032,7 +1074,7 @@ class AgendamentoServiceTest {
         agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
 
         AgendaSalaView agenda = new AgendaSalaView();
-        agenda.setLinhas(List.of(new AgendaSalaLinha(LocalTime.of(10, 0), List.of(agendamento))));
+        agenda.setLinhas(List.of(AgendaSalaLinha.comAgendamentoUnico(LocalTime.of(10, 0), agendamento)));
 
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
@@ -1061,7 +1103,7 @@ class AgendamentoServiceTest {
         agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(2));
 
         AgendaSalaView agenda = new AgendaSalaView();
-        agenda.setLinhas(List.of(new AgendaSalaLinha(LocalTime.of(11, 0), List.of(agendamento))));
+        agenda.setLinhas(List.of(AgendaSalaLinha.comAgendamentoUnico(LocalTime.of(11, 0), agendamento)));
 
         when(authService.isAdmin(polyana)).thenReturn(false);
         when(authService.isDonaClinica(polyana)).thenReturn(true);

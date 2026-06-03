@@ -22,8 +22,15 @@ import com.clinica.sistema.service.IndicacaoReservaService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import com.clinica.sistema.service.RelatorioSemanalService;
+import com.clinica.sistema.service.RelatorioUsoSitePdfService;
+import com.clinica.sistema.service.RelatorioUsoSiteService;
+import com.clinica.sistema.service.RelatorioUsoSiteSessaoService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +40,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -45,6 +55,9 @@ import java.util.Map;
 @Controller
 @RequestMapping("/agendamentos")
 public class AgendamentoController {
+
+    private static final Logger log = LoggerFactory.getLogger(AgendamentoController.class);
+
     private final AgendamentoService service;
     private final AuthService authService;
     private final StartupDataInitializer startupDataInitializer;
@@ -59,6 +72,9 @@ public class AgendamentoController {
     private final ManualProperties manualProperties;
     private final SiteProperties siteProperties;
     private final NovidadeSiteService novidadeSiteService;
+    private final RelatorioUsoSiteService relatorioUsoSiteService;
+    private final RelatorioUsoSiteSessaoService relatorioUsoSiteSessaoService;
+    private final RelatorioUsoSitePdfService relatorioUsoSitePdfService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -74,7 +90,10 @@ public class AgendamentoController {
             FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService,
             ManualProperties manualProperties,
             SiteProperties siteProperties,
-            NovidadeSiteService novidadeSiteService
+            NovidadeSiteService novidadeSiteService,
+            RelatorioUsoSiteService relatorioUsoSiteService,
+            RelatorioUsoSiteSessaoService relatorioUsoSiteSessaoService,
+            RelatorioUsoSitePdfService relatorioUsoSitePdfService
     ) {
         this.service = service;
         this.authService = authService;
@@ -90,6 +109,9 @@ public class AgendamentoController {
         this.manualProperties = manualProperties;
         this.siteProperties = siteProperties;
         this.novidadeSiteService = novidadeSiteService;
+        this.relatorioUsoSiteService = relatorioUsoSiteService;
+        this.relatorioUsoSiteSessaoService = relatorioUsoSiteSessaoService;
+        this.relatorioUsoSitePdfService = relatorioUsoSitePdfService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -307,6 +329,7 @@ public class AgendamentoController {
                 ? equipeProfissionais
                 : List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
+        model.addAttribute("turnosLocacao", service.listarTurnosLocacao());
         LocalDate referenciaSemana = agendaDataSugerida(semana);
         java.util.Map<Long, Integer> salasOcupadasNaSemana = service.contarAgendamentosPorSalaNaSemana(referenciaSemana);
         Long salaIdGrade = service.resolverSalaIdParaGrade(salaId, referenciaSemana, salasOcupadasNaSemana);
@@ -456,13 +479,28 @@ public class AgendamentoController {
         model.addAttribute("profissionais", usuarioService.listarProfissionaisDaEquipe());
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
-        String abaAtiva = switch (aba != null ? aba.toLowerCase() : "equipe") {
+        boolean podeVerRelatorioUsoSite = authService.podeVerRelatorioUsoSite(usuarioLogado);
+        String abaSolicitada = aba != null ? aba.toLowerCase() : "equipe";
+        if ("uso-site".equals(abaSolicitada) && !podeVerRelatorioUsoSite) {
+            abaSolicitada = "equipe";
+        }
+        String abaAtiva = switch (abaSolicitada) {
             case "configuracao" -> "configuracao";
             case "encerramentos" -> "encerramentos";
             case "indicacoes" -> "indicacoes";
+            case "uso-site" -> "uso-site";
             default -> "equipe";
         };
+        if (!"uso-site".equals(abaAtiva)) {
+            relatorioUsoSiteSessaoService.limpar(session);
+        }
         model.addAttribute("abaAtiva", abaAtiva);
+        model.addAttribute("podeVerRelatorioUsoSite", podeVerRelatorioUsoSite);
+        if ("uso-site".equals(abaAtiva)) {
+            model.addAttribute("relatorioUsoSite", relatorioUsoSiteSessaoService.obter(session).orElse(null));
+            model.addAttribute("relatorioUsoSiteGerado", relatorioUsoSiteSessaoService.possuiRelatorioGerado(session));
+            model.addAttribute("versaoDownload", System.currentTimeMillis());
+        }
         model.addAttribute("encerramentosSerie", service.listarEncerramentosSerieRecentes());
         model.addAttribute("indicacoesPendentes", indicacaoReservaService.listarAguardandoAprovacao());
         model.addAttribute("totalIndicacoesPendentes", indicacaoReservaService.contarAguardandoAprovacao());
@@ -473,6 +511,70 @@ public class AgendamentoController {
             model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
         }
         return "central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/uso-site/gerar")
+    public String gerarRelatorioUsoSiteCentral(
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeVerRelatorioUsoSite(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        try {
+            relatorioUsoSiteSessaoService.armazenar(session, relatorioUsoSiteService.montarRelatorio());
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    "Relatorio gerado. Ao sair desta aba os dados sao removidos da sessao."
+            );
+        } catch (RuntimeException e) {
+            log.error("Falha ao gerar relatorio de uso do site na central", e);
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Nao foi possivel gerar o relatorio. Tente novamente em alguns minutos."
+            );
+        }
+        return "redirect:/agendamentos/central-profissionais?aba=uso-site";
+    }
+
+    @GetMapping(value = "/central-profissionais/uso-site/download", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> baixarPdfRelatorioUsoSiteCentral(HttpSession session) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeVerRelatorioUsoSite(usuarioLogado)) {
+            return ResponseEntity.status(403)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Acesso negado.".getBytes(StandardCharsets.UTF_8));
+        }
+        var relatorioOpt = relatorioUsoSiteSessaoService.obter(session);
+        if (relatorioOpt.isEmpty()) {
+            return ResponseEntity.status(400)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Gere o relatorio nesta aba antes de baixar o PDF.".getBytes(StandardCharsets.UTF_8));
+        }
+        try {
+            byte[] pdf = relatorioUsoSitePdfService.gerarPdf(relatorioOpt.get());
+            if (pdf.length < 4 || pdf[0] != '%' || pdf[1] != 'P' || pdf[2] != 'D' || pdf[3] != 'F') {
+                log.error("PDF do relatorio de uso do site invalido (tamanho={})", pdf.length);
+                return ResponseEntity.internalServerError()
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("Erro ao gerar PDF.".getBytes(StandardCharsets.UTF_8));
+            }
+            ContentDisposition disposition = ContentDisposition.attachment()
+                    .filename(relatorioUsoSitePdfService.nomeArquivoPdf(), StandardCharsets.UTF_8)
+                    .build();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (RuntimeException e) {
+            log.error("Falha ao gerar PDF do relatorio de uso do site", e);
+            return ResponseEntity.internalServerError()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(("Erro ao gerar PDF: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     @GetMapping("/manual")
@@ -752,6 +854,7 @@ public class AgendamentoController {
         model.addAttribute("relocacaoForm", form);
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
+        model.addAttribute("turnosLocacao", service.listarTurnosLocacao());
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("realocacaoAvulsa", service.isRealocacaoAvulsa(agendamento));

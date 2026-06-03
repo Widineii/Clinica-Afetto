@@ -1,0 +1,135 @@
+<div th:fragment="painel (relatorio, relatorioGerado)"
+     xmlns:th="http://www.thymeleaf.org"
+     class="uso-site-pane">
+    <style>
+        .uso-site-pane .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 14px;
+        }
+        .uso-site-pane .stat-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+        .uso-site-pane .stat-box h3 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--afetto-teal-dark);
+        }
+        .uso-site-pane .stat-box p {
+            margin: 6px 0 0;
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+        .uso-site-pane .uso-table thead th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+        }
+        .uso-site-pane .badge-ok {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .uso-site-pane .badge-pendente {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .uso-site-pane .badge-neutro {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+
+    <div class="central-panel__head mb-4">
+        <div>
+            <h2 class="central-panel__title">Uso do site</h2>
+            <p class="central-panel__hint mb-0">
+                Quem ja entrou no sistema e quem ja fez agendamento. Clique em <strong>Gerar</strong> para montar o relatorio.
+                Ao sair desta aba, os dados sao apagados da sessao (nada extra fica no banco).
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-start">
+            <form th:action="@{/agendamentos/central-profissionais/uso-site/gerar}" method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-teal">Gerar</button>
+            </form>
+            <a th:if="${relatorioGerado}"
+               th:href="@{/agendamentos/central-profissionais/uso-site/download(v=${versaoDownload})}"
+               class="btn btn-outline-secondary"
+               download="relatorio-uso-site.pdf">Baixar PDF</a>
+        </div>
+    </div>
+
+    <div th:if="${!relatorioGerado}" class="central-empty">
+        <div class="central-empty__icon"><i class="fa-solid fa-chart-column" aria-hidden="true"></i></div>
+        <h3 class="h5 mb-2">Relatorio ainda nao gerado</h3>
+        <p class="text-muted mb-3">Use o botao <strong>Gerar</strong> para ver quem acessou o site e quantos agendamentos cada profissional tem.</p>
+    </div>
+
+    <th:block th:if="${relatorioGerado and relatorio != null}">
+        <div class="stat-grid mb-4">
+            <div class="stat-box">
+                <h3 th:text="${relatorio.totalProfissionais}">0</h3>
+                <p>Profissionais</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${relatorio.totalJaAcessaram}">0</h3>
+                <p>Ja acessaram o site</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${relatorio.totalNuncaAcessaram}">0</h3>
+                <p>Nunca acessaram</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${relatorio.totalJaAgendaram}">0</h3>
+                <p>Ja agendaram</p>
+            </div>
+            <div class="stat-box">
+                <h3 th:text="${relatorio.totalNaoAgendaram}">0</h3>
+                <p>Ainda nao agendaram</p>
+            </div>
+        </div>
+        <p class="small text-muted mb-4">
+            Ultimo acesso e registrado a cada login. Quem ja tem agendamento tambem aparece como ja entrou.
+        </p>
+        <div class="prof-table-wrap">
+            <table class="table prof-table align-middle uso-table mb-0">
+                <thead>
+                <tr>
+                    <th>Profissional</th>
+                    <th>Login</th>
+                    <th>Entrou no site?</th>
+                    <th class="text-center">Qtd. agendamentos</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="linha : ${relatorio.profissionais}">
+                    <td>
+                        <strong th:text="${linha.nome}">Nome</strong>
+                        <span th:if="${linha.donaClinica}" class="badge badge-neutro ms-1">Dona</span>
+                    </td>
+                    <td th:text="${linha.login}">login</td>
+                    <td>
+                        <span th:if="${linha.jaAcessouSite}" class="badge rounded-pill badge-ok">
+                            Ja entrou
+                            <span th:if="${linha.acessoConfirmadoPorLogin()}"
+                                  class="fw-normal opacity-75"
+                                  th:text="' · ' + ${#temporals.format(linha.ultimoAcessoEm, 'dd/MM/yyyy HH:mm')}"> · 01/06</span>
+                            <span th:if="${linha.entrouSoPorHistoricoAgenda()}"
+                                  class="fw-normal opacity-75"> · ja usou a agenda</span>
+                        </span>
+                        <span th:unless="${linha.jaAcessouSite}" class="badge rounded-pill badge-pendente">Nunca entrou</span>
+                    </td>
+                    <td class="text-center fw-semibold" th:text="${linha.totalAgendamentos}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </th:block>
+</div>
