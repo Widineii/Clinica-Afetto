@@ -35,15 +35,18 @@ public class FinanceiroDemoSeedService {
     private final AgendamentoRepository agendamentoRepository;
     private final UsuarioRepository usuarioRepository;
     private final SalaRepository salaRepository;
+    private final ValorConsultaService valorConsultaService;
 
     public FinanceiroDemoSeedService(
             AgendamentoRepository agendamentoRepository,
             UsuarioRepository usuarioRepository,
-            SalaRepository salaRepository
+            SalaRepository salaRepository,
+            ValorConsultaService valorConsultaService
     ) {
         this.agendamentoRepository = agendamentoRepository;
         this.usuarioRepository = usuarioRepository;
         this.salaRepository = salaRepository;
+        this.valorConsultaService = valorConsultaService;
     }
 
     @Transactional
@@ -85,12 +88,18 @@ public class FinanceiroDemoSeedService {
                 agendamento.setDataHoraFim(consulta.plusHours(1));
                 agendamento.setFixo(!"AVULSO".equalsIgnoreCase(tipoRecorrencia));
                 agendamento.setTipoRecorrencia(tipoRecorrencia);
+                BigDecimal valorConsultaCliente = new BigDecimal("150.00");
+                agendamento.setValorProfissionalRecebe(valorConsultaCliente);
                 agendamento.setValorClinicaCobra(taxa);
+                agendamento.setValorLiquidoProfissional(valorConsultaCliente.subtract(taxa));
                 agendamento.setValorPagamento(taxa);
                 agendamento.setStatusPagamento(PagamentoStatus.PAGO);
                 agendamento.setDataPagamento(dataPagamento);
                 agendamento.setDataReferenciaMesPagamento(mes.atDay(1));
                 agendamento.setPagamentoOrderNsu("demo-fin-" + mes + "-" + indice);
+                valorConsultaService.aplicarValoresPadraoProfissionalNoAgendamento(agendamento, profissional);
+                agendamento.setValorPagamento(taxa);
+                agendamento.setStatusPagamento(PagamentoStatus.PAGO);
                 criados.add(agendamento);
                 indice++;
             }

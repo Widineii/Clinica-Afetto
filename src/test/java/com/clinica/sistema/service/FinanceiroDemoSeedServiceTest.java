@@ -32,11 +32,19 @@ class FinanceiroDemoSeedServiceTest {
     @Mock
     private SalaRepository salaRepository;
 
+    @Mock
+    private ValorConsultaService valorConsultaService;
+
     private FinanceiroDemoSeedService service;
 
     @BeforeEach
     void setUp() {
-        service = new FinanceiroDemoSeedService(agendamentoRepository, usuarioRepository, salaRepository);
+        service = new FinanceiroDemoSeedService(
+                agendamentoRepository,
+                usuarioRepository,
+                salaRepository,
+                valorConsultaService
+        );
     }
 
     @Test

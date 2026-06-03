@@ -11,4 +11,5 @@ public class AtualizarValoresConsultaProfissionalForm {
     private BigDecimal valorSemanal;
     private BigDecimal valorQuinzenal;
     private BigDecimal valorMensal;
+    private BigDecimal percentualTaxaIndicacao;
 }

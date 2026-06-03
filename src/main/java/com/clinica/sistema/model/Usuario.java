@@ -35,7 +35,7 @@ public class Usuario {
     @Column(name = "ultimo_acesso_em")
     private LocalDateTime ultimoAcessoEm;
 
-    /** Valores padrao da consulta (quanto o cliente paga ao profissional), por tipo de agendamento. */
+    /** Taxa de sala padrao por tipo de agendamento (Central → Valores). Nao e o valor que o cliente paga ao profissional. */
     @Column(name = "valor_consulta_avulso", precision = 10, scale = 2)
     private BigDecimal valorConsultaAvulso;
 
@@ -47,4 +47,8 @@ public class Usuario {
 
     @Column(name = "valor_consulta_mensal", precision = 10, scale = 2)
     private BigDecimal valorConsultaMensal;
+
+    /** Percentual da taxa de indicação da clínica (ex.: 30 = 30%). Vazio usa o padrão do sistema. */
+    @Column(name = "percentual_taxa_indicacao", precision = 5, scale = 2)
+    private BigDecimal percentualTaxaIndicacao;
 }

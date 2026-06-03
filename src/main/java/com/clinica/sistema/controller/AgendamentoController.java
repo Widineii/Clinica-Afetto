@@ -7,6 +7,7 @@ import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.NovidadeSiteView;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
+import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.model.PeriodicidadePagamento;
@@ -27,6 +28,7 @@ import com.clinica.sistema.service.RelatorioUsoSitePdfService;
 import com.clinica.sistema.service.RelatorioUsoSiteService;
 import com.clinica.sistema.service.RelatorioUsoSiteSessaoService;
 import com.clinica.sistema.service.UsuarioService;
+import com.clinica.sistema.util.MoedaBrasilUtil;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -44,6 +46,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -123,6 +126,35 @@ public class AgendamentoController {
     @ModelAttribute("valoresConsultaPorProfissionalJson")
     public String valoresConsultaPorProfissionalJson() {
         return usuarioService.jsonValoresConsultaPadraoPorProfissional();
+    }
+
+    @ModelAttribute
+    public void prepararTaxasSalaReferenciaLogado(Model model) {
+        if (model.containsAttribute("taxasSalaReferenciaLogado")) {
+            return;
+        }
+        authService.buscarUsuarioLogado().ifPresent(usuario -> {
+            if (!authService.podeGerenciarEquipe(usuario)
+                    && !authService.profissionalIgnoraValoresEPagamento(usuario)) {
+                model.addAttribute(
+                        "taxasSalaReferenciaLogado",
+                        usuarioService.taxasSalaReferenciaProfissional(usuario)
+                );
+            }
+        });
+    }
+
+    @ModelAttribute
+    public void prepararFlagsValoresConsulta(Model model) {
+        if (!model.containsAttribute("podeGerenciarValoresConsulta")) {
+            model.addAttribute("podeGerenciarValoresConsulta", false);
+        }
+        if (!model.containsAttribute("relatorioUsoSiteGerado")) {
+            model.addAttribute("relatorioUsoSiteGerado", Boolean.FALSE);
+        }
+        if (!model.containsAttribute("relatorioUsoSite")) {
+            model.addAttribute("relatorioUsoSite", null);
+        }
     }
 
     @ModelAttribute
@@ -214,7 +246,7 @@ public class AgendamentoController {
             form.setDataAtendimento(dataSugerida);
             form.setHorarioAtendimento(service.listarHorariosDisponiveis().get(0));
             if (!podeGerenciarEquipe) {
-                usuarioService.preencherValorConsultaPadraoNoForm(form, usuarioLogado.getId(), "AVULSO");
+                usuarioService.preencherTaxaSalaPadraoNoForm(form, usuarioLogado.getId(), "AVULSO");
             }
             model.addAttribute("agendamentoForm", form);
         }
@@ -407,9 +439,6 @@ public class AgendamentoController {
         if (!(attr instanceof AgendamentoForm form)) {
             return;
         }
-        if (form.getValorProfissionalRecebe() != null && form.getValorProfissionalRecebe().signum() > 0) {
-            return;
-        }
         Long profissionalId = form.getProfissionalId();
         if (profissionalId == null && !podeGerenciarEquipe) {
             profissionalId = usuarioLogado.getId();
@@ -420,7 +449,7 @@ public class AgendamentoController {
         String recorrencia = form.getRecorrencia() != null && !form.getRecorrencia().isBlank()
                 ? form.getRecorrencia()
                 : "AVULSO";
-        usuarioService.preencherValorConsultaPadraoNoForm(form, profissionalId, recorrencia);
+        usuarioService.preencherTaxaSalaPadraoNoForm(form, profissionalId, recorrencia);
     }
 
     private void popularNovidades(Model model, Usuario usuarioLogado, HttpSession session) {
@@ -547,11 +576,16 @@ public class AgendamentoController {
                     "profissionaisValoresConsulta",
                     usuarioService.listarProfissionaisParaGestaoValoresConsulta()
             );
+        } else {
+            model.addAttribute("profissionaisValoresConsulta", List.of());
         }
         if ("uso-site".equals(abaAtiva)) {
             model.addAttribute("relatorioUsoSite", relatorioUsoSiteSessaoService.obter(session).orElse(null));
             model.addAttribute("relatorioUsoSiteGerado", relatorioUsoSiteSessaoService.possuiRelatorioGerado(session));
             model.addAttribute("versaoDownload", System.currentTimeMillis());
+        } else {
+            model.addAttribute("relatorioUsoSite", null);
+            model.addAttribute("relatorioUsoSiteGerado", false);
         }
         model.addAttribute("encerramentosSerie", service.listarEncerramentosSerieRecentes());
         model.addAttribute("indicacoesPendentes", indicacaoReservaService.listarAguardandoAprovacao());
@@ -592,7 +626,12 @@ public class AgendamentoController {
 
     @PostMapping("/central-profissionais/valores/salvar")
     public String salvarValoresConsultaProfissional(
-            @ModelAttribute AtualizarValoresConsultaProfissionalForm form,
+            @RequestParam Long usuarioId,
+            @RequestParam(name = "valorAvulso", required = false) String valorAvulso,
+            @RequestParam(name = "valorSemanal", required = false) String valorSemanal,
+            @RequestParam(name = "valorQuinzenal", required = false) String valorQuinzenal,
+            @RequestParam(name = "valorMensal", required = false) String valorMensal,
+            @RequestParam(name = "percentualTaxaIndicacao", required = false) String percentualTaxaIndicacao,
             RedirectAttributes redirectAttributes
     ) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
@@ -600,12 +639,106 @@ public class AgendamentoController {
             return "redirect:/agendamentos/dashboard";
         }
         try {
-            usuarioService.atualizarValoresConsultaProfissional(form, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Valores salvos com sucesso.");
+            AtualizarValoresConsultaProfissionalForm form = montarFormValoresConsulta(
+                    valorAvulso,
+                    valorSemanal,
+                    valorQuinzenal,
+                    valorMensal,
+                    percentualTaxaIndicacao
+            );
+            form.setUsuarioId(usuarioId);
+            int consultasAtualizadas = usuarioService.atualizarValoresConsultaProfissional(form, usuarioLogado);
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    consultasAtualizadas > 0
+                            ? "Taxas de sala salvas. Consultas não pagas ajustadas (Clin.): "
+                            + consultasAtualizadas
+                            + ". Consultas já pagas não foram alteradas. Recarregue a agenda (F5)."
+                            : "Taxas de sala salvas. Nenhuma consulta não paga precisou de ajuste (Clin. já igual ou locação de turno)."
+            );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
         return "redirect:/agendamentos/central-profissionais?aba=valores";
+    }
+
+    @PostMapping("/central-profissionais/valores/salvar-todos")
+    public String salvarValoresConsultaTodosProfissionais(
+            @RequestParam(name = "valorAvulso", required = false) String valorAvulso,
+            @RequestParam(name = "valorSemanal", required = false) String valorSemanal,
+            @RequestParam(name = "valorQuinzenal", required = false) String valorQuinzenal,
+            @RequestParam(name = "valorMensal", required = false) String valorMensal,
+            @RequestParam(name = "percentualTaxaIndicacao", required = false) String percentualTaxaIndicacao,
+            @RequestParam(name = "excluirUsuarioIds", required = false) List<Long> excluirUsuarioIds,
+            RedirectAttributes redirectAttributes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        try {
+            AtualizarValoresConsultaProfissionalForm form = montarFormValoresConsulta(
+                    valorAvulso,
+                    valorSemanal,
+                    valorQuinzenal,
+                    valorMensal,
+                    percentualTaxaIndicacao
+            );
+            ResultadoAtualizacaoValoresConsulta resultado =
+                    usuarioService.atualizarValoresConsultaTodosProfissionais(
+                            form,
+                            usuarioLogado,
+                            excluirUsuarioIds
+                    );
+            String mensagem = "Taxas de sala alteradas para "
+                    + resultado.profissionaisAtualizados()
+                    + " profissional(is). Consultas não pagas ajustadas (Clin.): "
+                    + resultado.consultasAtualizadas()
+                    + ". Consultas já pagas não foram alteradas. Recarregue a agenda (F5).";
+            if (resultado.profissionaisExcluidos() > 0) {
+                mensagem += " "
+                        + resultado.profissionaisExcluidos()
+                        + " profissional(is) mantido(s) sem alteração (Menos).";
+            }
+            redirectAttributes.addFlashAttribute("sucesso", mensagem);
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais?aba=valores";
+    }
+
+    private AtualizarValoresConsultaProfissionalForm montarFormValoresConsulta(
+            String valorAvulso,
+            String valorSemanal,
+            String valorQuinzenal,
+            String valorMensal,
+            String percentualTaxaIndicacao
+    ) {
+        AtualizarValoresConsultaProfissionalForm form = new AtualizarValoresConsultaProfissionalForm();
+        form.setValorAvulso(parseValorMoedaOpcional(valorAvulso));
+        form.setValorSemanal(parseValorMoedaOpcional(valorSemanal));
+        form.setValorQuinzenal(parseValorMoedaOpcional(valorQuinzenal));
+        form.setValorMensal(parseValorMoedaOpcional(valorMensal));
+        form.setPercentualTaxaIndicacao(parsePercentualOpcional(percentualTaxaIndicacao));
+        return form;
+    }
+
+    private BigDecimal parsePercentualOpcional(String valorTexto) {
+        if (valorTexto == null || valorTexto.isBlank()) {
+            return null;
+        }
+        try {
+            return MoedaBrasilUtil.parsePercentual(valorTexto);
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+    }
+
+    private BigDecimal parseValorMoedaOpcional(String valorTexto) {
+        if (valorTexto == null || valorTexto.isBlank()) {
+            return null;
+        }
+        return MoedaBrasilUtil.parse(valorTexto);
     }
 
     @GetMapping(value = "/central-profissionais/uso-site/download", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -1023,6 +1156,33 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
         }
         return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/{id}/alterar-valor-profissional-serie")
+    public String alterarValorProfissionalSerie(
+            @PathVariable Long id,
+            @RequestParam("valorProfissionalRecebe") String valorProfissionalRecebe,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            BigDecimal novoValor = MoedaBrasilUtil.parse(valorProfissionalRecebe);
+            int atualizados = service.alterarValorProfissionalSerie(id, novoValor, usuarioLogado);
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    atualizados == 1
+                            ? "Valor da consulta atualizado em 1 data pendente. Datas já pagas não foram alteradas."
+                            : "Valor da consulta atualizado em " + atualizados
+                            + " datas pendentes. Datas já pagas não foram alteradas."
+            );
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
+        }
+        return "redirect:/agendamentos/dashboard#meus-agendamentos";
     }
 
     @PostMapping("/sincronizar-fixos")

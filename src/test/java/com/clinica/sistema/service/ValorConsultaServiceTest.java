@@ -151,32 +151,53 @@ class ValorConsultaServiceTest {
     }
 
     @Test
-    void deveRetornarValorPadraoCadastradoNoProfissional() {
+    void deveRetornarTaxaSalaCadastradaNoProfissional() {
         Usuario julia = new Usuario();
-        julia.setValorConsultaAvulso(new BigDecimal("150.00"));
-        julia.setValorConsultaSemanal(new BigDecimal("140.00"));
-        julia.setValorConsultaQuinzenal(new BigDecimal("130.00"));
-        julia.setValorConsultaMensal(new BigDecimal("120.00"));
+        julia.setValorConsultaAvulso(new BigDecimal("40.00"));
+        julia.setValorConsultaSemanal(new BigDecimal("38.00"));
+        julia.setValorConsultaQuinzenal(new BigDecimal("36.00"));
+        julia.setValorConsultaMensal(new BigDecimal("32.00"));
 
-        assertEquals(new BigDecimal("150.00"), service.valorPadraoProfissionalRecebe(julia, "AVULSO").orElseThrow());
-        assertEquals(new BigDecimal("140.00"), service.valorPadraoProfissionalRecebe(julia, "SEMANAL").orElseThrow());
-        assertEquals(new BigDecimal("130.00"), service.valorPadraoProfissionalRecebe(julia, "QUINZENAL").orElseThrow());
-        assertEquals(new BigDecimal("120.00"), service.valorPadraoProfissionalRecebe(julia, "MENSAL").orElseThrow());
-        assertEquals(new BigDecimal("150.00"), service.valorPadraoProfissionalRecebe(julia, "OUTRO").orElseThrow());
-        assertTrue(service.valorPadraoProfissionalRecebe(null, "AVULSO").isEmpty());
+        assertEquals(new BigDecimal("40.00"), service.taxaSalaCadastradaProfissional(julia, "AVULSO").orElseThrow());
+        assertEquals(new BigDecimal("38.00"), service.taxaSalaCadastradaProfissional(julia, "SEMANAL").orElseThrow());
+        assertEquals(new BigDecimal("36.00"), service.taxaSalaCadastradaProfissional(julia, "QUINZENAL").orElseThrow());
+        assertEquals(new BigDecimal("32.00"), service.taxaSalaCadastradaProfissional(julia, "MENSAL").orElseThrow());
+        assertEquals(new BigDecimal("40.00"), service.taxaSalaCadastradaProfissional(julia, "OUTRO").orElseThrow());
+        assertTrue(service.taxaSalaCadastradaProfissional(null, "AVULSO").isEmpty());
     }
 
     @Test
-    void aplicarValoresDeveUsarValorPadraoCadastradoQuandoFormularioVazio() {
+    void aplicarValoresDeveUsarTaxaSalaCadastradaQuandoClinicaNaoInformada() {
         Usuario julia = new Usuario();
-        julia.setValorConsultaAvulso(new BigDecimal("180.00"));
+        julia.setValorConsultaAvulso(new BigDecimal("40.00"));
 
         AgendamentoForm form = new AgendamentoForm();
+        form.setValorProfissionalRecebe(new BigDecimal("200.00"));
         var agendamento = new com.clinica.sistema.model.Agendamento();
 
         service.aplicarValores(agendamento, form, sala1, "AVULSO", true, julia);
 
-        assertEquals(new BigDecimal("180.00"), agendamento.getValorProfissionalRecebe());
+        assertEquals(new BigDecimal("200.00"), agendamento.getValorProfissionalRecebe());
+        assertEquals(new BigDecimal("40.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("160.00"), agendamento.getValorLiquidoProfissional());
+    }
+
+    @Test
+    void propagacaoIgnoraConsultaJaPaga() {
+        Usuario julia = new Usuario();
+        julia.setValorConsultaAvulso(new BigDecimal("50.00"));
+
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+        agendamento.setProfissional(julia);
+        agendamento.setSala(sala1);
+        agendamento.setTipoRecorrencia("AVULSO");
+        agendamento.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        agendamento.setValorClinicaCobra(new BigDecimal("35.00"));
+        agendamento.setValorLiquidoProfissional(new BigDecimal("115.00"));
+        agendamento.setStatusPagamento(com.clinica.sistema.model.PagamentoStatus.PAGO);
+
+        assertFalse(service.aplicarValoresPadraoProfissionalNoAgendamento(agendamento, julia));
         assertEquals(new BigDecimal("35.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("115.00"), agendamento.getValorLiquidoProfissional());
     }
 }

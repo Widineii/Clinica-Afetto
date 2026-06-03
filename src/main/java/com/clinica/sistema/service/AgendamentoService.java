@@ -24,10 +24,13 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.EncerramentoSerieRegistroRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.util.MoedaBrasilUtil;
 import com.clinica.sistema.util.WhatsAppNumeroUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -276,6 +279,7 @@ public class AgendamentoService {
                 : ordenados;
 
         Agendamento referencia = ordenados.get(ordenados.size() - 1);
+        Agendamento referenciaValores = resolverReferenciaValoresExibicaoSerie(ordenados, referencia);
         List<SerieAgendamentoOcorrencia> datasHistorico = montarDatasHistoricoMensal(
                 referencia,
                 ordenados,
@@ -287,7 +291,7 @@ public class AgendamentoService {
         return new MensalAgendamentoLinha(
                 referencia,
                 datasHistorico,
-                referencia.getValoresConsultaResumo()
+                referenciaValores.getValoresConsultaResumo()
         );
     }
 
@@ -445,6 +449,16 @@ public class AgendamentoService {
                 ? representante.getSala().getNome()
                 : "-";
         String diaSemanaRotulo = formatarHorarioDiaSemana(representante.getDataHoraInicio());
+        Agendamento referenciaValores = resolverReferenciaValoresExibicaoSerie(
+                agendamentos,
+                chaveSerie,
+                limite,
+                representante
+        );
+        String valorProfInput = referenciaValores.getValorProfissionalRecebe() != null
+                && referenciaValores.getValorProfissionalRecebe().signum() > 0
+                ? MoedaBrasilUtil.formatarDecimal(referenciaValores.getValorProfissionalRecebe())
+                : null;
         return new SerieAgendamentoLinha(
                 representante.getNomeCliente(),
                 salaNome,
@@ -452,8 +466,40 @@ public class AgendamentoService {
                 recorrenciaDoAgendamento(representante),
                 diaSemanaRotulo,
                 proximasOcorrencias != null ? proximasOcorrencias : List.of(),
-                representante.getValoresConsultaResumo()
+                referenciaValores.getValoresConsultaResumo(),
+                valorProfInput
         );
+    }
+
+    /**
+     * Valores exibidos no card da serie: primeira consulta futura ainda nao paga (taxa/clinica atualizada).
+     * Se todas estiverem pagas, usa o representante da serie.
+     */
+    private Agendamento resolverReferenciaValoresExibicaoSerie(
+            List<Agendamento> agendamentos,
+            String chaveSerie,
+            LocalDateTime limite,
+            Agendamento fallback
+    ) {
+        return agendamentos.stream()
+                .filter(agendamento -> chaveSerie(agendamento).equals(chaveSerie))
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(limite))
+                .filter(agendamento -> !PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento()))
+                .filter(Agendamento::possuiValoresConsulta)
+                .min(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .orElse(fallback);
+    }
+
+    private Agendamento resolverReferenciaValoresExibicaoSerie(
+            List<Agendamento> agendamentosSerie,
+            Agendamento fallback
+    ) {
+        return agendamentosSerie.stream()
+                .filter(agendamento -> !PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento()))
+                .filter(Agendamento::possuiValoresConsulta)
+                .max(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .orElse(fallback);
     }
 
     private SerieAgendamentoOcorrencia montarOcorrenciaSerie(
@@ -1565,6 +1611,132 @@ public class AgendamentoService {
         encerramentoSerieRegistroRepository.save(registro);
 
         repository.deleteAll(serieCompleta);
+    }
+
+    public boolean podeAlterarValorProfissionalSerie(Long agendamentoId, Usuario usuarioLogado) {
+        if (agendamentoId == null || usuarioLogado == null) {
+            return false;
+        }
+        return repository.findById(agendamentoId)
+                .map(agendamento -> podeAlterarValorProfissionalSerie(agendamento, usuarioLogado))
+                .orElse(false);
+    }
+
+    public boolean podeAlterarValorProfissionalSerie(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || usuarioLogado == null || !podeVerValoresConsulta(agendamento, usuarioLogado)) {
+            return false;
+        }
+        if (TurnoLocacao.isTurno(agendamento.getTurnoLocacao())) {
+            return false;
+        }
+        if (agendamento.isMensal()) {
+            return podeGerenciarAgendamentoDeOutros(usuarioLogado)
+                    || isAgendamentoDoUsuario(agendamento, usuarioLogado);
+        }
+        if (agendamento.getSerieFixaId() == null || agendamento.getSerieFixaId().isBlank()) {
+            return false;
+        }
+        return podeGerenciarAgendamentoDeOutros(usuarioLogado)
+                || isAgendamentoDoUsuario(agendamento, usuarioLogado);
+    }
+
+    @Transactional
+    public int alterarValorProfissionalSerie(Long agendamentoReferenciaId, BigDecimal novoValorProfissional, Usuario usuarioLogado) {
+        if (novoValorProfissional == null || novoValorProfissional.signum() <= 0) {
+            throw new RuntimeException("Informe quanto o cliente paga ao profissional (valor maior que zero).");
+        }
+        Agendamento referencia = repository.findById(agendamentoReferenciaId)
+                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
+        if (!podeAlterarValorProfissionalSerie(referencia, usuarioLogado)) {
+            throw new RuntimeException("Sem permissão para alterar o valor desta série.");
+        }
+
+        BigDecimal novoValor = novoValorProfissional.setScale(2, RoundingMode.HALF_UP);
+        Usuario profissional = referencia.getProfissional();
+        List<Agendamento> serie = listarAgendamentosDaSerie(referencia);
+        if (serie.isEmpty()) {
+            throw new RuntimeException("Nenhum horário encontrado para esta série.");
+        }
+
+        int atualizados = 0;
+        for (Agendamento agendamento : serie) {
+            if (aplicarNovoValorProfissionalNoAgendamento(agendamento, novoValor, profissional)) {
+                repository.save(agendamento);
+                atualizados++;
+            }
+        }
+        if (atualizados == 0) {
+            throw new RuntimeException("Nenhuma consulta pendente para atualizar. Consultas já pagas não são alteradas.");
+        }
+        return atualizados;
+    }
+
+    private List<Agendamento> listarAgendamentosDaSerie(Agendamento referencia) {
+        if (referencia.isMensal()) {
+            return listarConsultasMensaisDoCliente(referencia);
+        }
+        if (referencia.getSerieFixaId() != null && !referencia.getSerieFixaId().isBlank()) {
+            return repository.findBySerieFixaIdOrderByDataHoraInicioAsc(referencia.getSerieFixaId());
+        }
+        return List.of(referencia);
+    }
+
+    private List<Agendamento> listarConsultasMensaisDoCliente(Agendamento referencia) {
+        if (referencia.getProfissional() == null
+                || referencia.getProfissional().getId() == null
+                || referencia.getNomeCliente() == null
+                || referencia.getNomeCliente().isBlank()) {
+            return List.of();
+        }
+        String cliente = referencia.getNomeCliente().trim();
+        Long profissionalId = referencia.getProfissional().getId();
+        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissionalId).stream()
+                .filter(Agendamento::isMensal)
+                .filter(agendamento -> mesmoNomeCliente(agendamento, cliente))
+                .toList();
+    }
+
+    private boolean aplicarNovoValorProfissionalNoAgendamento(
+            Agendamento agendamento,
+            BigDecimal novoValorProfissional,
+            Usuario profissional
+    ) {
+        if (agendamento == null || TurnoLocacao.isTurno(agendamento.getTurnoLocacao())) {
+            return false;
+        }
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
+        BigDecimal valorClinica = agendamento.isIndicacaoDona()
+                ? valorConsultaService.calcularTarifaClinicaIndicacao(novoValorProfissional, profissional)
+                : agendamento.getValorClinicaCobra();
+        if (valorClinica == null) {
+            valorClinica = BigDecimal.ZERO;
+        }
+        BigDecimal liquidoNovo = valorConsultaService.calcularLiquido(novoValorProfissional, valorClinica);
+        boolean alterado = !mesmoValorMonetario(agendamento.getValorProfissionalRecebe(), novoValorProfissional)
+                || !mesmoValorMonetario(agendamento.getValorLiquidoProfissional(), liquidoNovo)
+                || (agendamento.isIndicacaoDona()
+                && !mesmoValorMonetario(agendamento.getValorClinicaCobra(), valorClinica));
+        if (!alterado) {
+            return false;
+        }
+        agendamento.setValorProfissionalRecebe(novoValorProfissional);
+        if (agendamento.isIndicacaoDona()) {
+            agendamento.setValorClinicaCobra(valorClinica);
+        }
+        agendamento.setValorLiquidoProfissional(liquidoNovo);
+        return true;
+    }
+
+    private static boolean mesmoValorMonetario(BigDecimal atual, BigDecimal novo) {
+        if (atual == null && novo == null) {
+            return true;
+        }
+        if (atual == null || novo == null) {
+            return false;
+        }
+        return atual.setScale(2, RoundingMode.HALF_UP).compareTo(novo.setScale(2, RoundingMode.HALF_UP)) == 0;
     }
 
     private void validarFormulario(AgendamentoForm form) {

@@ -3,12 +3,14 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.TurnoLocacao;
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -24,6 +26,26 @@ public class ValorConsultaService {
     @Deprecated
     public static final BigDecimal CLINICA_AVULSO_QUINZENAL = CLINICA_AVULSO;
     public static final BigDecimal INDICACAO_PERCENTUAL = new BigDecimal("0.30");
+    public static final BigDecimal INDICACAO_PERCENTUAL_PADRAO = new BigDecimal("30.00");
+
+    /** Taxa de sala padrao do sistema (avulso/semanal/quinzenal 35; mensal 32). */
+    public static BigDecimal taxaSalaPadraoSistema(String recorrencia) {
+        return valorClientePadraoPorRecorrencia(recorrencia);
+    }
+
+    /** @deprecated use {@link #taxaSalaPadraoSistema(String)} */
+    @Deprecated
+    public static BigDecimal valorClientePadraoPorRecorrencia(String recorrencia) {
+        if (recorrencia == null) {
+            return CLINICA_AVULSO;
+        }
+        return switch (recorrencia.toUpperCase(Locale.ROOT)) {
+            case "SEMANAL" -> CLINICA_FIXO_SEMANAL;
+            case "QUINZENAL" -> CLINICA_QUINZENAL;
+            case "MENSAL" -> CLINICA_MENSAL;
+            default -> CLINICA_AVULSO;
+        };
+    }
 
     public void aplicarValores(Agendamento agendamento, AgendamentoForm form, Sala sala, String recorrencia) {
         aplicarValores(agendamento, form, sala, recorrencia, true);
@@ -63,8 +85,8 @@ public class ValorConsultaService {
                 && !TurnoLocacao.isTurno(form.getTurnoLocacao())
                 && form.isIndicacaoDona();
         BigDecimal valorClinica = indicacao
-                ? calcularTarifaClinicaIndicacao(valorRecebe)
-                : resolverValorClinicaSemIndicacao(form, sala, recorrencia, valorRecebe);
+                ? calcularTarifaClinicaIndicacao(valorRecebe, profissional)
+                : resolverValorClinicaSemIndicacao(form, sala, recorrencia, profissional);
         agendamento.setValorProfissionalRecebe(valorRecebe);
         agendamento.setValorClinicaCobra(valorClinica);
         agendamento.setValorLiquidoProfissional(calcularLiquido(valorRecebe, valorClinica));
@@ -75,7 +97,7 @@ public class ValorConsultaService {
             AgendamentoForm form,
             Sala sala,
             String recorrencia,
-            BigDecimal valorRecebe
+            Usuario profissional
     ) {
         if (TurnoLocacao.isTurno(form.getTurnoLocacao())) {
             return CLINICA_TURNO_LOCACAO;
@@ -83,7 +105,7 @@ public class ValorConsultaService {
         if (form.getValorClinicaCobra() != null && form.getValorClinicaCobra().signum() > 0) {
             return normalizarValor(form.getValorClinicaCobra(), "Informe quanto a clinica cobra nesta sessao.");
         }
-        return calcularTarifaClinicaPadrao(sala, recorrencia, form.getTurnoLocacao());
+        return resolverTaxaSalaProfissional(profissional, sala, recorrencia, form.getTurnoLocacao());
     }
 
     public BigDecimal calcularTarifaClinicaPadrao(Sala sala, String recorrencia) {
@@ -130,9 +152,30 @@ public class ValorConsultaService {
         return calcularTarifaClinicaPadrao(sala, recorrencia, form.getTurnoLocacao());
     }
 
+    public static BigDecimal percentualTaxaIndicacaoPadrao() {
+        return INDICACAO_PERCENTUAL_PADRAO;
+    }
+
+    public BigDecimal percentualTaxaIndicacao(Usuario profissional) {
+        if (profissional != null && profissional.getPercentualTaxaIndicacao() != null
+                && profissional.getPercentualTaxaIndicacao().signum() > 0) {
+            return profissional.getPercentualTaxaIndicacao().setScale(2, RoundingMode.HALF_UP);
+        }
+        return INDICACAO_PERCENTUAL_PADRAO;
+    }
+
+    public BigDecimal fracaoTaxaIndicacao(Usuario profissional) {
+        return percentualTaxaIndicacao(profissional)
+                .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal calcularTarifaClinicaIndicacao(BigDecimal valorConsulta) {
+        return calcularTarifaClinicaIndicacao(valorConsulta, null);
+    }
+
+    public BigDecimal calcularTarifaClinicaIndicacao(BigDecimal valorConsulta, Usuario profissional) {
         return valorConsulta
-                .multiply(INDICACAO_PERCENTUAL)
+                .multiply(fracaoTaxaIndicacao(profissional))
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -156,24 +199,43 @@ public class ValorConsultaService {
         if (informado != null && informado.signum() > 0) {
             return normalizarValor(informado, "Informe quanto o cliente paga ao profissional.");
         }
-        return valorPadraoProfissionalRecebe(profissional, recorrencia)
-                .orElseThrow(() -> new RuntimeException("Informe quanto o cliente paga ao profissional."));
+        throw new RuntimeException("Informe quanto o cliente paga ao profissional.");
     }
 
-    public Optional<BigDecimal> valorPadraoProfissionalRecebe(Usuario profissional, String recorrencia) {
+    /** Taxa de sala cadastrada na Central → Valores (por tipo de agendamento). */
+    public Optional<BigDecimal> taxaSalaCadastradaProfissional(Usuario profissional, String recorrencia) {
         if (profissional == null || recorrencia == null) {
             return Optional.empty();
         }
-        BigDecimal valor = switch (recorrencia.toUpperCase()) {
+        BigDecimal valor = switch (recorrencia.toUpperCase(Locale.ROOT)) {
             case "SEMANAL" -> profissional.getValorConsultaSemanal();
             case "QUINZENAL" -> profissional.getValorConsultaQuinzenal();
             case "MENSAL" -> profissional.getValorConsultaMensal();
             default -> profissional.getValorConsultaAvulso();
         };
-        if (valor == null || valor.signum() <= 0) {
-            return Optional.empty();
+        if (valor != null && valor.signum() > 0) {
+            return Optional.of(valor.setScale(2, RoundingMode.HALF_UP));
         }
-        return Optional.of(valor.setScale(2, RoundingMode.HALF_UP));
+        return Optional.empty();
+    }
+
+    public BigDecimal resolverTaxaSalaProfissional(
+            Usuario profissional,
+            Sala sala,
+            String recorrencia,
+            String turnoLocacao
+    ) {
+        if (TurnoLocacao.isTurno(turnoLocacao)) {
+            return CLINICA_TURNO_LOCACAO;
+        }
+        return taxaSalaCadastradaProfissional(profissional, recorrencia)
+                .orElseGet(() -> calcularTarifaClinicaPadrao(sala, recorrencia, turnoLocacao));
+    }
+
+    /** @deprecated taxa de sala — use {@link #taxaSalaCadastradaProfissional(Usuario, String)} */
+    @Deprecated
+    public Optional<BigDecimal> valorPadraoProfissionalRecebe(Usuario profissional, String recorrencia) {
+        return taxaSalaCadastradaProfissional(profissional, recorrencia);
     }
 
     public boolean isSala4(Sala sala) {
@@ -199,10 +261,98 @@ public class ValorConsultaService {
         BigDecimal valorRecebe = origem.getValorProfissionalRecebe();
         destino.setValorProfissionalRecebe(valorRecebe);
         destino.setIndicacaoDona(false);
-        BigDecimal valorClinica = calcularTarifaClinicaPadrao(sala, recorrencia, origem.getTurnoLocacao());
+        BigDecimal valorClinica = resolverTaxaSalaProfissional(
+                origem.getProfissional(),
+                sala,
+                recorrencia,
+                origem.getTurnoLocacao()
+        );
         destino.setValorClinicaCobra(valorClinica);
         if (valorRecebe != null) {
             destino.setValorLiquidoProfissional(calcularLiquido(valorRecebe, valorClinica));
         }
+    }
+
+    /**
+     * Propaga taxa de sala da Central para consultas existentes do profissional.
+     * Usa a taxa do tipo (avulso/semanal/quinzenal/mensal) de cada agendamento.
+     * Consultas ja pagas nao sao alteradas; pendentes recalculam Clin. e Liquido (Prof. recebe intacto).
+     */
+    public boolean aplicarValoresPadraoProfissionalNoAgendamento(Agendamento agendamento, Usuario profissional) {
+        if (agendamento == null || profissional == null || TurnoLocacao.isTurno(agendamento.getTurnoLocacao())) {
+            return false;
+        }
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
+        String recorrencia = recorrenciaDoAgendamento(agendamento);
+        BigDecimal valorRecebe = agendamento.getValorProfissionalRecebe();
+        BigDecimal valorClinica = agendamento.isIndicacaoDona()
+                && valorRecebe != null
+                && valorRecebe.signum() > 0
+                ? calcularTarifaClinicaIndicacao(valorRecebe, profissional)
+                : resolverTaxaSalaProfissional(
+                        profissional,
+                        agendamento.getSala(),
+                        recorrencia,
+                        agendamento.getTurnoLocacao()
+                );
+
+        BigDecimal valorLiquidoAtual = agendamento.getValorLiquidoProfissional();
+        BigDecimal valorLiquidoNovo = valorLiquidoAtual;
+        if (valorRecebe != null && valorRecebe.signum() > 0) {
+            valorLiquidoNovo = calcularLiquido(valorRecebe, valorClinica);
+        }
+
+        boolean alterado = !mesmoValor(agendamento.getValorClinicaCobra(), valorClinica);
+        if (valorRecebe != null && valorRecebe.signum() > 0) {
+            alterado = alterado || !mesmoValor(valorLiquidoAtual, valorLiquidoNovo);
+        }
+        if (!alterado) {
+            return false;
+        }
+
+        agendamento.setValorClinicaCobra(valorClinica);
+        if (valorRecebe != null && valorRecebe.signum() > 0) {
+            agendamento.setValorLiquidoProfissional(valorLiquidoNovo);
+        }
+        sincronizarValorPagamentoPendente(agendamento, valorClinica);
+        return true;
+    }
+
+    public String recorrenciaDoAgendamento(Agendamento agendamento) {
+        if (agendamento.isQuinzenal()) {
+            return "QUINZENAL";
+        }
+        if (agendamento.isMensal()) {
+            return "MENSAL";
+        }
+        if (agendamento.isFixoSemanal()) {
+            return "SEMANAL";
+        }
+        if (agendamento.getTipoRecorrencia() != null && !agendamento.getTipoRecorrencia().isBlank()) {
+            return agendamento.getTipoRecorrencia().toUpperCase(Locale.ROOT);
+        }
+        if (Boolean.TRUE.equals(agendamento.getFixo())) {
+            return "SEMANAL";
+        }
+        return "AVULSO";
+    }
+
+    private void sincronizarValorPagamentoPendente(Agendamento agendamento, BigDecimal taxaClinica) {
+        if (agendamento.getStatusPagamento() == PagamentoStatus.PAGO || taxaClinica == null) {
+            return;
+        }
+        agendamento.setValorPagamento(taxaClinica.setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private static boolean mesmoValor(BigDecimal atual, BigDecimal novo) {
+        if (atual == null && novo == null) {
+            return true;
+        }
+        if (atual == null || novo == null) {
+            return false;
+        }
+        return atual.setScale(2, RoundingMode.HALF_UP).compareTo(novo.setScale(2, RoundingMode.HALF_UP)) == 0;
     }
 }

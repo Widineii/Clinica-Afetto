@@ -30,6 +30,27 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.757-taxas-sala-central",
+                        "2.757",
+                        "Taxas de sala na Central",
+                        "Nova aba Taxas de sala: defina avulso, semanal, quinzenal e mensal por profissional ou para todos. "
+                                + "Atualiza Clín. nas consultas pendentes; pagas não mudam. Manual com seção exclusiva da Polyana.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        485,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.757-valores-alterar-prof",
+                        "2.757",
+                        "Valores da consulta e Alterar valor",
+                        "No agendamento: Prof. recebe (você informa), Clínica cobra (taxa da Central, somente leitura) e Líq. calculado. "
+                                + "Em Meus agendamentos, Alterar valor muda o Prof. nas datas pendentes de séries fixa, quinzenal ou mensal. "
+                                + "Manual atualizado com seção só para profissionais.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        484,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.6-login-renovado",
                         "2.6",
                         "Nova tela de login",

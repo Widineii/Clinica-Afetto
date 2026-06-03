@@ -4,17 +4,25 @@ import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.GraficoJsonUtil;
+import com.clinica.sistema.dto.AtualizarPercentualIndicacaoProfissionalForm;
+import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.ProfissionalValoresConsultaLinhaView;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
+import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,12 +32,17 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UsuarioService {
+    private static final Logger log = LoggerFactory.getLogger(UsuarioService.class);
     private static final Duration BLOQUEIO_ALTERACAO_PERIODICIDADE = Duration.ofHours(24);
     private static final DateTimeFormatter FORMATO_PROXIMA_ALTERACAO =
             DateTimeFormatter.ofPattern("dd/MM 'as' HH:mm");
@@ -41,6 +54,9 @@ public class UsuarioService {
     private final PagamentoConsultaService pagamentoConsultaService;
     private final SegurancaProperties segurancaProperties;
     private final ValorConsultaService valorConsultaService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
@@ -68,14 +84,31 @@ public class UsuarioService {
         return GraficoJsonUtil.serializarValoresConsultaPadrao(mapaValoresConsultaPadraoPorProfissional());
     }
 
-    public void preencherValorConsultaPadraoNoForm(AgendamentoForm form, Long profissionalId, String recorrencia) {
+    public void preencherTaxaSalaPadraoNoForm(AgendamentoForm form, Long profissionalId, String recorrencia) {
+        if (form == null || profissionalId == null) {
+            return;
+        }
+        usuarioRepository.findById(profissionalId).ifPresent(profissional -> {
+            BigDecimal taxa = valorConsultaService.taxaSalaCadastradaProfissional(profissional, recorrencia)
+                    .orElseGet(() -> ValorConsultaService.taxaSalaPadraoSistema(recorrencia));
+            form.setValorClinicaCobra(taxa);
+        });
+    }
+
+    public void preencherValorRecebeHistoricoNoForm(AgendamentoForm form, Long profissionalId, String recorrencia) {
         if (form == null || profissionalId == null || form.getValorProfissionalRecebe() != null) {
             return;
         }
-        usuarioRepository.findById(profissionalId).ifPresent(profissional ->
-                valorConsultaService.valorPadraoProfissionalRecebe(profissional, recorrencia)
-                        .ifPresent(form::setValorProfissionalRecebe)
-        );
+        BigDecimal historico = ultimoValorRecebeDoHistorico(profissionalId, recorrencia);
+        if (historico != null && historico.signum() > 0) {
+            form.setValorProfissionalRecebe(historico);
+        }
+    }
+
+    /** @deprecated use {@link #preencherTaxaSalaPadraoNoForm} */
+    @Deprecated
+    public void preencherValorConsultaPadraoNoForm(AgendamentoForm form, Long profissionalId, String recorrencia) {
+        preencherTaxaSalaPadraoNoForm(form, profissionalId, recorrencia);
     }
 
     public Map<String, Map<String, BigDecimal>> mapaValoresConsultaPadraoPorProfissional() {
@@ -92,19 +125,60 @@ public class UsuarioService {
         return mapa;
     }
 
+    /** Taxas de sala exibidas na referencia do formulario (mesma fonte do campo Clinica cobra). */
+    public Map<String, BigDecimal> taxasSalaReferenciaProfissional(Usuario profissional) {
+        if (profissional == null || authService.profissionalIgnoraValoresEPagamento(profissional)) {
+            return Map.of();
+        }
+        return valoresConsultaDoProfissional(profissional);
+    }
+
     private Map<String, BigDecimal> valoresConsultaDoProfissional(Usuario profissional) {
         Map<String, BigDecimal> valores = new LinkedHashMap<>();
-        adicionarValorSePresente(valores, "AVULSO", profissional.getValorConsultaAvulso());
-        adicionarValorSePresente(valores, "SEMANAL", profissional.getValorConsultaSemanal());
-        adicionarValorSePresente(valores, "QUINZENAL", profissional.getValorConsultaQuinzenal());
-        adicionarValorSePresente(valores, "MENSAL", profissional.getValorConsultaMensal());
+        valores.put("AVULSO", valorConsultaExibicao(profissional, "AVULSO", null));
+        valores.put("SEMANAL", valorConsultaExibicao(profissional, "SEMANAL", null));
+        valores.put("QUINZENAL", valorConsultaExibicao(profissional, "QUINZENAL", null));
+        valores.put("MENSAL", valorConsultaExibicao(profissional, "MENSAL", null));
+        valores.put("INDICACAO_PERCENT", valorConsultaService.percentualTaxaIndicacao(profissional));
         return valores;
     }
 
-    private void adicionarValorSePresente(Map<String, BigDecimal> valores, String chave, BigDecimal valor) {
-        if (valor != null && valor.signum() > 0) {
-            valores.put(chave, valor.setScale(2, RoundingMode.HALF_UP));
+    private BigDecimal valorConsultaExibicao(Usuario profissional, String recorrencia, BigDecimal historico) {
+        return valorConsultaService.taxaSalaCadastradaProfissional(profissional, recorrencia)
+                .orElseGet(() -> ValorConsultaService.taxaSalaPadraoSistema(recorrencia));
+    }
+
+    @Transactional
+    public void preencherValoresConsultaPadraoOndeAusente() {
+        for (Usuario profissional : listarProfissionaisDaEquipe()) {
+            if (!authService.elegivelParaGestaoValoresConsulta(profissional)) {
+                continue;
+            }
+            boolean alterado = false;
+            if (!valorPositivo(profissional.getValorConsultaAvulso())) {
+                profissional.setValorConsultaAvulso(ValorConsultaService.valorClientePadraoPorRecorrencia("AVULSO"));
+                alterado = true;
+            }
+            if (!valorPositivo(profissional.getValorConsultaSemanal())) {
+                profissional.setValorConsultaSemanal(ValorConsultaService.valorClientePadraoPorRecorrencia("SEMANAL"));
+                alterado = true;
+            }
+            if (!valorPositivo(profissional.getValorConsultaQuinzenal())) {
+                profissional.setValorConsultaQuinzenal(ValorConsultaService.valorClientePadraoPorRecorrencia("QUINZENAL"));
+                alterado = true;
+            }
+            if (!valorPositivo(profissional.getValorConsultaMensal())) {
+                profissional.setValorConsultaMensal(ValorConsultaService.valorClientePadraoPorRecorrencia("MENSAL"));
+                alterado = true;
+            }
+            if (alterado) {
+                usuarioRepository.save(profissional);
+            }
         }
+    }
+
+    private static boolean valorPositivo(BigDecimal valor) {
+        return valor != null && valor.signum() > 0;
     }
 
     public List<ProfissionalValoresConsultaLinhaView> listarProfissionaisParaGestaoValoresConsulta() {
@@ -114,13 +188,159 @@ public class UsuarioService {
                 .toList();
     }
 
+    private BigDecimal ultimoValorRecebeDoHistorico(Long profissionalId, String recorrencia) {
+        if (profissionalId == null || recorrencia == null) {
+            return null;
+        }
+        try {
+            return agendamentoRepository
+                    .buscarUltimoValorProfissionalRecebePorRecorrencia(
+                            profissionalId,
+                            recorrencia.toUpperCase(),
+                            PageRequest.of(0, 1)
+                    )
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Nao foi possivel buscar ultimo valor de consulta para profissional {} ({}): {}",
+                    profissionalId,
+                    recorrencia,
+                    ex.getMessage()
+            );
+            return null;
+        }
+    }
+
     @Transactional
-    public void atualizarValoresConsultaProfissional(
+    public int atualizarValoresConsultaProfissional(
             AtualizarValoresConsultaProfissionalForm form,
             Usuario usuarioLogado
     ) {
+        validarGestaoValoresConsulta(usuarioLogado);
+        if (form == null || form.getUsuarioId() == null) {
+            throw new RuntimeException("Selecione o profissional.");
+        }
+        Usuario profissional = usuarioRepository.findById(form.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado."));
+        if (!authService.elegivelParaGestaoValoresConsulta(profissional)) {
+            throw new RuntimeException("Este usuário não pode ter valores de consulta cadastrados.");
+        }
+        aplicarValoresConsultaNoProfissional(profissional, form);
+        usuarioRepository.save(profissional);
+        return propagarValoresConsultaParaAgendamentosExistentes(profissional);
+    }
+
+    @Transactional
+    public ResultadoAtualizacaoValoresConsulta atualizarValoresConsultaTodosProfissionais(
+            AtualizarValoresConsultaProfissionalForm form,
+            Usuario usuarioLogado,
+            List<Long> excluirUsuarioIds
+    ) {
+        validarGestaoValoresConsulta(usuarioLogado);
+        if (form == null) {
+            throw new RuntimeException("Informe os valores.");
+        }
+        Set<Long> excluidos = normalizarIdsExclusao(excluirUsuarioIds);
+        List<Usuario> elegiveis = listarProfissionaisDaEquipe().stream()
+                .filter(authService::elegivelParaGestaoValoresConsulta)
+                .toList();
+        List<Usuario> profissionais = elegiveis.stream()
+                .filter(profissional -> !excluidos.contains(profissional.getId()))
+                .toList();
+        if (profissionais.isEmpty()) {
+            throw new RuntimeException("Nenhum profissional restante para alteração. Desmarque alguém em Menos.");
+        }
+        int consultasAtualizadas = 0;
+        for (Usuario profissional : profissionais) {
+            aplicarValoresConsultaNoProfissional(profissional, form);
+            usuarioRepository.save(profissional);
+            consultasAtualizadas += propagarValoresConsultaParaAgendamentosExistentes(profissional);
+        }
+        log.info(
+                "Valores alterados em lote para {} profissional(is) ({} excluido(s)); {} consulta(s) ajustada(s).",
+                profissionais.size(),
+                excluidos.size(),
+                consultasAtualizadas
+        );
+        return new ResultadoAtualizacaoValoresConsulta(
+                profissionais.size(),
+                consultasAtualizadas,
+                excluidos.size()
+        );
+    }
+
+    private Set<Long> normalizarIdsExclusao(List<Long> excluirUsuarioIds) {
+        if (excluirUsuarioIds == null || excluirUsuarioIds.isEmpty()) {
+            return Set.of();
+        }
+        return excluirUsuarioIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private void validarGestaoValoresConsulta(Usuario usuarioLogado) {
         if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
             throw new RuntimeException("Apenas a Polyana pode alterar os valores de consulta.");
+        }
+    }
+
+    private void aplicarValoresConsultaNoProfissional(
+            Usuario profissional,
+            AtualizarValoresConsultaProfissionalForm form
+    ) {
+        if (form.getValorAvulso() != null) {
+            profissional.setValorConsultaAvulso(normalizarValorOpcional(form.getValorAvulso(), "avulso"));
+        }
+        if (form.getValorSemanal() != null) {
+            profissional.setValorConsultaSemanal(normalizarValorOpcional(form.getValorSemanal(), "semanal"));
+        }
+        if (form.getValorQuinzenal() != null) {
+            profissional.setValorConsultaQuinzenal(normalizarValorOpcional(form.getValorQuinzenal(), "quinzenal"));
+        }
+        if (form.getValorMensal() != null) {
+            profissional.setValorConsultaMensal(normalizarValorOpcional(form.getValorMensal(), "mensal"));
+        }
+        if (form.getPercentualTaxaIndicacao() != null) {
+            profissional.setPercentualTaxaIndicacao(normalizarPercentualOpcional(form.getPercentualTaxaIndicacao()));
+        }
+    }
+
+    private int propagarValoresConsultaParaAgendamentosExistentes(Usuario profissional) {
+        entityManager.flush();
+        Usuario profissionalAtualizado = usuarioRepository.findById(profissional.getId())
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado."));
+        List<Agendamento> agendamentos = agendamentoRepository
+                .listarPorProfissionalParaPropagacaoValores(profissionalAtualizado.getId());
+        List<Agendamento> modificados = new ArrayList<>();
+        for (Agendamento agendamento : agendamentos) {
+            if (valorConsultaService.aplicarValoresPadraoProfissionalNoAgendamento(
+                    agendamento,
+                    profissionalAtualizado
+            )) {
+                modificados.add(agendamento);
+            }
+        }
+        if (!modificados.isEmpty()) {
+            agendamentoRepository.saveAll(modificados);
+            entityManager.flush();
+            log.info(
+                    "Taxas de sala propagadas para {} consulta(s) do profissional {}.",
+                    modificados.size(),
+                    profissionalAtualizado.getLogin()
+            );
+        }
+        return modificados.size();
+    }
+
+    @Transactional
+    public int atualizarPercentualIndicacaoProfissional(
+            AtualizarPercentualIndicacaoProfissionalForm form,
+            Usuario usuarioLogado
+    ) {
+        if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
+            throw new RuntimeException("Apenas a Polyana pode alterar a taxa de indicacao.");
         }
         if (form == null || form.getUsuarioId() == null) {
             throw new RuntimeException("Selecione o profissional.");
@@ -128,13 +348,24 @@ public class UsuarioService {
         Usuario profissional = usuarioRepository.findById(form.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("Profissional nao encontrado."));
         if (!authService.elegivelParaGestaoValoresConsulta(profissional)) {
-            throw new RuntimeException("Este usuario nao pode ter valores de consulta cadastrados.");
+            throw new RuntimeException("Este usuario nao pode ter taxa de indicacao cadastrada.");
         }
-        profissional.setValorConsultaAvulso(normalizarValorOpcional(form.getValorAvulso(), "avulso"));
-        profissional.setValorConsultaSemanal(normalizarValorOpcional(form.getValorSemanal(), "semanal"));
-        profissional.setValorConsultaQuinzenal(normalizarValorOpcional(form.getValorQuinzenal(), "quinzenal"));
-        profissional.setValorConsultaMensal(normalizarValorOpcional(form.getValorMensal(), "mensal"));
+        profissional.setPercentualTaxaIndicacao(normalizarPercentualOpcional(form.getPercentualTaxaIndicacao()));
         usuarioRepository.save(profissional);
+        return propagarValoresConsultaParaAgendamentosExistentes(profissional);
+    }
+
+    private BigDecimal normalizarPercentualOpcional(BigDecimal percentual) {
+        if (percentual == null) {
+            return null;
+        }
+        if (percentual.signum() <= 0) {
+            throw new RuntimeException("Informe um percentual positivo ou deixe em branco para usar 30%.");
+        }
+        if (percentual.compareTo(new BigDecimal("100")) > 0) {
+            throw new RuntimeException("O percentual não pode ser maior que 100.");
+        }
+        return percentual.setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal normalizarValorOpcional(BigDecimal valor, String rotulo) {

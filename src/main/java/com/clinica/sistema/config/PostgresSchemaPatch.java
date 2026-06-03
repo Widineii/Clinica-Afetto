@@ -83,6 +83,12 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             jdbcTemplate.execute(
                     """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS percentual_taxa_indicacao NUMERIC(5,2)
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
                     ALTER TABLE agendamentos
                     ADD COLUMN IF NOT EXISTS data_referencia_semana_pagamento DATE
                     """

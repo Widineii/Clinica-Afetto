@@ -449,7 +449,7 @@
                     <ul class="lista-curta">
                         <li><strong>Grade semanal</strong> — visão geral de quem está em cada sala e horário.</li>
                         <li th:if="${ehProfissional}"><strong>Novo agendamento</strong> — formulário para marcar avulso, fixo ou quinzenal.</li>
-                        <li th:if="${ehProfissional}"><strong>Meus agendamentos</strong> — caderno com suas séries e avulsos; cancelar data, pagar, realocar ou encerrar série.</li>
+                        <li th:if="${ehProfissional}"><strong>Meus agendamentos</strong> — caderno com suas séries e avulsos; cancelar data, pagar, realocar, <strong>Alterar valor</strong> ou encerrar série.</li>
                         <li th:if="${ehProfissional}"><strong>Agenda do dia</strong> — só os seus atendimentos de hoje, em todas as salas.</li>
                         <li th:if="${ehProfissional}"><strong>Meu relatório</strong> — resumo mensal dos seus atendimentos e taxas PIX pagas (filtro por sala).</li>
                         <li th:if="${ehProfissional and podeEscolherFormaPagamento}"><strong>Forma de pagamento</strong> — no topo da agenda: Diário, Semanal ou Mensal (trava de 24h para trocar).</li>
@@ -481,33 +481,49 @@
                 <div class="accordion-body">
                     <p class="manual-lead">
                         Ao marcar um horário, você paga a <strong>taxa de locação da sala</strong> (PIX).
-                        O valor depende do tipo de agendamento e da sala escolhida.
+                        O valor da taxa depende do <strong>tipo de agendamento</strong> e do cadastro na Central
+                        (cada profissional pode ter taxas diferentes).
                     </p>
+                    <div class="manual-nota mb-3" th:if="${ehProfissional}">
+                        Suas taxas de sala aparecem no formulário <strong>Novo agendamento</strong> (lista
+                        <strong>Taxas de sala deste profissional</strong>) e no campo <strong>Clínica cobra</strong>,
+                        que é preenchido pela Polyana na <strong>Central → Taxas de sala</strong>.
+                        Detalhes em <a href="#valores-profissional-manual">Valores da consulta e Alterar valor</a>.
+                    </div>
+                    <div class="manual-nota mb-3" th:if="${podeAcessarCentralProfissionais}">
+                        Você define as taxas por profissional em
+                        <a href="#taxas-polyana-manual">Taxas de sala — Central (Polyana)</a>.
+                    </div>
                     <div class="row g-3 mt-1">
-                        <div class="col-sm-4">
+                        <div class="col-sm-6 col-lg-3">
                             <span class="chip">Avulso</span>
-                            <p class="small mb-0 mt-1"><strong>1 data só.</strong> Taxa R$ 35 por consulta.</p>
+                            <p class="small mb-0 mt-1"><strong>1 data só.</strong> Taxa de sala conforme cadastro (tipo avulso).</p>
                         </div>
-                        <div class="col-sm-4">
+                        <div class="col-sm-6 col-lg-3">
                             <span class="chip">Fixo semanal</span>
-                            <p class="small mb-0 mt-1"><strong>12 semanas</strong> no mesmo dia/hora. Taxa R$ 35 por consulta.</p>
+                            <p class="small mb-0 mt-1"><strong>12 semanas</strong> no mesmo dia/hora. Taxa semanal por consulta.</p>
                         </div>
-                        <div class="col-sm-4">
+                        <div class="col-sm-6 col-lg-3">
                             <span class="chip">Quinzenal</span>
-                            <p class="small mb-0 mt-1"><strong>6 datas</strong> (a cada 2 semanas). Taxa R$ 35 por consulta.</p>
+                            <p class="small mb-0 mt-1"><strong>6 datas</strong> (a cada 2 semanas). Taxa quinzenal por consulta.</p>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <span class="chip">Mensal</span>
+                            <p class="small mb-0 mt-1"><strong>1 data</strong> no mês; remarcar quando o cliente voltar.</p>
                         </div>
                     </div>
-                    <p class="manual-subtitulo">Taxas especiais</p>
+                    <p class="manual-subtitulo">Referência padrão da clínica</p>
                     <ul class="lista-curta">
-                        <li><strong>Mensal:</strong> taxa de <strong>R$ 32</strong> por consulta (1 data no mês; remarcar no mês seguinte).</li>
-                        <li><strong>Sala 4:</strong> taxa reduzida de <strong>R$ 25</strong> por consulta.</li>
-                        <li><strong>Indicação da clínica:</strong> a taxa passa a ser <strong>30%</strong> do valor que o profissional recebe na consulta (marque o checkbox no formulário).</li>
+                        <li>Avulso, semanal e quinzenal: <strong>R$ 35,00</strong> (padrão — pode ser diferente por profissional).</li>
+                        <li><strong>Mensal:</strong> <strong>R$ 32,00</strong> por consulta (1 data no mês).</li>
+                        <li><strong>Indicação da clínica:</strong> taxa de <strong>30%</strong> do valor que o profissional recebe (marque o checkbox no formulário).</li>
                     </ul>
                     <p class="manual-subtitulo" th:if="${ehProfissional}">Como criar um agendamento</p>
                     <ol class="lista-curta" th:if="${ehProfissional}">
                         <li>Na agenda, role até <strong>Novo agendamento</strong>.</li>
-                        <li>Escolha sala, data, horário, nome do cliente e tipo (avulso, fixo ou quinzenal).</li>
-                        <li>Se for indicação da clínica, marque a opção correspondente.</li>
+                        <li>Escolha sala, data, horário, nome do cliente e tipo (avulso, fixo, quinzenal ou mensal).</li>
+                        <li>Informe <strong>Prof. recebe</strong> (quanto o cliente paga). <strong>Clínica cobra</strong> vem da Central e não pode ser editada.</li>
+                        <li>Se for indicação da clínica, marque a opção correspondente (taxa vira 30% do Prof.).</li>
                         <li>Confirme — o sistema verifica conflito de horário e abre o pagamento quando necessário.</li>
                     </ol>
                     <p class="manual-subtitulo">Cancelar x encerrar série</p>
@@ -522,6 +538,44 @@
                     <div class="manual-nota mb-0">
                         Séries fixas se renovam sozinhas: quando uma data passa, o sistema mantém até
                         <strong>12 semanas</strong> (fixo) ou <strong>6 ocorrências</strong> (quinzenal) sempre à frente.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-0 border-top" th:if="${ehProfissional}" id="valores-profissional-manual">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-valores-prof">
+                    Valores da consulta e Alterar valor
+                </button>
+            </h2>
+            <div id="acc-valores-prof" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        Cada consulta registra três valores: <strong>Prof.</strong> (quanto o cliente paga a você),
+                        <strong>Clín.</strong> (taxa de sala / PIX) e <strong>Líq.</strong> (Prof. menos Clín.).
+                        Só você altera o <strong>Prof.</strong>; a Polyana altera o <strong>Clín.</strong> na Central.
+                    </p>
+                    <p class="manual-subtitulo">No formulário Novo agendamento</p>
+                    <ul class="lista-curta">
+                        <li><strong>Prof. recebe</strong> — você informa quanto o cliente paga na consulta.</li>
+                        <li><strong>Clínica cobra</strong> — preenchido automaticamente com sua taxa de sala (cadastro da Polyana). Campo <strong>somente leitura</strong>.</li>
+                        <li><strong>Líquido</strong> — calculado pelo sistema (Prof. − Clín.).</li>
+                        <li>Lista <strong>Taxas de sala deste profissional</strong> — mostra avulso, semanal, quinzenal e mensal cadastrados para você.</li>
+                        <li>Tipo <strong>Mensal</strong> — uma data por vez; no mês seguinte use <strong>Meus agendamentos → Marcar outra consulta</strong>.</li>
+                        <li><strong>Indicação da clínica</strong> — a Clín. vira 30% do Prof. (não usa a taxa fixa da lista).</li>
+                    </ul>
+                    <p class="manual-subtitulo">Alterar valor (séries fixas, quinzenais e mensais)</p>
+                    <ul class="lista-curta">
+                        <li>Em <strong>Meus agendamentos</strong>, no card da série, clique em <strong>Alterar valor</strong>.</li>
+                        <li>Informe o novo <strong>Prof.</strong> — vale para todas as datas <strong>ainda não pagas</strong> da série.</li>
+                        <li>Consultas com ✓ (PIX já pago) <strong>não mudam</strong>.</li>
+                        <li>O <strong>Clín.</strong> permanece igual; o <strong>Líq.</strong> é recalculado.</li>
+                        <li>O card da série mostra os valores da <strong>primeira consulta pendente</strong>.</li>
+                    </ul>
+                    <div class="manual-nota mb-0">
+                        A Polyana <strong>não</strong> altera o Prof. pela Central — só a taxa de sala (Clín.).
+                        Para mudar quanto o cliente paga, use o formulário ao marcar ou <strong>Alterar valor</strong> na série.
                     </div>
                 </div>
             </div>
@@ -542,7 +596,7 @@
                     <p class="manual-subtitulo">O que aparece</p>
                     <ul class="lista-curta">
                         <li>Total de atendimentos no mês e valor líquido estimado (profissional).</li>
-                        <li>Lista de atendimentos: data, sala, cliente, tipo (avulso / fixo / quinzenal) e valores.</li>
+                        <li>Lista de atendimentos: data, sala, cliente, tipo (avulso, fixo, quinzenal ou mensal) e valores.</li>
                         <li>Lista de PIX pagos no período (taxas de locação quitadas).</li>
                     </ul>
                     <p class="manual-subtitulo">Filtros</p>
@@ -605,7 +659,7 @@
                         <strong>somente os seus</strong> atendimentos de hoje, em todas as salas.
                     </p>
                     <ul class="lista-curta mb-3">
-                        <li>Mostra horário, sala, cliente e tipo (avulso, fixo ou quinzenal).</li>
+                        <li>Mostra horário, sala, cliente e tipo (avulso, fixo, quinzenal ou mensal).</li>
                         <li>Status do pagamento e botão <strong>Pagar agora</strong> quando aplicável.</li>
                         <li>Não lista horários de outros profissionais — só os seus.</li>
                     </ul>
@@ -786,6 +840,50 @@
             </div>
         </div>
 
+        <div class="accordion-item border-0 border-top" th:if="${podeAcessarCentralProfissionais}" id="taxas-polyana-manual">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-taxas-polyana">
+                    Taxas de sala — Central (Polyana)
+                </button>
+            </h2>
+            <div id="acc-taxas-polyana" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                <div class="accordion-body">
+                    <p class="manual-lead">
+                        Na <strong>Central dos profissionais</strong>, aba <strong>Taxas de sala</strong>, você define
+                        quanto cada profissional paga de locação (PIX) por tipo de consulta.
+                        Isso alimenta o campo <strong>Clín.</strong> nos agendamentos — não o <strong>Prof.</strong>
+                        (valor da consulta ao profissional).
+                    </p>
+                    <p class="manual-subtitulo">O que cadastrar</p>
+                    <ul class="lista-curta">
+                        <li><strong>Taxa avulso</strong> — consulta única.</li>
+                        <li><strong>Taxa semanal</strong> — cada data de série fixa.</li>
+                        <li><strong>Taxa quinzenal</strong> — cada data de série quinzenal.</li>
+                        <li><strong>Taxa mensal</strong> — consulta do tipo mensal.</li>
+                        <li><strong>Indicação</strong> — percentual sobre o Prof. (padrão 30%; aplicado quando marcam indicação).</li>
+                    </ul>
+                    <p class="manual-subtitulo">Alterar para todos ou por profissional</p>
+                    <ul class="lista-curta">
+                        <li>Bloco <strong>Alterar para todos os profissionais</strong> — aplica as taxas à lista inteira. Use <strong>Menos</strong> para excluir quem não deve receber a alteração.</li>
+                        <li>Clique no nome de uma profissional — formulário individual com as mesmas taxas.</li>
+                        <li>Referência exibida na tela: avulso/semanal/quinzenal R$ 35, mensal R$ 32 (valores padrão da clínica).</li>
+                    </ul>
+                    <p class="manual-subtitulo">O que acontece ao salvar</p>
+                    <ul class="lista-curta">
+                        <li>Em consultas <strong>ainda não pagas</strong>, atualiza só o <strong>Clín.</strong> conforme o tipo (avulso → taxa avulso, semanal → semanal, etc.).</li>
+                        <li>Recalcula o <strong>Líq.</strong> (Prof. − Clín.).</li>
+                        <li>O <strong>Prof.</strong> (valor que o cliente paga ao profissional) <strong>não muda</strong> — isso é responsabilidade da profissional no agendamento ou em <strong>Alterar valor</strong>.</li>
+                        <li>Consultas com PIX <strong>já confirmado (PAGO)</strong> permanecem congeladas.</li>
+                    </ul>
+                    <div class="manual-nota mb-3">
+                        Profissionais veem o <strong>Clínica cobra</strong> no formulário, mas não podem editar.
+                        Eles ajustam o <strong>Prof. recebe</strong> ao marcar ou usam <strong>Alterar valor</strong> nas séries.
+                    </div>
+                    <a th:href="@{/agendamentos/central-profissionais(aba='valores')}" class="btn btn-warning btn-sm">Abrir Taxas de sala</a>
+                </div>
+            </div>
+        </div>
+
         <div class="accordion-item border-0 border-top" th:if="${podeGerenciarEquipe}" id="dona-admin">
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-dona">
@@ -802,6 +900,7 @@
                     </p>
                     <ul class="lista-curta mb-3">
                         <li th:if="${podeAcessarCentralProfissionais}"><strong>Central dos profissionais</strong> — cadastrar profissional, resetar senha e definir forma de pagamento inicial (dia, semana ou mês).</li>
+                        <li th:if="${podeAcessarCentralProfissionais}"><strong>Taxas de sala</strong> — aba na Central: taxa avulso, semanal, quinzenal e mensal por profissional (ou alterar para todos). Veja a seção <a href="#taxas-polyana-manual">Taxas de sala — Central</a>.</li>
                         <li th:if="${isAdmin and !isDonaClinica}"><strong>Grade semanal</strong> — dois cliques para cancelar data ou encerrar série de qualquer profissional.</li>
                         <li th:if="${isDonaClinica}"><strong>Grade semanal</strong> — dois cliques para cancelar data ou encerrar série de qualquer profissional.</li>
                         <li><strong>Fechamento do mês anterior</strong> — no <strong>dia 3</strong> o sistema arquiva o mês passado e remove agendamentos avulsos da agenda (sem PDF para download).</li>
@@ -876,6 +975,9 @@
                             <tr th:if="${ehProfissional}"><td>Conferir mês passado</td><td><strong>Meu relatório</strong> → escolher mês e sala</td></tr>
                             <tr th:if="${ehProfissional and podeEscolherFormaPagamento}"><td>Trocar Diário/Semanal/Mensal</td><td>Card <strong>Forma de pagamento</strong> no topo (1x a cada 24h)</td></tr>
                             <tr th:if="${ehProfissional}"><td>Cliente saiu da série fixa</td><td>Meus agendamentos → <strong>Encerrar série</strong></td></tr>
+                            <tr th:if="${ehProfissional}"><td>Mudar quanto o cliente paga (Prof.)</td><td><strong>Meus agendamentos</strong> → <strong>Alterar valor</strong> (série fixa, quinzenal ou mensal; só pendentes)</td></tr>
+                            <tr th:if="${ehProfissional}"><td>Ver minha taxa de sala (Clín.)</td><td><strong>Novo agendamento</strong> → lista Taxas de sala / campo Clínica cobra</td></tr>
+                            <tr th:if="${podeAcessarCentralProfissionais}"><td>Alterar taxa de sala de alguém</td><td><strong>Central → Taxas de sala</strong> (individual ou para todos)</td></tr>
                             <tr th:if="${podeAcessarCentralProfissionais}"><td>Cancelar horário de alguém</td><td>Dois cliques na grade</td></tr>
                             <tr th:if="${isAdmin and !isDonaClinica}"><td>Cancelar horário pago</td><td>Dois cliques na grade (admin)</td></tr>
                             <tr><td>Dúvida geral</td><td>Fale com a <strong>Polyana</strong> ou use o WhatsApp de suporte</td></tr>
@@ -921,9 +1023,11 @@
             '#funcionamento': 'acc-func',
             '#grade': 'acc-grade',
             '#agendamentos': 'acc-agenda',
+            '#valores-profissional-manual': 'acc-valores-prof',
             '#meu-relatorio-manual': 'acc-relatorio',
             '#forma-pagamento-manual': 'acc-forma-pag',
             '#agenda-dia-manual': 'acc-agenda-dia',
+            '#taxas-polyana-manual': 'acc-taxas-polyana',
             '#senha': 'acc-senha',
             '#duvidas': 'acc-senha',
             '#video': null

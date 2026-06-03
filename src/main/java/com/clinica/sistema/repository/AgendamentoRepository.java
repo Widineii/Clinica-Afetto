@@ -6,11 +6,13 @@ import com.clinica.sistema.model.Usuario;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -18,6 +20,16 @@ import java.util.Optional;
 
 @Repository
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a
+            FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.PAGO
+            ORDER BY a.dataHoraInicio ASC
+            """)
+    List<Agendamento> listarPorProfissionalParaPropagacaoValores(@Param("profissionalId") Long profissionalId);
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findByProfissionalIdOrderByDataHoraInicioAsc(Long profissionalId);
@@ -536,5 +548,30 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("inicioDia") LocalDateTime inicioDia,
             @Param("fimDia") LocalDateTime fimDia,
             @Param("statusLiberado") PagamentoStatus statusLiberado
+    );
+
+    @Query("""
+            SELECT a.valorProfissionalRecebe
+            FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.valorProfissionalRecebe IS NOT NULL
+              AND a.valorProfissionalRecebe > 0
+              AND (
+                    (:recorrencia = 'SEMANAL' AND UPPER(COALESCE(a.tipoRecorrencia, '')) = 'SEMANAL')
+                 OR (:recorrencia = 'QUINZENAL' AND UPPER(COALESCE(a.tipoRecorrencia, '')) = 'QUINZENAL')
+                 OR (:recorrencia = 'MENSAL' AND UPPER(COALESCE(a.tipoRecorrencia, '')) = 'MENSAL')
+                 OR (:recorrencia = 'AVULSO' AND (
+                        a.tipoRecorrencia IS NULL
+                     OR a.tipoRecorrencia = ''
+                     OR UPPER(a.tipoRecorrencia) = 'AVULSO'
+                     OR UPPER(a.tipoRecorrencia) NOT IN ('SEMANAL', 'QUINZENAL', 'MENSAL')
+                    ))
+              )
+            ORDER BY a.dataHoraInicio DESC
+            """)
+    List<BigDecimal> buscarUltimoValorProfissionalRecebePorRecorrencia(
+            @Param("profissionalId") Long profissionalId,
+            @Param("recorrencia") String recorrencia,
+            Pageable pageable
     );
 }

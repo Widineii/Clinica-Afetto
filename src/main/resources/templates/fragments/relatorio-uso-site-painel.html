@@ -59,20 +59,20 @@
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                 <button type="submit" class="btn btn-teal">Gerar</button>
             </form>
-            <a th:if="${relatorioGerado}"
+            <a th:if="${relatorioGerado == true}"
                th:href="@{/agendamentos/central-profissionais/uso-site/download(v=${versaoDownload})}"
                class="btn btn-outline-secondary"
                download="relatorio-uso-site.pdf">Baixar PDF</a>
         </div>
     </div>
 
-    <div th:if="${!relatorioGerado}" class="central-empty">
+    <div th:if="${relatorioGerado != true}" class="central-empty">
         <div class="central-empty__icon"><i class="fa-solid fa-chart-column" aria-hidden="true"></i></div>
         <h3 class="h5 mb-2">Relatorio ainda nao gerado</h3>
         <p class="text-muted mb-3">Use o botao <strong>Gerar</strong> para ver quem acessou o site e quantos agendamentos cada profissional tem.</p>
     </div>
 
-    <th:block th:if="${relatorioGerado and relatorio != null}">
+    <th:block th:if="${relatorioGerado == true and relatorio != null}">
         <div class="stat-grid mb-4">
             <div class="stat-box">
                 <h3 th:text="${relatorio.totalProfissionais}">0</h3>

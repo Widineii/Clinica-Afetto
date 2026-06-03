@@ -14,6 +14,7 @@ public class SerieAgendamentoLinha {
     private final String diaSemanaRotulo;
     private final List<SerieAgendamentoOcorrencia> proximasOcorrencias;
     private final String valoresConsultaResumo;
+    private final String valorProfissionalRecebeInput;
 
     public SerieAgendamentoLinha(
             String nomeCliente,
@@ -23,7 +24,7 @@ public class SerieAgendamentoLinha {
             String diaSemanaRotulo,
             List<SerieAgendamentoOcorrencia> proximasOcorrencias
     ) {
-        this(nomeCliente, salaNome, agendamentoReferenciaId, tipoRecorrencia, diaSemanaRotulo, proximasOcorrencias, null);
+        this(nomeCliente, salaNome, agendamentoReferenciaId, tipoRecorrencia, diaSemanaRotulo, proximasOcorrencias, null, null);
     }
 
     public SerieAgendamentoLinha(
@@ -35,6 +36,20 @@ public class SerieAgendamentoLinha {
             List<SerieAgendamentoOcorrencia> proximasOcorrencias,
             String valoresConsultaResumo
     ) {
+        this(nomeCliente, salaNome, agendamentoReferenciaId, tipoRecorrencia, diaSemanaRotulo,
+                proximasOcorrencias, valoresConsultaResumo, null);
+    }
+
+    public SerieAgendamentoLinha(
+            String nomeCliente,
+            String salaNome,
+            Long agendamentoReferenciaId,
+            String tipoRecorrencia,
+            String diaSemanaRotulo,
+            List<SerieAgendamentoOcorrencia> proximasOcorrencias,
+            String valoresConsultaResumo,
+            String valorProfissionalRecebeInput
+    ) {
         this.nomeCliente = nomeCliente;
         this.salaNome = salaNome;
         this.agendamentoReferenciaId = agendamentoReferenciaId;
@@ -42,6 +57,7 @@ public class SerieAgendamentoLinha {
         this.diaSemanaRotulo = diaSemanaRotulo;
         this.proximasOcorrencias = proximasOcorrencias;
         this.valoresConsultaResumo = valoresConsultaResumo;
+        this.valorProfissionalRecebeInput = valorProfissionalRecebeInput;
     }
 
     public String getRotuloCabecalho() {

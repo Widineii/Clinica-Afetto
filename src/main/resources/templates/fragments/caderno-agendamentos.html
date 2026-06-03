@@ -57,8 +57,14 @@
             </span>
         </div>
         <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
+        <p class="meus-agendamentos-serie-linha__dica mb-2">
+            Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas consultas pendentes — pagas não mudam.
+            Marque a próxima consulta quando o cliente voltar no mês seguinte.
+        </p>
         <div class="meus-agendamentos-serie-linha__acoes mt-2"
-             th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado) or agendamentoService.podeCancelarSerieMensal(agendamento, usuarioLogado)}">
+             th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado)
+                    or agendamentoService.podeCancelarSerieMensal(agendamento, usuarioLogado)
+                    or agendamentoService.podeAlterarValorProfissionalSerie(linha.agendamentoReferenciaId, usuarioLogado)}">
             <button th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado)}"
                     type="button"
                     class="btn btn-sm btn-outline-primary me-2 btn-abrir-remarcar-mensal"
@@ -77,6 +83,12 @@
                     Cancelar série
                 </button>
             </form>
+            <button th:if="${agendamentoService.podeAlterarValorProfissionalSerie(linha.agendamentoReferenciaId, usuarioLogado)}"
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary me-2 meus-agendamentos-alterar-valor-prof-btn"
+                    th:attr="data-agendamento-referencia-id=${linha.agendamentoReferenciaId},data-valor-atual=${agendamento.valorProfissionalRecebe != null ? T(com.clinica.sistema.util.MoedaBrasilUtil).formatarDecimal(agendamento.valorProfissionalRecebe) : ''},data-serie-rotulo=${linha.rotuloCabecalho}">
+                Alterar valor
+            </button>
         </div>
         <div th:if="${agendamentoService.podeMarcarProximaConsultaMensal(agendamento, usuarioLogado)}"
              class="remarcar-mensal-panel d-none w-100"
@@ -161,8 +173,9 @@
            class="agendamento-valores small text-muted mb-2"
            th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
         <p class="meus-agendamentos-serie-linha__dica mb-2">
-            Selecione uma data para cancelar, pagar ou realocar. Encerrar série remove todos os horários de uma vez.
-            Cancelar data: mais de 24h de antecedência e sem pagamento na data (só séries fixa/quinzenal).
+            Selecione uma data para cancelar, pagar ou realocar. Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas datas pendentes — pagas não mudam.
+            Encerrar série remove todos os horários de uma vez.
+            Cancelar data: mais de 24h de antecedência e sem pagamento na data (fixo e quinzenal).
         </p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
             <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
@@ -208,6 +221,12 @@
                     Encerrar série
                 </button>
             </form>
+            <button th:if="${agendamentoService.podeAlterarValorProfissionalSerie(serie.agendamentoReferenciaId, usuarioLogado)}"
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary ms-2 meus-agendamentos-alterar-valor-prof-btn"
+                    th:attr="data-agendamento-referencia-id=${serie.agendamentoReferenciaId},data-valor-atual=${serie.valorProfissionalRecebeInput},data-serie-rotulo=${serie.rotuloCabecalho}">
+                Alterar valor
+            </button>
         </div>
     </div>
 </div>

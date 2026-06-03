@@ -294,7 +294,10 @@ public class InfinitePayService {
         if (Boolean.TRUE.equals(agendamento.getIndicacaoDona())
                 && agendamento.getValorProfissionalRecebe() != null
                 && agendamento.getValorProfissionalRecebe().signum() > 0) {
-            return valorConsultaService.calcularTarifaClinicaIndicacao(agendamento.getValorProfissionalRecebe());
+            return valorConsultaService.calcularTarifaClinicaIndicacao(
+                    agendamento.getValorProfissionalRecebe(),
+                    agendamento.getProfissional()
+            );
         }
         return valorConsultaService.calcularTarifaClinicaPadrao(
                 agendamento.getSala(),

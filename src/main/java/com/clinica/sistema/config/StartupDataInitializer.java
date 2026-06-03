@@ -8,6 +8,7 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.RelatorioMensalArquivadoRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
@@ -46,6 +47,7 @@ public class StartupDataInitializer implements CommandLineRunner {
     private final RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository;
     private final PasswordEncoder passwordEncoder;
     private final SegurancaProperties segurancaProperties;
+    private final UsuarioService usuarioService;
 
     @Value("${app.seed-demo-data:false}")
     private boolean seedDemoData;
@@ -83,13 +85,17 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-test-user.exigir-troca-senha:#{null}}")
     private Boolean testUserExigirTrocaSenha;
 
+    @Value("${app.seed-valores-consulta-padrao:false}")
+    private boolean seedValoresConsultaPadrao;
+
     public StartupDataInitializer(
             SalaRepository salaRepository,
             UsuarioRepository usuarioRepository,
             AgendamentoRepository agendamentoRepository,
             RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository,
             PasswordEncoder passwordEncoder,
-            SegurancaProperties segurancaProperties
+            SegurancaProperties segurancaProperties,
+            UsuarioService usuarioService
     ) {
         this.salaRepository = salaRepository;
         this.usuarioRepository = usuarioRepository;
@@ -97,6 +103,7 @@ public class StartupDataInitializer implements CommandLineRunner {
         this.relatorioMensalArquivadoRepository = relatorioMensalArquivadoRepository;
         this.passwordEncoder = passwordEncoder;
         this.segurancaProperties = segurancaProperties;
+        this.usuarioService = usuarioService;
     }
 
     @Override
@@ -108,6 +115,9 @@ public class StartupDataInitializer implements CommandLineRunner {
         garantirAdmin();
         garantirUsuarioTeste();
         migrarSenhasLegadas();
+        if (seedValoresConsultaPadrao) {
+            usuarioService.preencherValoresConsultaPadraoOndeAusente();
+        }
 
         if (seedDemoData) {
             resetarBaseDemonstracao();

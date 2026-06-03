@@ -46,6 +46,7 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaUsuariosSeNecessario("valor_consulta_semanal", "DECIMAL(10,2)");
             adicionarColunaUsuariosSeNecessario("valor_consulta_quinzenal", "DECIMAL(10,2)");
             adicionarColunaUsuariosSeNecessario("valor_consulta_mensal", "DECIMAL(10,2)");
+            adicionarColunaUsuariosSeNecessario("percentual_taxa_indicacao", "DECIMAL(5,2)");
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");
             adicionarColunaSeNecessario("data_referencia_mes_pagamento", "DATE");
             adicionarColunaSeNecessario("historico_datas_mensal", "VARCHAR(120)");

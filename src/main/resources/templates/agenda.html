@@ -1666,8 +1666,9 @@
                                 </select>
                                 <div class="form-text">A administração ou a dona da clínica podem escolher qual profissional será vinculado ao agendamento.</div>
                                 <div class="form-text" id="hintValorProfissionalCadastrado">
-                                    Selecione o profissional: o campo <strong>Profissional recebe</strong> usa o valor cadastrado em
-                                    <strong>Central dos profissionais → Valores</strong>.
+                                    Selecione o profissional: <strong>Clínica cobra</strong> usa a taxa de sala cadastrada em
+                                    <strong>Central → Taxas de sala</strong>.
+                                    Informe em <strong>Profissional recebe</strong> quanto o cliente paga na consulta.
                                 </div>
                             </div>
                             <div th:unless="${isAdmin or isDonaClinica}">
@@ -1675,11 +1676,11 @@
                                 <input type="hidden" th:field="*{profissionalId}">
                                 <div id="valoresPadraoProfissionalLogado"
                                      class="d-none"
-                                     th:if="${exibirPainelValoresConsulta}"
-                                     th:attr="data-valor-avulso=${usuarioLogado.valorConsultaAvulso},
-                                              data-valor-semanal=${usuarioLogado.valorConsultaSemanal},
-                                              data-valor-quinzenal=${usuarioLogado.valorConsultaQuinzenal},
-                                              data-valor-mensal=${usuarioLogado.valorConsultaMensal}"></div>
+                                     th:if="${exibirPainelValoresConsulta and taxasSalaReferenciaLogado != null}"
+                                     th:attr="data-valor-avulso=${taxasSalaReferenciaLogado['AVULSO']},
+                                              data-valor-semanal=${taxasSalaReferenciaLogado['SEMANAL']},
+                                              data-valor-quinzenal=${taxasSalaReferenciaLogado['QUINZENAL']},
+                                              data-valor-mensal=${taxasSalaReferenciaLogado['MENSAL']}"></div>
                                 <div class="form-text">Agendamento vinculado automaticamente ao usuário conectado.</div>
                             </div>
                         </div>
@@ -1805,13 +1806,30 @@
                                 <strong>Líquido do profissional:</strong>
                                 <span id="valorLiquidoProfissional">—</span>
                             </p>
-                            <div class="valores-consulta-referencia" id="valoresConsultaHint">
-                                <p class="titulo mb-0">Taxas da clínica</p>
-                                <ul>
+                            <div class="valores-consulta-referencia" id="valoresConsultaHint"
+                                 th:attr="data-hint-servidor=${taxasSalaReferenciaLogado != null ? 'true' : 'false'}">
+                                <p class="titulo mb-0"
+                                   th:text="${taxasSalaReferenciaLogado != null ? 'Taxas de sala deste profissional' : 'Taxas da clínica (padrão)'}">
+                                    Taxas da clínica
+                                </p>
+                                <ul th:if="${taxasSalaReferenciaLogado != null}">
+                                    <li><strong>Avulso:</strong>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['AVULSO'], 1, 2, 'COMMA')}">35,00</span></li>
+                                    <li><strong>Semanal:</strong>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['SEMANAL'], 1, 2, 'COMMA')}">35,00</span></li>
+                                    <li><strong>Quinzenal:</strong>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['QUINZENAL'], 1, 2, 'COMMA')}">35,00</span></li>
+                                    <li><strong>Mensal:</strong>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['MENSAL'], 1, 2, 'COMMA')}">32,00</span>
+                                        (1 consulta; remarcar no mês seguinte ou próxima semana)</li>
+                                    <li><strong>Indicação:</strong>
+                                        <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['INDICACAO_PERCENT'], 1, 0, 'COMMA')}">30</span>% do valor da consulta</li>
+                                </ul>
+                                <ul th:unless="${taxasSalaReferenciaLogado != null}">
                                     <li><strong>Avulso:</strong> R$ 35</li>
                                     <li><strong>Semanal:</strong> R$ 35</li>
                                     <li><strong>Quinzenal:</strong> R$ 35</li>
-                                    <li><strong>Mensal:</strong> R$ 32 (1 consulta; remarcar no mês seguinte)</li>
+                                    <li><strong>Mensal:</strong> R$ 32 (1 consulta; remarcar no mês seguinte ou próxima semana)</li>
                                     <li><strong>Indicação:</strong> 30% do valor da consulta</li>
                                 </ul>
                             </div>
@@ -2315,6 +2333,42 @@
         </div>
     </div>
 </div>
+<div class="modal fade admin-modal" id="alterarValorProfissionalSerieModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="alterarValorProfissionalSerieTitulo">Alterar valor da consulta</h2>
+                    <p class="text-muted small mb-0" id="alterarValorProfissionalSerieResumo">Série</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="alterarValorProfissionalSerieForm" method="post">
+                <div class="modal-body px-4">
+                    <input type="hidden" name="_csrf" id="alterarValorProfissionalSerieCsrf">
+                    <p class="small text-muted mb-3">
+                        Atualiza o campo <strong>Prof.</strong> (quanto o cliente paga ao profissional) em todas as datas
+                        <strong>ainda não pagas</strong> desta série. O <strong>Clín.</strong> (taxa de sala) não muda;
+                        o <strong>Líq.</strong> é recalculado. Datas com ✓ (já pagas) permanecem iguais.
+                    </p>
+                    <label class="form-label" for="alterarValorProfissionalSerieValor">Novo valor Prof. (R$)</label>
+                    <input type="text"
+                           class="form-control valor-moeda-brl"
+                           id="alterarValorProfissionalSerieValor"
+                           name="valorProfissionalRecebe"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           required
+                           placeholder="0,00">
+                </div>
+                <div class="modal-footer px-4 pb-4 pt-0 border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar alteração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pos-agendamento(agendamento=${pagamentoAgendamento})}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
 
@@ -2627,9 +2681,14 @@
                 }
                 if (indicacaoInput && indicacaoInput.checked) {
                     if (recebe > 0) {
-                        return Math.round(recebe * 0.30 * 100) / 100;
+                        var pctIndicacao = percentualIndicacaoProfissionalAtual();
+                        return Math.round(recebe * (pctIndicacao / 100) * 100) / 100;
                     }
                     return 0;
+                }
+                var taxaProf = taxaSalaProfissionalAtual();
+                if (taxaProf != null && taxaProf > 0) {
+                    return taxaProf;
                 }
                 if (isSala4()) {
                     return 25;
@@ -2643,6 +2702,58 @@
                     }
                 }
                 return 35;
+            }
+
+            function taxaSalaProfissionalAtual() {
+                var profissionalId = idProfissionalAtual();
+                if (!profissionalId || profissionalSemValores(profissionalId)) {
+                    return null;
+                }
+                var recorrencia = recorrenciaAtual();
+
+                if (idProfissionalLogado != null && String(profissionalId) === String(idProfissionalLogado)) {
+                    var hiddenLogado = document.getElementById('valoresPadraoProfissionalLogado');
+                    var taxaLogada = valorDoElementoPadrao(hiddenLogado, recorrencia);
+                    if (taxaLogada != null && taxaLogada > 0) {
+                        return taxaLogada;
+                    }
+                }
+
+                var mapaProf = valoresConsultaPorProfissional[String(profissionalId)];
+                if (mapaProf) {
+                    var valorMapa = mapaProf[recorrencia];
+                    if (valorMapa == null && recorrencia !== 'AVULSO') {
+                        valorMapa = mapaProf.AVULSO;
+                    }
+                    if (valorMapa != null) {
+                        var numeroMapa = Number(valorMapa);
+                        if (Number.isFinite(numeroMapa) && numeroMapa > 0) {
+                            return numeroMapa;
+                        }
+                    }
+                }
+
+                if (selectProf && String(selectProf.value) === String(profissionalId)) {
+                    var taxaSelect = valorDoElementoPadrao(selectProf.options[selectProf.selectedIndex], recorrencia);
+                    if (taxaSelect != null && taxaSelect > 0) {
+                        return taxaSelect;
+                    }
+                }
+
+                return null;
+            }
+
+            function percentualIndicacaoProfissionalAtual() {
+                var profissionalId = idProfissionalAtual();
+                if (!profissionalId) {
+                    return 30;
+                }
+                var mapaProf = valoresConsultaPorProfissional[String(profissionalId)];
+                if (!mapaProf || mapaProf.INDICACAO_PERCENT == null) {
+                    return 30;
+                }
+                var pct = parseFloat(String(mapaProf.INDICACAO_PERCENT));
+                return isNaN(pct) || pct <= 0 ? 30 : pct;
             }
 
             function idProfissionalAtual() {
@@ -2687,43 +2798,96 @@
                 return Number.isFinite(numero) && numero > 0 ? numero : null;
             }
 
-            function aplicarValorPadraoProfissional() {
-                if (!recebeInput || modoLocacaoTurnoAtivo()) {
+            function aplicarValorPadraoProfissional(forcarHint) {
+                if (modoLocacaoTurnoAtivo()) {
+                    atualizarHintValoresProfissional(forcarHint);
                     return;
                 }
-                var profissionalId = idProfissionalAtual();
-                if (!profissionalId || profissionalSemValores(profissionalId)) {
+                var taxa = taxaSalaProfissionalAtual();
+                if (taxa == null || taxa <= 0 || !clinicaInput) {
+                    atualizarHintValoresProfissional(forcarHint);
                     return;
                 }
-                var recorrencia = recorrenciaAtual();
-                var valor = null;
+                if (!clinicaCobraBloqueadaEdicao()) {
+                    clinicaInput.value = formatMoney(taxa);
+                    clinicaManual = false;
+                }
+                if (recebeInput && recebeInput.value) {
+                    atualizarLiquido();
+                } else if (liquidoSpan) {
+                    liquidoSpan.textContent = '—';
+                }
+                atualizarHintValoresProfissional(forcarHint);
+            }
 
-                if (selectProf && String(selectProf.value) === String(profissionalId)) {
-                    valor = valorDoElementoPadrao(selectProf.options[selectProf.selectedIndex], recorrencia);
+            function formatMoneyHint(valor) {
+                var numero = Number(valor);
+                if (!Number.isFinite(numero) || numero <= 0) {
+                    return '—';
                 }
-                if (valor == null) {
+                return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function mapaTaxasDoElementoPadrao(elemento) {
+                if (!elemento) {
+                    return null;
+                }
+                return {
+                    AVULSO: valorDoElementoPadrao(elemento, 'AVULSO'),
+                    SEMANAL: valorDoElementoPadrao(elemento, 'SEMANAL'),
+                    QUINZENAL: valorDoElementoPadrao(elemento, 'QUINZENAL'),
+                    MENSAL: valorDoElementoPadrao(elemento, 'MENSAL')
+                };
+            }
+
+            function atualizarHintValoresProfissional(forcarAtualizacao) {
+                var hint = document.getElementById('valoresConsultaHint');
+                if (!hint) {
+                    return;
+                }
+                if (!forcarAtualizacao && hint.getAttribute('data-hint-servidor') === 'true') {
+                    return;
+                }
+                var titulo = hint.querySelector('.titulo');
+                var ul = hint.querySelector('ul');
+                if (!ul) {
+                    return;
+                }
+                var profId = idProfissionalAtual();
+                var mapa = profId ? valoresConsultaPorProfissional[String(profId)] : null;
+                if (idProfissionalLogado != null && String(profId) === String(idProfissionalLogado)) {
                     var hiddenValores = document.getElementById('valoresPadraoProfissionalLogado');
-                    if (hiddenValores && String(idProfissionalLogado) === String(profissionalId)) {
-                        valor = valorDoElementoPadrao(hiddenValores, recorrencia);
+                    var mapaHidden = mapaTaxasDoElementoPadrao(hiddenValores);
+                    if (mapaHidden && mapaHidden.AVULSO != null) {
+                        mapa = mapaHidden;
                     }
                 }
-                if (valor == null) {
-                    var mapaProf = valoresConsultaPorProfissional[String(profissionalId)];
-                    if (mapaProf) {
-                        valor = mapaProf[recorrencia];
-                        if (valor == null && recorrencia !== 'AVULSO') {
-                            valor = mapaProf.AVULSO;
-                        }
-                        valor = valor != null ? Number(valor) : null;
+                if (mapa && profId && !profissionalSemValores(profId)) {
+                    if (titulo) {
+                        titulo.textContent = 'Taxas de sala deste profissional';
                     }
-                }
-
-                if (valor == null || valor <= 0) {
+                    var pctIndicacao = mapa.INDICACAO_PERCENT != null ? Number(mapa.INDICACAO_PERCENT) : 30;
+                    if (!Number.isFinite(pctIndicacao) || pctIndicacao <= 0) {
+                        pctIndicacao = 30;
+                    }
+                    ul.innerHTML =
+                        '<li><strong>Avulso:</strong> R$ ' + formatMoneyHint(mapa.AVULSO) + '</li>' +
+                        '<li><strong>Semanal:</strong> R$ ' + formatMoneyHint(mapa.SEMANAL) + '</li>' +
+                        '<li><strong>Quinzenal:</strong> R$ ' + formatMoneyHint(mapa.QUINZENAL) + '</li>' +
+                        '<li><strong>Mensal:</strong> R$ ' + formatMoneyHint(mapa.MENSAL) +
+                        ' (1 consulta; remarcar no mês seguinte ou próxima semana)</li>' +
+                        '<li><strong>Indicação:</strong> ' + Math.round(pctIndicacao) + '% do valor da consulta</li>';
                     return;
                 }
-                recebeInput.value = formatMoney(valor);
-                clinicaManual = false;
-                atualizarClinicaAutomatica();
+                if (titulo) {
+                    titulo.textContent = 'Taxas da clínica (padrão)';
+                }
+                ul.innerHTML =
+                    '<li><strong>Avulso:</strong> R$ 35</li>' +
+                    '<li><strong>Semanal:</strong> R$ 35</li>' +
+                    '<li><strong>Quinzenal:</strong> R$ 35</li>' +
+                    '<li><strong>Mensal:</strong> R$ 32 (1 consulta; remarcar no mês seguinte ou próxima semana)</li>' +
+                    '<li><strong>Indicação:</strong> 30% do valor da consulta</li>';
             }
 
             function atualizarLiquido() {
@@ -2808,6 +2972,8 @@
                 }
                 if (exibirCompleto) {
                     aplicarValorPadraoProfissional();
+                } else {
+                    atualizarHintValoresProfissional();
                 }
             }
 
@@ -2908,7 +3074,7 @@
 
             if (recorrenciaSelect) {
                 recorrenciaSelect.addEventListener('change', function () {
-                    aplicarValorPadraoProfissional();
+                    aplicarValorPadraoProfissional(false);
                     atualizarHintRecorrenciaAgenda();
                     var contMensal = document.getElementById('continuacaoMensalAgenda');
                     if (contMensal) {
@@ -2936,6 +3102,7 @@
                     }
                     alternarPainelValores();
                     if (selectProf.value) {
+                        aplicarValorPadraoProfissional(true);
                         var blocoValores = document.getElementById('blocoValoresLucroProfissional');
                         if (blocoValores && typeof blocoValores.scrollIntoView === 'function') {
                             blocoValores.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2948,12 +3115,9 @@
                 recebeInput.value = formatMoneyInput(recebeInput.value);
             }
             if (clinicaInput && clinicaInput.value) {
-                clinicaManual = true;
                 clinicaInput.value = formatMoneyInput(clinicaInput.value);
-            } else if (clinicaInput) {
-                clinicaInput.value = '';
-                clinicaManual = false;
             }
+            clinicaManual = false;
 
             alternarPainelValores();
 
@@ -3222,6 +3386,103 @@
                 }
             }
             bootstrap.Modal.getOrCreateInstance(encerrarSerieModalEl).show();
+        }
+
+        var alterarValorProfModalEl = document.getElementById('alterarValorProfissionalSerieModal');
+        var alterarValorProfForm = document.getElementById('alterarValorProfissionalSerieForm');
+        var alterarValorProfInput = document.getElementById('alterarValorProfissionalSerieValor');
+        var alterarValorProfResumo = document.getElementById('alterarValorProfissionalSerieResumo');
+        var alterarValorProfCsrf = document.getElementById('alterarValorProfissionalSerieCsrf');
+
+        function parseMoedaAlterarValor(texto) {
+            if (texto == null || texto === '') {
+                return 0;
+            }
+            var normalizado = String(texto).trim();
+            if (/,\d{1,2}$/.test(normalizado)) {
+                normalizado = normalizado.replace(/\./g, '').replace(',', '.');
+            }
+            var numero = Number(normalizado);
+            return Number.isFinite(numero) ? numero : 0;
+        }
+
+        function formatarMoedaAlterarValor(valor) {
+            return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatarEntradaMoedaAlterarValor(texto) {
+            var numero = parseMoedaAlterarValor(texto);
+            return numero > 0 ? formatarMoedaAlterarValor(numero) : '';
+        }
+
+        if (alterarValorProfInput) {
+            alterarValorProfInput.addEventListener('input', function () {
+                var digitos = alterarValorProfInput.value.replace(/\D/g, '');
+                if (!digitos) {
+                    alterarValorProfInput.value = '';
+                    return;
+                }
+                alterarValorProfInput.value = formatarMoedaAlterarValor(parseInt(digitos, 10) / 100);
+            });
+        }
+
+        function copiarCsrfAlterarValorProf() {
+            var csrf = document.querySelector('input[name="_csrf"]');
+            if (csrf && alterarValorProfCsrf) {
+                alterarValorProfCsrf.name = csrf.name;
+                alterarValorProfCsrf.value = csrf.value;
+            }
+        }
+
+        function abrirModalAlterarValorProfissional(agendamentoId, rotuloSerie, valorAtual) {
+            if (!alterarValorProfModalEl || !alterarValorProfForm || !agendamentoId) {
+                return;
+            }
+            copiarCsrfAlterarValorProf();
+            alterarValorProfForm.action = basePath + 'agendamentos/' + agendamentoId + '/alterar-valor-profissional-serie';
+            if (alterarValorProfResumo) {
+                alterarValorProfResumo.textContent = rotuloSerie || 'Série';
+            }
+            if (alterarValorProfInput) {
+                alterarValorProfInput.value = formatarEntradaMoedaAlterarValor(valorAtual);
+            }
+            bootstrap.Modal.getOrCreateInstance(alterarValorProfModalEl).show();
+            if (alterarValorProfInput) {
+                window.setTimeout(function () {
+                    alterarValorProfInput.focus();
+                    alterarValorProfInput.select();
+                }, 150);
+            }
+        }
+
+        document.querySelectorAll('.meus-agendamentos-alterar-valor-prof-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                abrirModalAlterarValorProfissional(
+                    btn.getAttribute('data-agendamento-referencia-id'),
+                    btn.getAttribute('data-serie-rotulo'),
+                    btn.getAttribute('data-valor-atual')
+                );
+            });
+        });
+
+        if (alterarValorProfForm) {
+            alterarValorProfForm.addEventListener('submit', function (evento) {
+                var valorTexto = alterarValorProfInput ? alterarValorProfInput.value.trim() : '';
+                var valorNumerico = parseMoedaAlterarValor(valorTexto);
+                if (!valorTexto || valorNumerico <= 0) {
+                    evento.preventDefault();
+                    return;
+                }
+                if (alterarValorProfInput) {
+                    alterarValorProfInput.value = formatarMoedaAlterarValor(valorNumerico);
+                }
+                if (!window.confirm(
+                    'Alterar o valor Prof. para R$ ' + formatarMoedaAlterarValor(valorNumerico)
+                    + ' em todas as datas pendentes desta série? Datas já pagas não serão alteradas.'
+                )) {
+                    evento.preventDefault();
+                }
+            });
         }
 
         document.querySelectorAll('.meus-agendamentos-serie-linha').forEach(function (card) {
@@ -3598,6 +3859,54 @@
 
         atualizarCountdownsPagamento();
         window.setInterval(atualizarCountdownsPagamento, 1000);
+
+        (function initAtalhosAgenda() {
+            var nav = document.querySelector('.agenda-quick-nav');
+            if (!nav) {
+                return;
+            }
+            var links = nav.querySelectorAll('a[href^="#"]');
+
+            function marcarAtivo(idSecao) {
+                links.forEach(function (link) {
+                    var alvo = (link.getAttribute('href') || '').replace('#', '');
+                    var ativo = alvo === idSecao;
+                    link.classList.toggle('btn-primary', ativo);
+                    link.class.toggle('btn-outline-secondary', !ativo);
+                });
+            }
+
+            function irParaSecao(idSecao) {
+                var alvo = document.getElementById(idSecao);
+                if (!alvo) {
+                    return;
+                }
+                marcarAtivo(idSecao);
+                alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', '#' + idSecao);
+                }
+            }
+
+            links.forEach(function (link) {
+                link.addEventListener('click', function (evento) {
+                    evento.preventDefault();
+                    var idSecao = (link.getAttribute('href') || '').replace('#', '');
+                    if (idSecao) {
+                        irParaSecao(idSecao);
+                    }
+                });
+            });
+
+            var hashInicial = (window.location.hash || '').replace('#', '');
+            if (hashInicial && document.getElementById(hashInicial)) {
+                window.setTimeout(function () {
+                    irParaSecao(hashInicial);
+                }, 100);
+            } else {
+                marcarAtivo('grade-semanal');
+            }
+        })();
     });
 </script>
 <th:block th:replace="~{fragments/pagamento-consulta :: auto-sincronizar-pix-script}"></th:block>

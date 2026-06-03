@@ -1559,6 +1559,43 @@ class AgendamentoServiceTest {
     }
 
     @Test
+    void cardSerieExibeTaxaClinicaDaPrimeiraConsultaPendente() {
+        LocalDateTime pago = LocalDateTime.now().plusDays(2);
+        LocalDateTime pendente = pago.plusWeeks(1);
+        String serieId = "semanal-taxa-card";
+
+        Agendamento ocorrenciaPaga = agendamentoSerie(serieId, pago);
+        ocorrenciaPaga.setId(201L);
+        ocorrenciaPaga.setNomeCliente("Cliente");
+        ocorrenciaPaga.setSala(sala);
+        ocorrenciaPaga.setStatusPagamento(PagamentoStatus.PAGO);
+        ocorrenciaPaga.setValorProfissionalRecebe(new BigDecimal("170.00"));
+        ocorrenciaPaga.setValorClinicaCobra(new BigDecimal("35.00"));
+        ocorrenciaPaga.setValorLiquidoProfissional(new BigDecimal("135.00"));
+
+        Agendamento ocorrenciaPendente = agendamentoSerie(serieId, pendente);
+        ocorrenciaPendente.setId(202L);
+        ocorrenciaPendente.setNomeCliente("Cliente");
+        ocorrenciaPendente.setSala(sala);
+        ocorrenciaPendente.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        ocorrenciaPendente.setValorProfissionalRecebe(new BigDecimal("170.00"));
+        ocorrenciaPendente.setValorClinicaCobra(new BigDecimal("50.00"));
+        ocorrenciaPendente.setValorLiquidoProfissional(new BigDecimal("120.00"));
+
+        List<SerieAgendamentoLinha> linhas = agendamentoService.agruparSeriesAtivas(
+                List.of(ocorrenciaPaga, ocorrenciaPendente),
+                Agendamento::isFixoSemanal
+        );
+
+        assertEquals(1, linhas.size());
+        String resumo = linhas.get(0).getValoresConsultaResumo();
+        assertNotNull(resumo);
+        assertTrue(resumo.contains("50,00"), () -> "Resumo atual: " + resumo);
+        assertTrue(resumo.contains("120,00"), () -> "Resumo atual: " + resumo);
+        assertFalse(resumo.contains("135,00"), () -> "Nao deve usar liquido da consulta paga: " + resumo);
+    }
+
+    @Test
     void deveLimitarQuinzenalASeisDatasMesmoSemTipoRecorrenciaNoBanco() {
         LocalDateTime primeiro = LocalDateTime.now().plusWeeks(1);
         List<Agendamento> ocorrencias = new java.util.ArrayList<>();
