@@ -214,7 +214,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(paga, futura));
 
         var pendencias = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(profissional);
@@ -249,7 +249,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(bloqueadaHoje, futuraSemana));
 
         var semana = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(profissional);
@@ -511,7 +511,7 @@ class PagamentoConsultaServiceTest {
         indicacao.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
         indicacao.setDataHoraInicio(LocalDateTime.now().plusHours(2).withMinute(0).withSecond(0).withNano(0));
 
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(indicacao));
 
         assertTrue(pagamentoConsultaService.listarPagamentosPendentesProximoDia(profissional).isEmpty());
@@ -587,7 +587,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(hojePassado));
 
         assertTrue(pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(profissional).isEmpty());
@@ -614,7 +614,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(amanha, depoisDeAmanha));
 
         var exibicao = pagamentoConsultaService.listarPagamentosPendentesProximoDia(profissional);
@@ -652,7 +652,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(bloqueadoHoje, pagamentoAbertoAmanha, pagamentoFuturo));
 
         var pendencias = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(profissional);
@@ -1056,9 +1056,9 @@ class PagamentoConsultaServiceTest {
         when(authService.isDonaClinica(julia)).thenReturn(false);
         when(authService.isAdmin(carol)).thenReturn(false);
         when(authService.isDonaClinica(carol)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(1L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(pendenteJulia));
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(2L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(2L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of());
 
         var bloqueados = pagamentoConsultaService.listarProfissionaisBloqueadosPorPagamento();
@@ -1086,7 +1086,7 @@ class PagamentoConsultaServiceTest {
         when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(1L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(pendente));
 
         assertTrue(pagamentoConsultaService.profissionalEstaBloqueadoPorPagamento(1L));
@@ -1107,7 +1107,7 @@ class PagamentoConsultaServiceTest {
         pendente.setDataHoraInicio(dataPendente.atTime(9, 0));
         pendente.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
 
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(1L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(pendente));
 
         String mensagem = pagamentoConsultaService.mensagemBloqueioPagamento(julia);
@@ -1230,7 +1230,7 @@ class PagamentoConsultaServiceTest {
         when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(1L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(liberadoAtrasado));
 
         assertFalse(pagamentoConsultaService.podePagarAgora(liberadoAtrasado));
@@ -1413,7 +1413,7 @@ class PagamentoConsultaServiceTest {
             when(authService.isAdmin(julia)).thenReturn(false);
             when(authService.isDonaClinica(julia)).thenReturn(false);
             when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
-            when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(3L))
+            when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
                     .thenReturn(java.util.List.of(consulta));
 
             assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
@@ -1439,7 +1439,7 @@ class PagamentoConsultaServiceTest {
             when(authService.isAdmin(julia)).thenReturn(false);
             when(authService.isDonaClinica(julia)).thenReturn(false);
             when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
-            when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(3L))
+            when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
                     .thenReturn(java.util.List.of(consulta));
 
             assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal(julia));
@@ -1483,7 +1483,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(3L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(consulta));
 
         var consultas = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
@@ -1528,7 +1528,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(carol)).thenReturn(false);
         when(authService.isDonaClinica(carol)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(carol)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(4L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(4L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(consulta));
         when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
         when(infinitePayService.resolverValorTaxaClinica(consulta)).thenReturn(new BigDecimal("35.00"));
@@ -1573,7 +1573,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(anaPaula)).thenReturn(false);
         when(authService.isDonaClinica(anaPaula)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(7L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(7L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(doMesAnterior, doMesAtual));
 
         var consultas = pagamentoConsultaService.listarConsultasPagamentoMensal(anaPaula);
@@ -1622,7 +1622,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(anaPaula)).thenReturn(false);
         when(authService.isDonaClinica(anaPaula)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(anaPaula)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(7L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(7L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(consulta));
         when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
         when(infinitePayService.resolverValorTaxaClinica(consulta)).thenReturn(new BigDecimal("35.00"));
@@ -1805,7 +1805,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
-        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(java.util.List.of(amanha));
 
         var notificacao = pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional);
@@ -1847,7 +1847,7 @@ class PagamentoConsultaServiceTest {
             consulta.setProfissional(profissional);
             consulta.setDataHoraInicio(YearMonth.now().minusMonths(1).atDay(5).atTime(10, 0));
             consulta.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
-            when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+            when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                     .thenReturn(java.util.List.of(consulta));
 
             var notificacao = pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional);

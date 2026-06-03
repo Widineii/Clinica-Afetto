@@ -194,8 +194,6 @@ public class AgendamentoController {
             model.addAttribute("exibirBolinhaNotificacaoNovoAgendamento", false);
         }
 
-        service.renovarSeriesRecorrentesAtivasSeNecessario();
-
         boolean isAdmin = authService.isAdmin(usuarioLogado);
         boolean isDonaClinica = authService.isDonaClinica(usuarioLogado);
         boolean podeTrocarPropriaSenha = authService.podeTrocarPropriaSenha(usuarioLogado);
@@ -353,6 +351,7 @@ public class AgendamentoController {
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         popularControlePeriodicidadePropria(model, usuarioLogado);
         var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
+        var pagamentosPendentesProximoDia = pagamentoConsultaService.listarPagamentosPendentesProximoDia(usuarioLogado);
         model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
         model.addAttribute(
                 "pagamentoBloqueioAgendamentoId",
@@ -362,10 +361,7 @@ public class AgendamentoController {
                 "pagamentoBloqueioMensagem",
                 pagamentoConsultaService.mensagemBloqueioPagamento(usuarioLogado)
         );
-        model.addAttribute(
-                "totalMeusPagamentosPendentes",
-                pagamentoConsultaService.listarPagamentosPendentesProximoDia(usuarioLogado).size()
-        );
+        model.addAttribute("totalMeusPagamentosPendentes", pagamentosPendentesProximoDia.size());
         model.addAttribute(
                 "pagamentosAguardandoQr",
                 pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)

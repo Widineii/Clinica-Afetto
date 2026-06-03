@@ -106,11 +106,21 @@ public class AgendamentoService {
     }
 
     public List<Agendamento> buscarPorProfissional(Long profissionalId) {
-        LocalDateTime desde = LocalDateTime.now().minusMonths(MESES_HISTORICO_AGENDA);
-        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+        var janela = intervaloListaAgenda();
+        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
                 profissionalId,
-                desde
+                janela.desde(),
+                janela.ate()
         );
+    }
+
+    private record IntervaloListaAgenda(LocalDateTime desde, LocalDateTime ate) {
+    }
+
+    private IntervaloListaAgenda intervaloListaAgenda() {
+        LocalDateTime desde = LocalDateTime.now().minusMonths(MESES_HISTORICO_AGENDA);
+        LocalDateTime ate = LocalDate.now().plusWeeks(SEMANAS_FIXAS_PADRAO + 2).plusDays(1).atStartOfDay();
+        return new IntervaloListaAgenda(desde, ate);
     }
 
     public ProfissionalAgendamentosResumo montarResumoAgendamentos(Usuario profissional) {
@@ -118,7 +128,14 @@ public class AgendamentoService {
     }
 
     public ProfissionalAgendamentosResumo montarResumoAgendamentos(Usuario profissional, Usuario usuarioLogado) {
-        List<Agendamento> agendamentos = buscarPorProfissional(profissional.getId());
+        return montarResumoAgendamentos(profissional, buscarPorProfissional(profissional.getId()), usuarioLogado);
+    }
+
+    private ProfissionalAgendamentosResumo montarResumoAgendamentos(
+            Usuario profissional,
+            List<Agendamento> agendamentos,
+            Usuario usuarioLogado
+    ) {
         List<Agendamento> avulsos = listarProximosPorSerie(agendamentos, Agendamento::isAvulsoSemMensal);
         List<MensalAgendamentoLinha> mensais = agruparMensaisAtivos(agendamentos, usuarioLogado);
         List<SerieAgendamentoLinha> seriesFixas = agruparSeriesAtivas(
@@ -153,8 +170,26 @@ public class AgendamentoService {
             List<Usuario> profissionais,
             Usuario usuarioLogado
     ) {
+        if (profissionais == null || profissionais.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = profissionais.stream().map(Usuario::getId).toList();
+        var janela = intervaloListaAgenda();
+        List<Agendamento> carregados = repository
+                .findByProfissionalIdInAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                        ids,
+                        janela.desde(),
+                        janela.ate()
+                );
+        java.util.Map<Long, List<Agendamento>> porProfissional = carregados.stream()
+                .filter(agendamento -> agendamento.getProfissional() != null)
+                .collect(java.util.stream.Collectors.groupingBy(agendamento -> agendamento.getProfissional().getId()));
         return profissionais.stream()
-                .map(profissional -> montarResumoAgendamentos(profissional, usuarioLogado))
+                .map(profissional -> montarResumoAgendamentos(
+                        profissional,
+                        porProfissional.getOrDefault(profissional.getId(), List.of()),
+                        usuarioLogado
+                ))
                 .toList();
     }
 

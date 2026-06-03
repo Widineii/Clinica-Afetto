@@ -44,6 +44,9 @@ public class PagamentoConsultaService {
     private static final String URL_MEUS_PAGAMENTOS_DIA = "/agendamentos/meus-pagamentos#pagamentos-pendentes";
     private static final String URL_MEUS_PAGAMENTOS_SEMANA = "/agendamentos/meus-pagamentos#pagamentos-semana";
     private static final String URL_MEUS_PAGAMENTOS_MES = "/agendamentos/meus-pagamentos#pagamentos-mes";
+    /** Evita SELECT de todo o historico do profissional em cada tela. */
+    private static final int MESES_PASSADO_JANELA_PAGAMENTO = 4;
+    private static final int MESES_FUTURO_JANELA_PAGAMENTO = 3;
 
     private final AgendamentoRepository repository;
     private final UsuarioRepository usuarioRepository;
@@ -611,7 +614,7 @@ public class PagamentoConsultaService {
         LocalDate inicioSemana = periodo.inicio();
         LocalDate fimSemana = periodo.fim();
 
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId()).stream()
+        return agendamentosDoProfissionalNaJanelaPagamento(usuarioLogado.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !consultaJaFoiPaga(agendamento))
                 .filter(agendamento -> {
@@ -825,7 +828,7 @@ public class PagamentoConsultaService {
         }
         LocalDate hoje = LocalDate.now();
         LocalDate amanha = dataProximoDiaPagamentoPendente();
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId()).stream()
+        return agendamentosDoProfissionalNaJanelaPagamento(usuarioLogado.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !consultaJaFoiPaga(agendamento))
                 .filter(agendamento -> exibirNaListaPagamentosPendentes(agendamento, hoje, amanha))
@@ -922,7 +925,7 @@ public class PagamentoConsultaService {
     }
 
     private List<Agendamento> listarPendenciasDiariasParaBloqueio(Usuario usuarioLogado) {
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId()).stream()
+        return agendamentosDoProfissionalNaJanelaPagamento(usuarioLogado.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !consultaJaFoiPaga(agendamento))
                 .filter(this::aindaExigeBloqueioPorPagamentoDiario)
@@ -2332,9 +2335,11 @@ public class PagamentoConsultaService {
     }
 
     private List<Agendamento> listarConsultasComQrAtivo(Usuario profissional) {
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()).stream()
-                .filter(Agendamento::possuiQrPagamentoAtivo)
-                .toList();
+        return repository.findByProfissionalIdAndStatusPagamentoAndPagamentoExpiraEmAfterOrderByPagamentoExpiraEmAsc(
+                profissional.getId(),
+                PagamentoStatus.ESPERANDO_CONFIRMACAO,
+                LocalDateTime.now()
+        );
     }
 
     private boolean bloqueadoPorPagamentoSemanal(Usuario profissional) {
@@ -2376,7 +2381,7 @@ public class PagamentoConsultaService {
 
     private List<Agendamento> listarConsultasNaoPagasNoPeriodo(Usuario profissional, PeriodoSemanaPagamento periodo) {
         boolean usaReferenciaSemanal = resolverPeriodicidade(profissional) == PeriodicidadePagamento.SEMANAL;
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()).stream()
+        return agendamentosDoProfissionalNaJanelaPagamento(profissional.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !consultaJaFoiPaga(agendamento))
                 .filter(agendamento -> {
@@ -2393,7 +2398,7 @@ public class PagamentoConsultaService {
 
     private List<Agendamento> listarConsultasNaoPagasNoMes(Usuario profissional, YearMonth mesReferencia) {
         boolean usaReferenciaMensal = resolverPeriodicidade(profissional) == PeriodicidadePagamento.MENSAL;
-        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()).stream()
+        return agendamentosDoProfissionalNaJanelaPagamento(profissional.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
                 .filter(agendamento -> !consultaJaFoiPaga(agendamento))
                 .filter(agendamento -> {
@@ -2405,6 +2410,16 @@ public class PagamentoConsultaService {
                     return mesReferencia.equals(mesCobranca);
                 })
                 .toList();
+    }
+
+    private List<Agendamento> agendamentosDoProfissionalNaJanelaPagamento(Long profissionalId) {
+        LocalDateTime desde = LocalDate.now().minusMonths(MESES_PASSADO_JANELA_PAGAMENTO).atStartOfDay();
+        LocalDateTime ate = LocalDate.now().plusMonths(MESES_FUTURO_JANELA_PAGAMENTO).plusDays(1).atStartOfDay();
+        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                profissionalId,
+                desde,
+                ate
+        );
     }
 
     private int diaLimitePagamentoMensal() {
