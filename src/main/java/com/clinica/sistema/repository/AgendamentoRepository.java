@@ -81,6 +81,23 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataHoraInicio
     );
 
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.dataHoraInicio < :fim
+              AND a.dataHoraFim > :inicio
+              AND a.id <> :agendamentoId
+              AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.LIBERADO_FALTA_PAGAMENTO
+            ORDER BY a.id ASC
+            """)
+    Optional<Agendamento> findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
+            @Param("profissionalId") Long profissionalId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("agendamentoId") Long agendamentoId
+    );
+
     @Transactional
     @Modifying
     void deleteByProfissionalIdIn(List<Long> profissionalIds);
@@ -445,5 +462,23 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     int countMensalByProfissionalIdAndNomeCliente(
             @Param("profissionalId") Long profissionalId,
             @Param("nomeCliente") String nomeCliente
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a
+            FROM Agendamento a
+            WHERE a.telefoneCliente IS NOT NULL
+              AND TRIM(a.telefoneCliente) <> ''
+              AND a.whatsappLembreteEnviadoEm IS NULL
+              AND a.dataHoraInicio >= :inicioDia
+              AND a.dataHoraInicio < :fimDia
+              AND (a.statusPagamento IS NULL OR a.statusPagamento <> :statusLiberado)
+            ORDER BY a.dataHoraInicio ASC
+            """)
+    List<Agendamento> findPendentesLembreteWhatsappVespera(
+            @Param("inicioDia") LocalDateTime inicioDia,
+            @Param("fimDia") LocalDateTime fimDia,
+            @Param("statusLiberado") PagamentoStatus statusLiberado
     );
 }

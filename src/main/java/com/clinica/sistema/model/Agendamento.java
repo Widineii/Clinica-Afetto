@@ -37,6 +37,13 @@ public class Agendamento {
 
     private String nomeCliente;
 
+    /** WhatsApp do cliente (somente digitos, DDI 55) para lembrete na vespera. */
+    @Column(name = "telefone_cliente", length = 20)
+    private String telefoneCliente;
+
+    @Column(name = "whatsapp_lembrete_enviado_em")
+    private LocalDateTime whatsappLembreteEnviadoEm;
+
     // O Repository usa esse nome 'dataHoraInicio' para o 'AndDataHoraInicio'
     private LocalDateTime dataHoraInicio;
 

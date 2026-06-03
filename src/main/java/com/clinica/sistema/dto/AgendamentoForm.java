@@ -11,6 +11,8 @@ public class AgendamentoForm {
     private Long profissionalId;
     private Long salaId;
     private String nomeCliente;
+    /** Opcional: lembrete WhatsApp (Meta) na vespera da consulta. */
+    private String telefoneCliente;
     private LocalDate dataAtendimento;
     private LocalTime horarioAtendimento;
     /** Locação de sala: TURNO_MANHA (8h–13h) ou TURNO_TARDE (13h–18h). */

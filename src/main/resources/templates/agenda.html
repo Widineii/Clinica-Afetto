@@ -1677,6 +1677,21 @@
                         </div>
 
                         <div class="col-12">
+                            <label class="form-label" for="telefoneCliente">WhatsApp do cliente</label>
+                            <input th:field="*{telefoneCliente}"
+                                   type="tel"
+                                   class="form-control"
+                                   id="telefoneCliente"
+                                   inputmode="tel"
+                                   autocomplete="tel"
+                                   maxlength="20"
+                                   placeholder="(37) 99855-0994">
+                            <div class="form-text">
+                                Opcional. Com a API Meta ativa, envia lembrete na <strong>véspera</strong> da consulta (mesma regra do pagamento D-1).
+                            </div>
+                        </div>
+
+                        <div class="col-12">
                             <label class="form-label">Data</label>
                             <input th:field="*{dataAtendimento}" type="date" class="form-control" required>
                         </div>

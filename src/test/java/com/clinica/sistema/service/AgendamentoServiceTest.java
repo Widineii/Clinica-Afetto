@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -106,6 +107,9 @@ class AgendamentoServiceTest {
                     return agendamento != null
                             && !PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(agendamento.getStatusPagamento());
                 });
+        lenient().when(agendamentoRepository.findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
+                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
+        )).thenReturn(Optional.empty());
     }
 
     @Test
@@ -1712,6 +1716,35 @@ class AgendamentoServiceTest {
                 any(LocalDateTime.class),
                 eq(-1L)
         )).thenReturn(Optional.empty());
+    }
+
+    @Test
+    void serieSemanalDeveIgnorarHorarioLiberadoNaSegundaSemana() {
+        LocalDateTime inicioSerie = proximaDataUtil(LocalTime.of(9, 0));
+        AgendamentoForm form = novoForm(inicioSerie);
+        form.setRecorrencia("SEMANAL");
+
+        Agendamento liberado = new Agendamento();
+        liberado.setId(99L);
+        liberado.setSala(sala);
+        liberado.setProfissional(profissional);
+        liberado.setStatusPagamento(PagamentoStatus.LIBERADO_FALTA_PAGAMENTO);
+        liberado.setDataHoraInicio(inicioSerie.plusWeeks(1));
+        liberado.setDataHoraFim(inicioSerie.plusWeeks(1).plusHours(1));
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
+        when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
+        mockSalaLivre(sala.getId());
+        when(agendamentoRepository.findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+        )).thenReturn(Optional.empty());
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
+        verify(agendamentoRepository, times(12)).findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+        );
     }
 
     private void mockSalaOcupada(Long salaId) {

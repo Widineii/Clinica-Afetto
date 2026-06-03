@@ -24,6 +24,7 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.EncerramentoSerieRegistroRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.util.WhatsAppNumeroUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -813,6 +814,7 @@ public class AgendamentoService {
             novo.setProfissional(profissional);
             novo.setSala(sala);
             novo.setNomeCliente(form.getNomeCliente().trim());
+            novo.setTelefoneCliente(normalizarTelefoneCliente(form.getTelefoneCliente()));
             novo.setDataHoraInicio(inicioOcorrencia);
             novo.setDataHoraFim(fimOcorrencia);
             novo.setFixo(isRecorrenciaComSerie(recorrencia));
@@ -1220,9 +1222,15 @@ public class AgendamentoService {
 
         preservarReferenciasCobrancaNaRealocacao(agendamento);
 
+        LocalDate dataAnterior = agendamento.getDataHoraInicio() != null
+                ? agendamento.getDataHoraInicio().toLocalDate()
+                : null;
         agendamento.setSala(novaSala);
         agendamento.setDataHoraInicio(novoInicio);
         agendamento.setDataHoraFim(novoFim);
+        if (dataAnterior != null && !dataAnterior.equals(novoInicio.toLocalDate())) {
+            agendamento.setWhatsappLembreteEnviadoEm(null);
+        }
         return repository.save(agendamento);
     }
 
@@ -1531,6 +1539,17 @@ public class AgendamentoService {
         if (form.getNomeCliente() == null || form.getNomeCliente().isBlank()) {
             throw new RuntimeException("Informe o nome do cliente.");
         }
+        if (form.getTelefoneCliente() != null && !form.getTelefoneCliente().isBlank()
+                && normalizarTelefoneCliente(form.getTelefoneCliente()) == null) {
+            throw new RuntimeException("WhatsApp do cliente invalido. Use DDD + numero (ex.: 37998550994).");
+        }
+    }
+
+    private String normalizarTelefoneCliente(String telefoneBruto) {
+        if (telefoneBruto == null || telefoneBruto.isBlank()) {
+            return null;
+        }
+        return WhatsAppNumeroUtil.normalizarDestinatario(telefoneBruto).orElse(null);
     }
 
     private String normalizarRecorrencia(AgendamentoForm form) {
@@ -1729,12 +1748,13 @@ public class AgendamentoService {
             int indiceSemana,
             Long ignorarAgendamentoId
     ) {
-        repository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        Long idIgnorado = ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L;
+        repository.findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
                         profissional.getId(),
+                        inicio,
                         fim,
-                        inicio
+                        idIgnorado
                 )
-                .filter(conflito -> !mesmoAgendamento(conflito, ignorarAgendamentoId))
                 .ifPresent(conflito -> {
                     throw conflitoMensagem(
                             mensagemConflitoProfissional(profissional, conflito, usuarioLogado),
@@ -1743,8 +1763,6 @@ public class AgendamentoService {
                             indiceSemana
                     );
                 });
-
-        Long idIgnorado = ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L;
         boolean salaOcupada = repository.findFirstOcupacaoAtivaNoHorarioExceto(
                 sala.getId(),
                 inicio,
@@ -1754,12 +1772,6 @@ public class AgendamentoService {
         if (salaOcupada) {
             throw new RuntimeException(mensagemConflitoSala(sala, inicio));
         }
-    }
-
-    private boolean mesmoAgendamento(Agendamento agendamento, Long ignorarAgendamentoId) {
-        return ignorarAgendamentoId != null
-                && agendamento.getId() != null
-                && ignorarAgendamentoId.equals(agendamento.getId());
     }
 
     private String mensagemConflitoProfissional(Usuario profissional, Agendamento conflito, Usuario usuarioLogado) {
