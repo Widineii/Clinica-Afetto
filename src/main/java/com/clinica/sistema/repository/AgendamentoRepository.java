@@ -98,6 +98,42 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("agendamentoId") Long agendamentoId
     );
 
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.profissional.id = :profissionalId
+              AND a.dataHoraInicio < :fim
+              AND (a.dataHoraFim > :inicio OR a.dataHoraFim IS NULL)
+              AND a.id <> :agendamentoId
+              AND a.serieEncerradaEm IS NULL
+              AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.LIBERADO_FALTA_PAGAMENTO
+            ORDER BY a.dataHoraInicio ASC
+            """)
+    List<Agendamento> findCandidatosConflitoProfissionalNoHorario(
+            @Param("profissionalId") Long profissionalId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("agendamentoId") Long agendamentoId
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a FROM Agendamento a
+            WHERE a.sala.id = :salaId
+              AND a.dataHoraInicio < :fim
+              AND (a.dataHoraFim > :inicio OR a.dataHoraFim IS NULL)
+              AND a.id <> :agendamentoId
+              AND a.serieEncerradaEm IS NULL
+              AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.LIBERADO_FALTA_PAGAMENTO
+            ORDER BY a.dataHoraInicio ASC
+            """)
+    List<Agendamento> findCandidatosConflitoSalaNoHorario(
+            @Param("salaId") Long salaId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("agendamentoId") Long agendamentoId
+    );
+
     @Transactional
     @Modifying
     void deleteByProfissionalIdIn(List<Long> profissionalIds);

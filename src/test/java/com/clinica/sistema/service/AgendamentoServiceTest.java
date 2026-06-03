@@ -110,6 +110,18 @@ class AgendamentoServiceTest {
         lenient().when(agendamentoRepository.findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
                 anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
         )).thenReturn(Optional.empty());
+        lenient().when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
+                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
+        )).thenReturn(List.of());
+        lenient().when(agendamentoRepository.findCandidatosConflitoSalaNoHorario(
+                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
+        )).thenReturn(List.of());
+        lenient().when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(any(Agendamento.class)))
+                .thenAnswer(invocation -> {
+                    Agendamento agendamento = invocation.getArgument(0);
+                    return agendamento != null
+                            && !PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(agendamento.getStatusPagamento());
+                });
     }
 
     @Test
@@ -1710,12 +1722,12 @@ class AgendamentoServiceTest {
     }
 
     private void mockSalaLivre(Long salaId) {
-        when(agendamentoRepository.findFirstOcupacaoAtivaNoHorarioExceto(
+        when(agendamentoRepository.findCandidatosConflitoSalaNoHorario(
                 eq(salaId),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class),
                 eq(-1L)
-        )).thenReturn(Optional.empty());
+        )).thenReturn(List.of());
     }
 
     @Test
@@ -1736,15 +1748,41 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
-        )).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
-        verify(agendamentoRepository, times(12)).findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
+        verify(agendamentoRepository, times(12)).findCandidatosConflitoProfissionalNoHorario(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
         );
+    }
+
+    @Test
+    void serieSemanalNaoDeveConflitarComQrExpiradoNaSegundaSemana() {
+        LocalDateTime inicioSerie = proximaDataUtil(LocalTime.of(9, 0));
+        AgendamentoForm form = novoForm(inicioSerie);
+        form.setRecorrencia("SEMANAL");
+
+        Agendamento qrExpirado = new Agendamento();
+        qrExpirado.setId(88L);
+        qrExpirado.setSala(sala);
+        qrExpirado.setProfissional(profissional);
+        qrExpirado.setNomeCliente("Cliente antigo");
+        qrExpirado.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        qrExpirado.setDataHoraInicio(inicioSerie.plusWeeks(1));
+        qrExpirado.setDataHoraFim(inicioSerie.plusWeeks(1).plusHours(1));
+        qrExpirado.setPagamentoExpiraEm(LocalDateTime.now().minusMinutes(30));
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
+        when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
+        mockSalaLivre(sala.getId());
+        when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+        )).thenReturn(List.of(qrExpirado));
+        when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(qrExpirado)).thenReturn(false);
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
     }
 
     private void mockSalaOcupada(Long salaId) {

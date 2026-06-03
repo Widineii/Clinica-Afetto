@@ -807,7 +807,9 @@ public class AgendamentoService {
                     inicioOcorrencia,
                     fimOcorrencia,
                     isRecorrenciaComSerie(recorrencia),
-                    indice
+                    indice,
+                    null,
+                    novosAgendamentos
             );
 
             Agendamento novo = new Agendamento();
@@ -1735,7 +1737,7 @@ public class AgendamentoService {
             boolean fixo,
             int indiceSemana
     ) {
-        validarConflitos(sala, profissional, usuarioLogado, inicio, fim, fixo, indiceSemana, null);
+        validarConflitos(sala, profissional, usuarioLogado, inicio, fim, fixo, indiceSemana, null, List.of());
     }
 
     private void validarConflitos(
@@ -1748,13 +1750,23 @@ public class AgendamentoService {
             int indiceSemana,
             Long ignorarAgendamentoId
     ) {
+        validarConflitos(sala, profissional, usuarioLogado, inicio, fim, fixo, indiceSemana, ignorarAgendamentoId, List.of());
+    }
+
+    private void validarConflitos(
+            Sala sala,
+            Usuario profissional,
+            Usuario usuarioLogado,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            boolean fixo,
+            int indiceSemana,
+            Long ignorarAgendamentoId,
+            List<Agendamento> pendentesMesmoSalvamento
+    ) {
+        validarConflitosComPendentes(pendentesMesmoSalvamento, sala, profissional, usuarioLogado, inicio, fim);
         Long idIgnorado = ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L;
-        repository.findFirstOcupacaoProfissionalAtivaNoHorarioExceto(
-                        profissional.getId(),
-                        inicio,
-                        fim,
-                        idIgnorado
-                )
+        resolverConflitoProfissionalNoHorario(profissional.getId(), inicio, fim, idIgnorado)
                 .ifPresent(conflito -> {
                     throw conflitoMensagem(
                             mensagemConflitoProfissional(profissional, conflito, usuarioLogado),
@@ -1763,15 +1775,103 @@ public class AgendamentoService {
                             indiceSemana
                     );
                 });
-        boolean salaOcupada = repository.findFirstOcupacaoAtivaNoHorarioExceto(
-                sala.getId(),
-                inicio,
-                fim,
-                idIgnorado
-        ).isPresent();
-        if (salaOcupada) {
-            throw new RuntimeException(mensagemConflitoSala(sala, inicio));
+        resolverConflitoSalaNoHorario(sala.getId(), inicio, fim, idIgnorado)
+                .ifPresent(conflito -> {
+                    throw new RuntimeException(mensagemConflitoSala(sala, inicio, conflito));
+                });
+    }
+
+    private void validarConflitosComPendentes(
+            List<Agendamento> pendentesMesmoSalvamento,
+            Sala sala,
+            Usuario profissional,
+            Usuario usuarioLogado,
+            LocalDateTime inicio,
+            LocalDateTime fim
+    ) {
+        if (pendentesMesmoSalvamento == null || pendentesMesmoSalvamento.isEmpty()) {
+            return;
         }
+        for (Agendamento pendente : pendentesMesmoSalvamento) {
+            if (!intervalosSobrepoem(
+                    resolverInicioAgendamento(pendente),
+                    resolverFimAgendamento(pendente),
+                    inicio,
+                    fim
+            )) {
+                continue;
+            }
+            if (pendente.getProfissional() != null
+                    && profissional.getId() != null
+                    && profissional.getId().equals(pendente.getProfissional().getId())) {
+                throw new RuntimeException(
+                        mensagemConflitoProfissional(profissional, pendente, usuarioLogado)
+                                + " Conflito com outra data desta mesma serie que voce esta salvando."
+                );
+            }
+            if (pendente.getSala() != null
+                    && sala.getId() != null
+                    && sala.getId().equals(pendente.getSala().getId())) {
+                throw new RuntimeException(mensagemConflitoSala(sala, inicio, pendente));
+            }
+        }
+    }
+
+    private Optional<Agendamento> resolverConflitoProfissionalNoHorario(
+            Long profissionalId,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            Long ignorarAgendamentoId
+    ) {
+        return repository.findCandidatosConflitoProfissionalNoHorario(
+                        profissionalId,
+                        inicio,
+                        fim,
+                        ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L
+                )
+                .stream()
+                .filter(candidato -> intervalosSobrepoem(
+                        resolverInicioAgendamento(candidato),
+                        resolverFimAgendamento(candidato),
+                        inicio,
+                        fim
+                ))
+                .filter(pagamentoConsultaService::agendamentoOcupaHorarioParaNovaReserva)
+                .findFirst();
+    }
+
+    private Optional<Agendamento> resolverConflitoSalaNoHorario(
+            Long salaId,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            Long ignorarAgendamentoId
+    ) {
+        return repository.findCandidatosConflitoSalaNoHorario(
+                        salaId,
+                        inicio,
+                        fim,
+                        ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L
+                )
+                .stream()
+                .filter(candidato -> intervalosSobrepoem(
+                        resolverInicioAgendamento(candidato),
+                        resolverFimAgendamento(candidato),
+                        inicio,
+                        fim
+                ))
+                .filter(pagamentoConsultaService::agendamentoOcupaHorarioParaNovaReserva)
+                .findFirst();
+    }
+
+    private LocalDateTime resolverInicioAgendamento(Agendamento agendamento) {
+        return inicioHoraCheia(agendamento.getDataHoraInicio());
+    }
+
+    private LocalDateTime resolverFimAgendamento(Agendamento agendamento) {
+        if (agendamento.getDataHoraFim() != null) {
+            return agendamento.getDataHoraFim();
+        }
+        return resolverInicioAgendamento(agendamento).plusHours(1);
     }
 
     private String mensagemConflitoProfissional(Usuario profissional, Agendamento conflito, Usuario usuarioLogado) {
@@ -1783,14 +1883,28 @@ public class AgendamentoService {
                 && profissional.getId() != null
                 && profissional.getId().equals(usuarioLogado.getId());
 
+        String detalhe = detalheAgendamentoConflitante(conflito);
         if (agendandoParaSiMesmo) {
-            return "Você já tem um agendamento nesse horário na " + salaConflito + ".";
+            return "Você já tem um agendamento nesse horário na " + salaConflito + "." + detalhe;
         }
 
         String nomeProfissional = profissional.getNome() != null && !profissional.getNome().isBlank()
                 ? profissional.getNome()
                 : "Este profissional";
-        return nomeProfissional + " já tem um agendamento nesse horário na " + salaConflito + ".";
+        return nomeProfissional + " já tem um agendamento nesse horário na " + salaConflito + "." + detalhe;
+    }
+
+    private String detalheAgendamentoConflitante(Agendamento conflito) {
+        if (conflito == null || conflito.getDataHoraInicio() == null) {
+            return "";
+        }
+        String cliente = conflito.getNomeCliente() != null ? conflito.getNomeCliente().trim() : "—";
+        String dataHora = conflito.getDataHoraInicio()
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        String status = conflito.getStatusPagamento() != null
+                ? conflito.getStatusPagamento().name()
+                : "sem status";
+        return " Conflito com: " + cliente + " em " + dataHora + " (" + status + ").";
     }
 
     private RuntimeException conflitoMensagem(String mensagemBase, LocalDateTime inicio, boolean fixo, int indiceSemana) {
@@ -1804,6 +1918,10 @@ public class AgendamentoService {
     }
 
     private String mensagemConflitoSala(Sala sala, LocalDateTime inicio) {
+        return mensagemConflitoSala(sala, inicio, null);
+    }
+
+    private String mensagemConflitoSala(Sala sala, LocalDateTime inicio, Agendamento conflito) {
         String nomeSala = sala != null && sala.getNome() != null && !sala.getNome().isBlank()
                 ? sala.getNome()
                 : "Sala";
@@ -1816,7 +1934,8 @@ public class AgendamentoService {
                 + " já está ocupada em "
                 + inicio.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 + " " + periodo
-                + ". Não é possível salvar este horário.";
+                + ". Não é possível salvar este horário."
+                + detalheAgendamentoConflitante(conflito);
     }
 
     private Usuario carregarProfissional(Long profissionalId, Usuario usuarioLogado) {

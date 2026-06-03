@@ -1305,10 +1305,26 @@ public class PagamentoConsultaService {
     }
 
     public boolean ocupaVagaNaGrade(Agendamento agendamento) {
-        if (agendamento == null) {
+        return agendamentoOcupaHorarioParaNovaReserva(agendamento);
+    }
+
+    /** Mesma regra da grade: horarios liberados, QR expirado ou serie encerrada nao bloqueiam nova reserva. */
+    public boolean agendamentoOcupaHorarioParaNovaReserva(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return false;
+        }
+        if (agendamento.getSerieEncerradaEm() != null) {
             return false;
         }
         if (PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
+        if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())
+                && !agendamento.possuiQrPagamentoAtivo()) {
+            return false;
+        }
+        if (PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO.equals(agendamento.getStatusPagamento())
+                && agendamento.confirmacaoDinheiroVencida()) {
             return false;
         }
         return exibirNaGradeComoReservado(agendamento);
