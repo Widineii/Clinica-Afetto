@@ -531,6 +531,15 @@
             letter-spacing: 0.02em;
         }
 
+        .slot-empty-label--prof-outra-sala {
+            color: #b45309;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-align: center;
+            padding: 0.15rem;
+        }
+
         .slot-empty .slot-empty-label {
             display: flex;
             align-items: center;
@@ -2050,7 +2059,11 @@
                                                   class="slot-indicacao-pill slot-status-pill">Ind. 30%</span>
                                         </div>
                                     </div>
-                                    <div th:if="${item == null}" class="slot-empty-label">Disponível</div>
+                                    <div th:if="${item == null and celula != null and !#strings.isEmpty(celula.avisoProfissionalOcupadoOutraSala)}"
+                                         class="slot-empty-label slot-empty-label--prof-outra-sala"
+                                         th:text="${celula.avisoProfissionalOcupadoOutraSala}">Você já está na Sala 1</div>
+                                    <div th:if="${item == null and (celula == null or #strings.isEmpty(celula.avisoProfissionalOcupadoOutraSala))}"
+                                         class="slot-empty-label">Disponível</div>
                                 </td>
                             </tr>
                             </tbody>

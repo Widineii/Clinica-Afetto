@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.AgendaGradeCelula;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
 import com.clinica.sistema.dto.AgendamentoForm;
@@ -111,10 +112,10 @@ class AgendamentoServiceTest {
                 anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
         )).thenReturn(Optional.empty());
         lenient().when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
-                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
+                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong(), any(LocalDateTime.class)
         )).thenReturn(List.of());
         lenient().when(agendamentoRepository.findCandidatosConflitoSalaNoHorario(
-                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong()
+                anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), anyLong(), any(LocalDateTime.class)
         )).thenReturn(List.of());
         lenient().when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(any(Agendamento.class)))
                 .thenAnswer(invocation -> {
@@ -1726,7 +1727,8 @@ class AgendamentoServiceTest {
                 eq(salaId),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class),
-                eq(-1L)
+                eq(-1L),
+                any(LocalDateTime.class)
         )).thenReturn(List.of());
     }
 
@@ -1752,7 +1754,7 @@ class AgendamentoServiceTest {
 
         assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
         verify(agendamentoRepository, times(12)).findCandidatosConflitoProfissionalNoHorario(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
         );
     }
 
@@ -1777,7 +1779,7 @@ class AgendamentoServiceTest {
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
         when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
         )).thenReturn(List.of(qrExpirado));
         when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(qrExpirado)).thenReturn(false);
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -1792,6 +1794,49 @@ class AgendamentoServiceTest {
                 any(LocalDateTime.class),
                 eq(-1L)
         )).thenReturn(Optional.of(new Agendamento()));
+    }
+
+    @Test
+    void gradeDeveMostrarProfissionalOcupadoEmOutraSala() {
+        LocalDate terca = LocalDate.of(2026, 6, 16);
+        LocalDate inicioSemana = terca.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        Sala sala1 = new Sala();
+        sala1.setId(1L);
+        sala1.setNome("Sala 1");
+
+        Agendamento naSala1 = new Agendamento();
+        naSala1.setId(50L);
+        naSala1.setProfissional(profissional);
+        naSala1.setSala(sala1);
+        naSala1.setNomeCliente("Cliente Sala 1");
+        naSala1.setDataHoraInicio(LocalDateTime.of(terca, LocalTime.of(9, 0)));
+        naSala1.setDataHoraFim(LocalDateTime.of(terca, LocalTime.of(10, 0)));
+        naSala1.setStatusPagamento(PagamentoStatus.PAGO);
+
+        when(salaRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(sala, sala1));
+        when(agendamentoRepository.findBySalaIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
+        )).thenReturn(List.of());
+        when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
+        )).thenReturn(List.of(naSala1));
+        when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(naSala1)).thenReturn(true);
+
+        AgendaSalaView view = agendamentoService.montarAgendaSala(sala.getId(), terca, profissional.getId());
+
+        int indiceTerca = view.getDiasSemana().indexOf(terca);
+        AgendaSalaLinha linha9 = view.getLinhas().stream()
+                .filter(l -> l.getHorario().equals(LocalTime.of(9, 0)))
+                .findFirst()
+                .orElseThrow();
+        AgendaGradeCelula celula = linha9.getCelulas().get(indiceTerca);
+
+        assertEquals(inicioSemana, view.getInicioSemana());
+        assertNotNull(celula);
+        assertFalse(celula.isOcupada());
+        assertFalse(celula.isDisponivelParaNovaReserva());
+        assertTrue(celula.getAvisoProfissionalOcupadoOutraSala().contains("Sala 1"));
     }
 
     private LocalDateTime proximaDataUtil(LocalTime horario) {

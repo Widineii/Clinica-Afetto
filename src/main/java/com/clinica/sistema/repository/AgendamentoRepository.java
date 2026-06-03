@@ -111,17 +111,23 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             SELECT a FROM Agendamento a
             WHERE a.profissional.id = :profissionalId
               AND a.dataHoraInicio < :fim
-              AND (a.dataHoraFim > :inicio OR a.dataHoraFim IS NULL)
+              AND COALESCE(a.dataHoraFim, a.dataHoraInicio + 1 HOUR) > :inicio
               AND a.id <> :agendamentoId
               AND a.serieEncerradaEm IS NULL
               AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.LIBERADO_FALTA_PAGAMENTO
+              AND NOT (
+                    a.statusPagamento = com.clinica.sistema.model.PagamentoStatus.ESPERANDO_CONFIRMACAO
+                    AND a.pagamentoExpiraEm IS NOT NULL
+                    AND a.pagamentoExpiraEm < :agora
+              )
             ORDER BY a.dataHoraInicio ASC
             """)
     List<Agendamento> findCandidatosConflitoProfissionalNoHorario(
             @Param("profissionalId") Long profissionalId,
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim,
-            @Param("agendamentoId") Long agendamentoId
+            @Param("agendamentoId") Long agendamentoId,
+            @Param("agora") LocalDateTime agora
     );
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
@@ -129,17 +135,23 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             SELECT a FROM Agendamento a
             WHERE a.sala.id = :salaId
               AND a.dataHoraInicio < :fim
-              AND (a.dataHoraFim > :inicio OR a.dataHoraFim IS NULL)
+              AND COALESCE(a.dataHoraFim, a.dataHoraInicio + 1 HOUR) > :inicio
               AND a.id <> :agendamentoId
               AND a.serieEncerradaEm IS NULL
               AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.LIBERADO_FALTA_PAGAMENTO
+              AND NOT (
+                    a.statusPagamento = com.clinica.sistema.model.PagamentoStatus.ESPERANDO_CONFIRMACAO
+                    AND a.pagamentoExpiraEm IS NOT NULL
+                    AND a.pagamentoExpiraEm < :agora
+              )
             ORDER BY a.dataHoraInicio ASC
             """)
     List<Agendamento> findCandidatosConflitoSalaNoHorario(
             @Param("salaId") Long salaId,
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim,
-            @Param("agendamentoId") Long agendamentoId
+            @Param("agendamentoId") Long agendamentoId,
+            @Param("agora") LocalDateTime agora
     );
 
     @Transactional

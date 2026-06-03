@@ -331,7 +331,14 @@ public class AgendamentoController {
         LocalDate referenciaSemana = agendaDataSugerida(semana);
         java.util.Map<Long, Integer> salasOcupadasNaSemana = service.contarAgendamentosPorSalaNaSemana(referenciaSemana);
         Long salaIdGrade = service.resolverSalaIdParaGrade(salaId, referenciaSemana, salasOcupadasNaSemana);
-        var agendaSala = service.montarAgendaSala(salaIdGrade, referenciaSemana);
+        Long profissionalIdGrade = usuarioLogado.getId();
+        if (model.containsAttribute("agendamentoForm")) {
+            Object formAttr = model.getAttribute("agendamentoForm");
+            if (formAttr instanceof AgendamentoForm formGrade && formGrade.getProfissionalId() != null) {
+                profissionalIdGrade = formGrade.getProfissionalId();
+            }
+        }
+        var agendaSala = service.montarAgendaSala(salaIdGrade, referenciaSemana, profissionalIdGrade);
         Map<Long, String> gradeAcoesPorId = service.montarAcoesGradePorId(agendaSala, usuarioLogado);
         service.mensagemAgendamentosEmOutraSala(agendaSala.getSala().getId(), salasOcupadasNaSemana)
                 .ifPresent(msg -> model.addAttribute("avisoAgendamentoOutraSala", msg));

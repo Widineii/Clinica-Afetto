@@ -553,6 +553,10 @@ public class AgendamentoService {
     }
 
     public AgendaSalaView montarAgendaSala(Long salaId, LocalDate referencia) {
+        return montarAgendaSala(salaId, referencia, null);
+    }
+
+    public AgendaSalaView montarAgendaSala(Long salaId, LocalDate referencia, Long profissionalIdParaDisponibilidade) {
         Sala sala = buscarSalaPadrao(salaId);
         LocalDate inicioSemana = obterInicioSemana(referencia);
         LocalDate fimSemana = inicioSemana.plusDays(5);
@@ -573,7 +577,13 @@ public class AgendamentoService {
         for (LocalTime horario = HORA_ABERTURA; horario.isBefore(HORA_FECHAMENTO); horario = horario.plusHours(1)) {
             List<AgendaGradeCelula> porDia = new ArrayList<>();
             for (LocalDate dia : diasSemana) {
-                porDia.add(resolverCelulaGrade(agendamentosSemana, dia, horario));
+                porDia.add(resolverCelulaGrade(
+                        agendamentosSemana,
+                        dia,
+                        horario,
+                        sala.getId(),
+                        profissionalIdParaDisponibilidade
+                ));
             }
             linhas.add(new AgendaSalaLinha(horario, porDia));
         }
@@ -1804,7 +1814,7 @@ public class AgendamentoService {
         resolverConflitoProfissionalNoHorario(profissional.getId(), inicio, fim, idIgnorado)
                 .ifPresent(conflito -> {
                     throw conflitoMensagem(
-                            mensagemConflitoProfissional(profissional, conflito, usuarioLogado),
+                            mensagemConflitoProfissional(profissional, conflito, usuarioLogado, sala),
                             inicio,
                             fixo,
                             indiceSemana
@@ -1840,7 +1850,7 @@ public class AgendamentoService {
                     && profissional.getId() != null
                     && profissional.getId().equals(pendente.getProfissional().getId())) {
                 throw new RuntimeException(
-                        mensagemConflitoProfissional(profissional, pendente, usuarioLogado)
+                        mensagemConflitoProfissional(profissional, pendente, usuarioLogado, sala)
                                 + " Conflito com outra data desta mesma serie que voce esta salvando."
                 );
             }
@@ -1862,7 +1872,8 @@ public class AgendamentoService {
                         profissionalId,
                         inicio,
                         fim,
-                        ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L
+                        ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L,
+                        LocalDateTime.now()
                 )
                 .stream()
                 .filter(candidato -> intervalosSobrepoem(
@@ -1885,7 +1896,8 @@ public class AgendamentoService {
                         salaId,
                         inicio,
                         fim,
-                        ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L
+                        ignorarAgendamentoId != null ? ignorarAgendamentoId : -1L,
+                        LocalDateTime.now()
                 )
                 .stream()
                 .filter(candidato -> intervalosSobrepoem(
@@ -1909,7 +1921,12 @@ public class AgendamentoService {
         return resolverInicioAgendamento(agendamento).plusHours(1);
     }
 
-    private String mensagemConflitoProfissional(Usuario profissional, Agendamento conflito, Usuario usuarioLogado) {
+    private String mensagemConflitoProfissional(
+            Usuario profissional,
+            Agendamento conflito,
+            Usuario usuarioLogado,
+            Sala salaDestino
+    ) {
         String salaConflito = conflito.getSala() != null && conflito.getSala().getNome() != null
                 ? conflito.getSala().getNome()
                 : "outra sala";
@@ -1919,13 +1936,30 @@ public class AgendamentoService {
                 && profissional.getId().equals(usuarioLogado.getId());
 
         String detalhe = detalheAgendamentoConflitante(conflito);
+        boolean salaDestinoLivre = salaDestino != null
+                && salaDestino.getId() != null
+                && conflito.getSala() != null
+                && conflito.getSala().getId() != null
+                && !salaDestino.getId().equals(conflito.getSala().getId());
+        String nomeSalaDestino = salaDestino != null && salaDestino.getNome() != null
+                ? salaDestino.getNome()
+                : "esta sala";
+
         if (agendandoParaSiMesmo) {
+            if (salaDestinoLivre) {
+                return "A " + nomeSalaDestino + " está livre neste horário, mas você já tem consulta na "
+                        + salaConflito + "." + detalhe;
+            }
             return "Você já tem um agendamento nesse horário na " + salaConflito + "." + detalhe;
         }
 
         String nomeProfissional = profissional.getNome() != null && !profissional.getNome().isBlank()
                 ? profissional.getNome()
                 : "Este profissional";
+        if (salaDestinoLivre) {
+            return nomeProfissional + " já tem consulta na " + salaConflito
+                    + " neste horário (a " + nomeSalaDestino + " está livre)." + detalhe;
+        }
         return nomeProfissional + " já tem um agendamento nesse horário na " + salaConflito + "." + detalhe;
     }
 
@@ -2150,7 +2184,9 @@ public class AgendamentoService {
     private AgendaGradeCelula resolverCelulaGrade(
             List<Agendamento> agendamentosSemana,
             LocalDate dia,
-            LocalTime horario
+            LocalTime horario,
+            Long salaIdAtual,
+            Long profissionalIdParaDisponibilidade
     ) {
         Agendamento agendamento = agendamentosSemana.stream()
                 .filter(item -> pagamentoConsultaService.ocupaVagaNaGrade(item))
@@ -2168,7 +2204,25 @@ public class AgendamentoService {
                 })
                 .min(Comparator.comparing(Agendamento::getDataHoraInicio))
                 .orElse(null);
-        return AgendaGradeCelula.resolver(agendamento, dia, horario);
+        AgendaGradeCelula celula = AgendaGradeCelula.resolver(agendamento, dia, horario);
+        if (celula != null || profissionalIdParaDisponibilidade == null || salaIdAtual == null) {
+            return celula;
+        }
+        LocalDateTime inicioCelula = LocalDateTime.of(dia, horario);
+        LocalDateTime fimCelula = inicioCelula.plusHours(1);
+        return resolverConflitoProfissionalNoHorario(
+                profissionalIdParaDisponibilidade,
+                inicioCelula,
+                fimCelula,
+                -1L
+        )
+                .filter(conflito -> conflito.getSala() != null
+                        && conflito.getSala().getId() != null
+                        && !conflito.getSala().getId().equals(salaIdAtual))
+                .map(conflito -> AgendaGradeCelula.profissionalOcupadoEmOutraSala(
+                        conflito.getSala().getNome()
+                ))
+                .orElse(null);
     }
 
     private boolean intervalosSobrepoem(

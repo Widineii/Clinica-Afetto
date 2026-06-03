@@ -17,9 +17,22 @@ public class AgendaGradeCelula {
     private boolean blocoMultiHora;
     private boolean primeiraCelulaDoBloco;
     private boolean ultimaCelulaDoBloco;
+    /** Sala livre na grade atual, mas o profissional ja tem horario em outra sala. */
+    private String avisoProfissionalOcupadoOutraSala;
 
     public boolean isOcupada() {
         return agendamento != null;
+    }
+
+    public boolean isDisponivelParaNovaReserva() {
+        return agendamento == null
+                && (avisoProfissionalOcupadoOutraSala == null || avisoProfissionalOcupadoOutraSala.isBlank());
+    }
+
+    public static AgendaGradeCelula profissionalOcupadoEmOutraSala(String salaNome) {
+        String rotulo = salaNome != null && !salaNome.isBlank() ? salaNome : "outra sala";
+        return new AgendaGradeCelula(null, false, false, false,
+                "Você já está na " + rotulo);
     }
 
     public boolean isExibirDetalhesCompletos() {
@@ -46,11 +59,11 @@ public class AgendaGradeCelula {
         boolean primeira = inicioCelula.equals(inicioAg);
         boolean ultima = !fimAg.isAfter(fimCelula);
 
-        return new AgendaGradeCelula(agendamento, blocoMultiHora, primeira, ultima);
+        return new AgendaGradeCelula(agendamento, blocoMultiHora, primeira, ultima, null);
     }
 
     public static AgendaGradeCelula completa(Agendamento agendamento) {
-        return new AgendaGradeCelula(agendamento, false, true, true);
+        return new AgendaGradeCelula(agendamento, false, true, true, null);
     }
 
     private static LocalDateTime inicioHoraCheia(LocalDateTime dataHora) {
