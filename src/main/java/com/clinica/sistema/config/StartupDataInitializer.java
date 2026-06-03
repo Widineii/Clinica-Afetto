@@ -53,6 +53,9 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-carga-inicial-fixos:true}")
     private boolean seedCargaInicialFixos;
 
+    @Value("${app.seed-sincronizar-usuarios-padrao-on-startup:true}")
+    private boolean seedSincronizarUsuariosPadraoOnStartup;
+
     @Value("${app.seed-admin-login:}")
     private String adminLogin;
 
@@ -99,7 +102,9 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         garantirSalas();
-        sincronizarUsuariosPadrao();
+        if (seedSincronizarUsuariosPadraoOnStartup) {
+            sincronizarUsuariosPadrao();
+        }
         garantirAdmin();
         garantirUsuarioTeste();
         migrarSenhasLegadas();
@@ -181,13 +186,12 @@ public class StartupDataInitializer implements CommandLineRunner {
     private void garantirSalas() {
         List<String> salas = List.of("Sala 1", "Sala 2", "Sala 3", "Sala 4");
         for (String nomeSala : salas) {
-            boolean existe = salaRepository.findAllByOrderByNomeAsc().stream()
-                    .anyMatch(sala -> sala.getNome().equalsIgnoreCase(nomeSala));
-            if (!existe) {
-                Sala sala = new Sala();
-                sala.setNome(nomeSala);
-                salaRepository.save(sala);
+            if (salaRepository.existsByNomeIgnoreCase(nomeSala)) {
+                continue;
             }
+            Sala sala = new Sala();
+            sala.setNome(nomeSala);
+            salaRepository.save(sala);
         }
     }
 

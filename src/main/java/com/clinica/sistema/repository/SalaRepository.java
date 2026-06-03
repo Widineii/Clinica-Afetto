@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface SalaRepository extends JpaRepository<Sala, Long> {
     List<Sala> findAllByOrderByNomeAsc();
+
+    boolean existsByNomeIgnoreCase(String nome);
 }

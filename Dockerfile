@@ -20,4 +20,5 @@ ENV PORT=10000
 
 EXPOSE 10000
 
-ENTRYPOINT ["java","-Xms256m","-Xmx768m","-jar","/app/app.jar"]
+# Railway: defina JAVA_OPTS no servico (ex.: -Xms512m -Xmx1024m) conforme o plano pago.
+ENTRYPOINT ["sh","-c","exec java ${JAVA_OPTS:--Xms512m -Xmx1024m} -jar /app/app.jar"]
