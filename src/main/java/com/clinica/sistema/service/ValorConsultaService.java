@@ -102,9 +102,6 @@ public class ValorConsultaService {
         if (TurnoLocacao.isTurno(form.getTurnoLocacao())) {
             return CLINICA_TURNO_LOCACAO;
         }
-        if (form.getValorClinicaCobra() != null && form.getValorClinicaCobra().signum() > 0) {
-            return normalizarValor(form.getValorClinicaCobra(), "Informe quanto a clinica cobra nesta sessao.");
-        }
         return resolverTaxaSalaProfissional(profissional, sala, recorrencia, form.getTurnoLocacao());
     }
 
@@ -145,9 +142,6 @@ public class ValorConsultaService {
         }
         if (TurnoLocacao.isTurno(form.getTurnoLocacao())) {
             return CLINICA_TURNO_LOCACAO;
-        }
-        if (form.getValorClinicaCobra() != null && form.getValorClinicaCobra().signum() > 0) {
-            return normalizarValor(form.getValorClinicaCobra(), "Informe quanto a clinica cobra nesta sessao.");
         }
         return calcularTarifaClinicaPadrao(sala, recorrencia, form.getTurnoLocacao());
     }

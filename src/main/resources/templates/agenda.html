@@ -1431,9 +1431,19 @@
             padding: 10px 12px;
         }
 
+        #grade-semanal,
+        #novo-agendamento,
+        #meus-agendamentos,
+        #agenda-do-dia,
+        #agendamentos-profissionais,
+        #pagamentos-pendentes {
+            scroll-margin-top: 1.25rem;
+        }
+
         .agenda-quick-nav {
             display: flex;
             flex-wrap: wrap;
+            align-items: center;
             gap: 12px;
             margin-top: 0.25rem;
         }
@@ -1821,6 +1831,81 @@
            href="#pagamentos-pendentes"
            class="btn btn-sm btn-warning">Pagamentos pendentes</a>
     </nav>
+    <script>
+        (function initAtalhosAgendaNav() {
+            function marcarAtivo(nav, links, idSecao) {
+                links.forEach(function (link) {
+                    if (link.classList.contains('btn-warning')) {
+                        return;
+                    }
+                    var alvo = (link.getAttribute('href') || '').replace('#', '');
+                    var ativo = alvo === idSecao;
+                    link.classList.toggle('btn-primary', ativo);
+                    link.classList.toggle('btn-outline-secondary', !ativo);
+                });
+            }
+
+            function irParaSecao(idSecao, nav, links) {
+                var alvo = idSecao ? document.getElementById(idSecao) : null;
+                if (!alvo) {
+                    return false;
+                }
+                marcarAtivo(nav, links, idSecao);
+                alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', '#' + idSecao);
+                } else {
+                    window.location.hash = idSecao;
+                }
+                return true;
+            }
+
+            function ligar() {
+                var nav = document.querySelector('.agenda-quick-nav');
+                if (!nav) {
+                    return;
+                }
+                var links = nav.querySelectorAll('a[href^="#"]');
+                if (!links.length) {
+                    return;
+                }
+
+                links.forEach(function (link) {
+                    link.addEventListener('click', function (evento) {
+                        var idSecao = (link.getAttribute('href') || '').replace('#', '');
+                        if (!idSecao) {
+                            return;
+                        }
+                        if (irParaSecao(idSecao, nav, links)) {
+                            evento.preventDefault();
+                        }
+                    });
+                });
+
+                window.addEventListener('hashchange', function () {
+                    var idHash = (window.location.hash || '').replace('#', '');
+                    if (idHash && document.getElementById(idHash)) {
+                        irParaSecao(idHash, nav, links);
+                    }
+                });
+
+                var hashInicial = (window.location.hash || '').replace('#', '');
+                if (hashInicial && document.getElementById(hashInicial)) {
+                    window.setTimeout(function () {
+                        irParaSecao(hashInicial, nav, links);
+                    }, 80);
+                } else {
+                    marcarAtivo(nav, links, 'grade-semanal');
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', ligar);
+            } else {
+                ligar();
+            }
+        })();
+    </script>
 
     <div class="row g-4 align-items-start agenda-main">
         <div class="col-12 col-xl-4 agenda-sidebar">
@@ -2011,7 +2096,14 @@
                                                placeholder="0,00"
                                                class="form-control valor-moeda-brl"
                                                id="valorClinicaCobra"
+                                               th:readonly="${!clinicaCobraEditavelNaAgenda}"
+                                               th:classappend="${!clinicaCobraEditavelNaAgenda} ? ' valor-clinica-bloqueado' : ''"
+                                               th:title="${!clinicaCobraEditavelNaAgenda} ? 'Taxa definida pela clínica; alteração na Central (Polyana).' : null"
                                                required>
+                                        <p class="form-text small text-muted mb-0"
+                                           th:if="${!clinicaCobraEditavelNaAgenda}">
+                                            Taxa fixa cadastrada pela clínica. A Polyana altera em Central → taxas de sala.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -2084,7 +2176,8 @@
                                 <strong>ainda não estiver paga</strong>.
                             </li>
                             <li class="mb-1">
-                                <strong>Avulso:</strong> paga na hora ao marcar — <strong>não dá para cancelar</strong> pelo app.
+                                <strong>Avulso:</strong> em <strong>Meus agendamentos</strong>, use <strong>Cancelar</strong>
+                                enquanto <strong>não tiver pago</strong> (errou data ou desistiu).
                             </li>
                             <li>
                                 <strong>Já pagou?</strong> É locação de sala, <strong>sem reembolso</strong>.
@@ -2830,6 +2923,7 @@
     var idsProfissionaisSemValores = /*[[${idsProfissionaisSemValores}]]*/ [];
     var valoresConsultaPorProfissional = {};
     var idProfissionalLogado = /*[[${exibirPainelValoresConsulta ? usuarioLogado.id : null}]]*/ null;
+    var clinicaCobraSomenteLeitura = /*[[${!clinicaCobraEditavelNaAgenda}]]*/ true;
     var podeAcompanharGanhosConsultaPropria = /*[[${podeAcompanharGanhosConsultaPropria}]]*/ false;
     var idProfissionalPolyana = /*[[${podeAcompanharGanhosConsultaPropria ? usuarioLogado.id : null}]]*/ null;
 
@@ -3026,6 +3120,9 @@
             }
 
             function clinicaCobraBloqueadaEdicao() {
+                if (clinicaCobraSomenteLeitura) {
+                    return true;
+                }
                 return modoLocacaoTurnoAtivo()
                         || (indicacaoInput && indicacaoInput.checked);
             }
@@ -4225,54 +4322,6 @@
 
         atualizarCountdownsPagamento();
         window.setInterval(atualizarCountdownsPagamento, 1000);
-
-        (function initAtalhosAgenda() {
-            var nav = document.querySelector('.agenda-quick-nav');
-            if (!nav) {
-                return;
-            }
-            var links = nav.querySelectorAll('a[href^="#"]');
-
-            function marcarAtivo(idSecao) {
-                links.forEach(function (link) {
-                    var alvo = (link.getAttribute('href') || '').replace('#', '');
-                    var ativo = alvo === idSecao;
-                    link.classList.toggle('btn-primary', ativo);
-                    link.class.toggle('btn-outline-secondary', !ativo);
-                });
-            }
-
-            function irParaSecao(idSecao) {
-                var alvo = document.getElementById(idSecao);
-                if (!alvo) {
-                    return;
-                }
-                marcarAtivo(idSecao);
-                alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                if (window.history && window.history.replaceState) {
-                    window.history.replaceState(null, '', '#' + idSecao);
-                }
-            }
-
-            links.forEach(function (link) {
-                link.addEventListener('click', function (evento) {
-                    evento.preventDefault();
-                    var idSecao = (link.getAttribute('href') || '').replace('#', '');
-                    if (idSecao) {
-                        irParaSecao(idSecao);
-                    }
-                });
-            });
-
-            var hashInicial = (window.location.hash || '').replace('#', '');
-            if (hashInicial && document.getElementById(hashInicial)) {
-                window.setTimeout(function () {
-                    irParaSecao(hashInicial);
-                }, 100);
-            } else {
-                marcarAtivo('grade-semanal');
-            }
-        })();
     });
 </script>
 <th:block th:replace="~{fragments/pagamento-consulta :: auto-sincronizar-pix-script}"></th:block>

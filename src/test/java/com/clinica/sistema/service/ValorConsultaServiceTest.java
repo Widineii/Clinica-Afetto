@@ -167,6 +167,22 @@ class ValorConsultaServiceTest {
     }
 
     @Test
+    void aplicarValoresDeveIgnorarTaxaManualNoFormulario() {
+        Usuario julia = new Usuario();
+        julia.setValorConsultaAvulso(new BigDecimal("50.00"));
+
+        AgendamentoForm form = new AgendamentoForm();
+        form.setValorProfissionalRecebe(new BigDecimal("200.00"));
+        form.setValorClinicaCobra(new BigDecimal("10.00"));
+        var agendamento = new com.clinica.sistema.model.Agendamento();
+
+        service.aplicarValores(agendamento, form, sala1, "AVULSO", true, julia);
+
+        assertEquals(new BigDecimal("50.00"), agendamento.getValorClinicaCobra());
+        assertEquals(new BigDecimal("150.00"), agendamento.getValorLiquidoProfissional());
+    }
+
+    @Test
     void aplicarValoresDeveUsarTaxaSalaCadastradaQuandoClinicaNaoInformada() {
         Usuario julia = new Usuario();
         julia.setValorConsultaAvulso(new BigDecimal("40.00"));

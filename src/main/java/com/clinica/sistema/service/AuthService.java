@@ -126,6 +126,11 @@ public class AuthService {
         return isDonaClinica(usuario) && !isAdmin(usuario);
     }
 
+    /** Taxa de sala no formulario da agenda: somente leitura; alteracao na Central (Polyana). */
+    public boolean clinicaCobraEditavelNaAgenda(Usuario usuario) {
+        return false;
+    }
+
     /** Lista da aba Valores: profissionais comuns, sem admin, Polyana nem perfil de teste. */
     public boolean elegivelParaGestaoValoresConsulta(Usuario profissional) {
         if (profissional == null || isAdmin(profissional)) {

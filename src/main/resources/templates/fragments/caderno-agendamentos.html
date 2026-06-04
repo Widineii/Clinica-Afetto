@@ -19,16 +19,6 @@
             <div th:replace="~{fragments/caderno-agendamentos :: valores-linha(agendamento=${agendamento})}"></div>
             <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
         </div>
-        <div class="meus-agendamentos-avulso-linha__acoes"
-             th:if="${agendamentoService.podeCancelarAgendamento(agendamento, usuarioLogado)}">
-            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                <button type="submit" class="btn btn-sm btn-outline-danger"
-                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
-                    Cancelar
-                </button>
-            </form>
-        </div>
     </div>
 </div>
 

@@ -745,7 +745,7 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void profissionalNaoPodeCancelarAgendamentoAvulso() {
+    void profissionalPodeCancelarAvulsoNaoPago() {
         Agendamento agendamento = new Agendamento();
         agendamento.setId(1L);
         agendamento.setProfissional(profissional);
@@ -755,13 +755,34 @@ class AgendamentoServiceTest {
 
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(pagamentoConsultaService.consultaJaFoiPaga(agendamento)).thenReturn(false);
+        when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
+
+        assertTrue(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
+        assertDoesNotThrow(() -> agendamentoService.cancelar(1L, profissional));
+        verify(agendamentoRepository).deleteById(1L);
+    }
+
+    @Test
+    void profissionalNaoPodeCancelarAvulsoJaPago() {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(1L);
+        agendamento.setProfissional(profissional);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
+        agendamento.setTipoRecorrencia("AVULSO");
+        agendamento.setFixo(false);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(pagamentoConsultaService.consultaJaFoiPaga(agendamento)).thenReturn(true);
         when(agendamentoRepository.findById(1L)).thenReturn(Optional.of(agendamento));
 
         assertFalse(agendamentoService.podeCancelarAgendamento(agendamento, profissional));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.cancelar(1L, profissional));
 
-        assertTrue(exception.getMessage().contains("avulsos"));
+        assertTrue(exception.getMessage().contains("já pago"));
         verify(agendamentoRepository, never()).deleteById(any());
     }
 

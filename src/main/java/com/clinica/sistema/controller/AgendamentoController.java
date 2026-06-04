@@ -310,6 +310,10 @@ public class AgendamentoController {
                 "exibirPainelValoresConsulta",
                 !authService.profissionalIgnoraValoresEPagamento(usuarioLogado) || podeGerenciarEquipe
         );
+        model.addAttribute(
+                "clinicaCobraEditavelNaAgenda",
+                authService.clinicaCobraEditavelNaAgenda(usuarioLogado)
+        );
         model.addAttribute("agendamentos", agendamentos);
         model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
         model.addAttribute("linhasMensaisResumo", linhasMensaisResumo);

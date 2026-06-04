@@ -1530,9 +1530,14 @@ public class AgendamentoService {
         if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
             return false;
         }
-        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)
-                && isRecorrenciaUnica(recorrenciaDoAgendamento(agendamento))) {
-            return false;
+        String recorrencia = recorrenciaDoAgendamento(agendamento);
+        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
+            if (RECORRENCIA_AVULSO.equals(recorrencia)) {
+                return !pagamentoConsultaService.consultaJaFoiPaga(agendamento);
+            }
+            if (RECORRENCIA_MENSAL.equals(recorrencia)) {
+                return false;
+            }
         }
         if (pagamentoConsultaService.consultaJaFoiPaga(agendamento)) {
             return false;
@@ -1946,10 +1951,15 @@ public class AgendamentoService {
         if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
             throw new RuntimeException("Você só pode cancelar os seus próprios agendamentos.");
         }
-        if (RECORRENCIA_AVULSO.equals(recorrenciaDoAgendamento(agendamento))) {
-            throw new RuntimeException(
-                    "Agendamentos avulsos não podem ser cancelados pelo app. O pagamento é feito na hora da marcação."
-            );
+        String recorrencia = recorrenciaDoAgendamento(agendamento);
+        if (RECORRENCIA_AVULSO.equals(recorrencia)) {
+            if (pagamentoConsultaService.consultaJaFoiPaga(agendamento)) {
+                throw new RuntimeException(
+                        "Não é possível cancelar um horário já pago. Locação de sala sem reembolso."
+                );
+            }
+            validarAgendamentoParaAcaoGestao(agendamento);
+            return;
         }
         if (pagamentoConsultaService.consultaJaFoiPaga(agendamento)) {
             throw new RuntimeException(

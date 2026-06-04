@@ -129,6 +129,18 @@
             Realocar
         </a>
 
+        <form th:if="${agendamentoService != null and usuarioLogado != null and agendamentoService.podeCancelarAgendamento(agendamento, usuarioLogado) and agendamento.id != null}"
+              th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}"
+              method="post"
+              class="d-inline">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Cancelar este agendamento? A reserva será removida.');">
+                Cancelar
+            </button>
+        </form>
+
         <form th:if="${agendamento.possuiQrPagamentoAtivo() and pagamentoService.modoTestePagamento()}"
               th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
               method="post"
