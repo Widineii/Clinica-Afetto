@@ -327,7 +327,7 @@
                         <h3 class="manual-demo-video__title">Pagar com PIX</h3>
                         <p class="manual-demo-video__text">
                             Em <strong>Meus pagamentos</strong>, quite semanal ou mensal conforme o prazo da clínica
-                            (fim de semana ou do dia 01 ao 15).
+                            (fim de semana ou do dia 01 ao 10 do mês vigente).
                         </p>
                     </div>
                     <div class="manual-demo-video__slide" data-slide th:unless="${ehProfissional}">
@@ -412,7 +412,7 @@
                             Sua agenda fica liberada até <strong>domingo</strong>; o PIX da semana é no <strong>sábado ou domingo</strong>.
                         </li>
                         <li th:if="${ehProfissional and pagamentoMensal}">
-                            Você agenda o mês todo; o PIX do mês anterior fica disponível do <strong>dia 01 ao 15</strong>.
+                            Você agenda o mês todo; o PIX do <strong>mês vigente</strong> fica disponível do <strong>dia 01 ao 10</strong>.
                         </li>
                         <li th:unless="${ehProfissional}">Cada profissional segue o prazo de pagamento definido pela Polyana na Central.</li>
                     </ul>
@@ -424,7 +424,7 @@
                         Se passar de <strong>domingo</strong> sem pagar a semana, a agenda <strong>bloqueia na segunda-feira</strong> até quitar.
                     </div>
                     <div class="manual-nota mb-0" th:if="${ehProfissional and pagamentoMensal}">
-                        Se passar do <strong>dia 15</strong> sem pagar o mês anterior, a agenda <strong>bloqueia</strong> até quitar.
+                        Se passar do <strong>dia 10</strong> sem pagar o mês vigente, a agenda <strong>bloqueia</strong> até quitar.
                     </div>
                     <div class="manual-nota mb-0" th:unless="${ehProfissional}">
                         Profissionais com pagamento <strong>diário</strong> ainda podem recuperar no mesmo dia, até o horário da consulta.
@@ -775,15 +775,15 @@
                     <div th:if="${pagamentoMensal}">
                         <p class="manual-subtitulo">Quando pagar</p>
                         <p class="manual-lead">
-                            As locações do <strong>mês anterior</strong> aparecem para pagamento a partir do
-                            <strong>dia 01</strong>, com prazo até o <strong>dia 15</strong>.
+                            As locações do <strong>mês vigente</strong> aparecem para pagamento do
+                            <strong>dia 01 ao 10</strong> do mesmo mês.
                         </p>
                         <p class="manual-subtitulo">Calendário do pagamento</p>
                         <ul class="lista-curta">
                             <li>Durante o mês, a agenda fica <strong>liberada</strong> para marcar horários.</li>
-                            <li>A partir do <strong>dia 01</strong>, aparece em <strong>Meus pagamentos → Pagamento do mês</strong> o total do mês anterior.</li>
-                            <li>Prazo para pagar: do <strong>dia 01 ao dia 15</strong>.</li>
-                            <li>Depois do <strong>dia 15</strong> sem pagar, a agenda <strong>bloqueia</strong> até quitar.</li>
+                            <li>Em <strong>Meus pagamentos → Mês vigente</strong> aparece o total do <strong>mês vigente</strong>.</li>
+                            <li>Prazo para pagar: do <strong>dia 01 ao dia 10</strong> do mesmo mês.</li>
+                            <li>Depois do <strong>dia 10</strong> sem pagar, a agenda <strong>bloqueia</strong> até quitar.</li>
                             <li>Você pode pagar tudo com <strong>um PIX único</strong> ou gerar QR por consulta.</li>
                         </ul>
                         <p class="manual-subtitulo">Realocar consulta</p>
@@ -792,7 +792,7 @@
                             porque foi quando você agendou originalmente.
                         </p>
                         <div class="manual-nota">
-                            Fora da janela do dia 01 ao 15, a aba mensal pode mostrar que não há cobrança pendente no momento.
+                            Fora da janela do dia 01 ao 10, a aba mensal pode mostrar que não há cobrança pendente no momento.
                         </div>
                     </div>
 
@@ -830,7 +830,7 @@
                     <ul class="lista-curta">
                         <li><strong>Diário:</strong> cobrança na véspera de cada consulta (D-1), até 23:59; recuperação no mesmo dia até o horário.</li>
                         <li><strong>Semanal:</strong> semana liberada até domingo; PIX no sábado ou domingo; bloqueia na segunda se não pagar.</li>
-                        <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 15 paga o mês anterior; bloqueia após o dia 15.</li>
+                        <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 10 paga o mês vigente; bloqueia após o dia 10.</li>
                     </ul>
                     <div class="manual-nota mb-0">
                         No manual, cada profissional vê <strong>só a explicação da forma de pagamento dele</strong>.
@@ -963,10 +963,10 @@
                                 <td>Segunda bloqueada</td><td>Quitar a semana anterior que venceu no domingo</td>
                             </tr>
                             <tr th:if="${ehProfissional and pagamentoMensal}">
-                                <td>PIX do mês</td><td>Meus pagamentos → Pagamento do mês (do dia 01 ao 15)</td>
+                                <td>PIX do mês</td><td>Meus pagamentos → Mês vigente (do dia 01 ao 10)</td>
                             </tr>
                             <tr th:if="${ehProfissional and pagamentoMensal}">
-                                <td>Passou do dia 15</td><td>Quitar o mês anterior para liberar a agenda</td>
+                                <td>Passou do dia 10</td><td>Quitar o mês vigente para liberar a agenda</td>
                             </tr>
                             <tr th:if="${ehProfissional}"><td>Agenda bloqueada</td><td>Quitar pendência em Meus pagamentos</td></tr>
                             <tr th:if="${ehProfissional}"><td>Quer mudar sala/data</td><td><strong>Meus agendamentos</strong> → Realocar (antes do horário)</td></tr>

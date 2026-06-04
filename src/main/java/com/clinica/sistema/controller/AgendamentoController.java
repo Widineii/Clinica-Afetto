@@ -217,6 +217,9 @@ public class AgendamentoController {
             @RequestParam(required = false) Long abrirRemarcarMensal,
             @RequestParam(required = false, defaultValue = "false") boolean secaoMensal,
             @RequestParam(required = false, defaultValue = "false") boolean viaNotificacaoNovoAgendamento,
+            @RequestParam(required = false, defaultValue = "todos") String acompProfissional,
+            @RequestParam(required = false, defaultValue = "hoje") String acompPeriodo,
+            @RequestParam(required = false, defaultValue = "todos") String acompRecorrencia,
             HttpSession session
     ) {
         relatorioSemanalService.limparSessao(session);
@@ -388,6 +391,36 @@ public class AgendamentoController {
         model.addAttribute("salasOcupadasNaSemana", salasOcupadasNaSemana);
         List<com.clinica.sistema.model.Agendamento> agendamentosDoDia =
                 service.listarAgendamentosDoDia(usuarioLogado, isAdmin);
+        if (isDonaClinica) {
+            var filtroProfissionalAcompanhamento = com.clinica.sistema.dto.AcompanhamentoAgendaFiltros.FiltroProfissional
+                    .fromParam(acompProfissional);
+            var periodoAcompanhamento = com.clinica.sistema.dto.AcompanhamentoAgendaFiltros.Periodo
+                    .fromParam(acompPeriodo);
+            var recorrenciaAcompanhamento = com.clinica.sistema.dto.AcompanhamentoAgendaFiltros.RecorrenciaConsulta
+                    .fromParam(acompRecorrencia);
+            var intervaloAcompanhamento = com.clinica.sistema.dto.AcompanhamentoAgendaFiltros.resolverIntervalo(
+                    periodoAcompanhamento,
+                    referenciaSemana
+            );
+            List<com.clinica.sistema.model.Agendamento> agendamentosAcompanhamento = service.listarAgendamentosAcompanhamento(
+                    filtroProfissionalAcompanhamento,
+                    intervaloAcompanhamento,
+                    recorrenciaAcompanhamento
+            );
+            model.addAttribute("exibirPainelAcompanhamentoAgenda", true);
+            model.addAttribute("profissionaisAcompanhamento", equipeProfissionais);
+            model.addAttribute("agendamentosAcompanhamento", agendamentosAcompanhamento);
+            model.addAttribute("totalAgendamentosAcompanhamento", agendamentosAcompanhamento.size());
+            model.addAttribute("acompanhamentoFiltroProfissional", filtroProfissionalAcompanhamento);
+            model.addAttribute("acompanhamentoPeriodo", periodoAcompanhamento);
+            model.addAttribute("acompanhamentoRecorrencia", recorrenciaAcompanhamento);
+            model.addAttribute("acompanhamentoIntervaloRotulo", intervaloAcompanhamento.rotulo());
+            model.addAttribute("acompanhamentoProfissionalParam", filtroProfissionalAcompanhamento.parametroUrl());
+            model.addAttribute("acompanhamentoPeriodoParam", periodoAcompanhamento.getParam());
+            model.addAttribute("acompanhamentoRecorrenciaParam", recorrenciaAcompanhamento.getParam());
+        } else {
+            model.addAttribute("exibirPainelAcompanhamentoAgenda", false);
+        }
         model.addAttribute("agendaSala", agendaSala);
         model.addAttribute("agendamentosDoDia", agendamentosDoDia);
         model.addAttribute("dataAgendaDia", LocalDate.now());

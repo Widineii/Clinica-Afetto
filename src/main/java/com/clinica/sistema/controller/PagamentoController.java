@@ -137,11 +137,11 @@ public class PagamentoController {
         return "redirect:/agendamentos/meus-pagamentos#pagamentos-semana";
     }
 
-    @PostMapping("/gerar-links-mes-anterior")
-    public String gerarLinksMesAnterior(RedirectAttributes redirectAttributes) {
+    @PostMapping({"/gerar-links-mes-vigente", "/gerar-links-mes-anterior"})
+    public String gerarLinksMesVigente(RedirectAttributes redirectAttributes) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            String order = pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(usuarioLogado);
+            String order = pagamentoConsultaService.gerarPagamentoUnicoMesVigente(usuarioLogado);
             return "redirect:/pagamentos/mes?order=" + order;
         } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
@@ -223,7 +223,7 @@ public class PagamentoController {
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("totalTaxaLote", pagamentoConsultaService.formatarTotalTaxaPix(consultas));
         model.addAttribute("rotuloPeriodo", pagamentoConsultaService.rotuloMesPagamentoPendente());
-        model.addAttribute("tituloLote", "Pagamento do mes anterior");
+        model.addAttribute("tituloLote", "Pagamento do mes vigente");
         model.addAttribute("qrUrl", "/pagamentos/mes/qr.png?order=" + order);
         model.addAttribute("voltarUrl", "/agendamentos/meus-pagamentos#pagamentos-mes");
         model.addAttribute("todasPagas", todasPagas);

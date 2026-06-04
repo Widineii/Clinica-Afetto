@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 public class PagamentoProperties {
 
     private int prazoConfirmacaoMinutos = 8;
-    /** Prazo do pagamento mensal do mes anterior (dia 1 ate este dia, inclusive). */
-    private int mensalDiaLimite = 15;
+    /** Prazo do pagamento mensal do mes vigente (dia 1 ate este dia, inclusive). */
+    private int mensalDiaLimite = 10;
     /** Hora limite no dia anterior a consulta (padrao 23:59). */
     private String horaLimitePagamentoVespera = "23:59";
 

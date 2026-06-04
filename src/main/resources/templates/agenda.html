@@ -244,6 +244,217 @@
             overflow: hidden;
         }
 
+        .acompanhamento-painel__head {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem 1.5rem;
+            padding-bottom: 1.15rem;
+            margin-bottom: 1.15rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .acompanhamento-painel__kicker {
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--afetto-teal-dark, #0a8785);
+            margin: 0 0 0.35rem;
+        }
+
+        .acompanhamento-painel__title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 0.45rem;
+        }
+
+        .acompanhamento-painel__meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 0.75rem;
+            font-size: 0.88rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .acompanhamento-painel__badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(10, 135, 133, 0.12);
+            color: var(--afetto-teal-dark, #0a8785);
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .acompanhamento-painel__hint {
+            max-width: 16rem;
+            font-size: 0.82rem;
+            color: #64748b;
+            line-height: 1.45;
+            margin: 0;
+            text-align: right;
+        }
+
+        @media (max-width: 767.98px) {
+            .acompanhamento-painel__hint {
+                text-align: left;
+                max-width: none;
+            }
+        }
+
+        .acompanhamento-filtros {
+            display: grid;
+            gap: 0.85rem 1rem;
+            background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 1rem 1.15rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .acompanhamento-filtros {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 992px) {
+            .acompanhamento-filtros {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        .acompanhamento-filtros .form-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 0.35rem;
+            color: #64748b;
+        }
+
+        .acompanhamento-filtros .form-select {
+            border-radius: 10px;
+            border-color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        .acompanhamento-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .acompanhamento-tabela-wrap {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: auto;
+            background: #fff;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .acompanhamento-tabela-wrap::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+
+        .acompanhamento-tabela-wrap::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .acompanhamento-table {
+            width: 100%;
+            margin-bottom: 0;
+            font-size: 0.875rem;
+            table-layout: fixed;
+        }
+
+        .acompanhamento-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f1f5f9;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #64748b;
+            padding: 0.75rem 0.55rem;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .acompanhamento-table tbody td {
+            padding: 0.7rem 0.55rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+            line-height: 1.35;
+        }
+
+        .acompanhamento-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .acompanhamento-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .acompanhamento-table .col-data,
+        .acompanhamento-table .col-hora {
+            white-space: nowrap;
+        }
+
+        .acompanhamento-table .col-cliente {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .acompanhamento-table .col-status {
+            white-space: normal;
+        }
+
+        .acompanhamento-table .col-status .badge {
+            max-width: 100%;
+            margin-left: 0 !important;
+            white-space: normal;
+            text-align: center;
+            line-height: 1.25;
+            font-size: 0.68rem;
+        }
+
+        .acompanhamento-valores {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            font-size: 0.78rem;
+            line-height: 1.25;
+        }
+
+        .acompanhamento-valores__prof {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .acompanhamento-valores__clin {
+            color: #64748b;
+        }
+
+        .acompanhamento-valores__clin::before {
+            content: "Clín. ";
+            font-weight: 600;
+        }
+
         .agenda-dia-card__empty {
             text-align: center;
             color: #64748b;
@@ -1604,7 +1815,8 @@
         <a href="#novo-agendamento" class="btn btn-sm btn-outline-secondary">Novo agendamento</a>
         <a th:if="${isAdmin}" href="#agendamentos-profissionais" class="btn btn-sm btn-outline-secondary">Agendamentos por profissional</a>
         <a th:unless="${isAdmin}" href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
-        <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary">Agenda do dia</a>
+        <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary"
+           th:text="${isDonaClinica ? 'Acompanhar agendamentos' : 'Agenda do dia'}">Agenda do dia</a>
         <a th:if="${pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
            href="#pagamentos-pendentes"
            class="btn btn-sm btn-warning">Pagamentos pendentes</a>
@@ -1740,7 +1952,7 @@
                             <div class="form-text mt-1" id="pagamentoRecorrenciaHintMensal"
                                  th:unless="${isDonaClinica}"
                                  th:if="${periodicidadePagamento != null and periodicidadePagamento.name() == 'MENSAL'}">
-                                Pagamento mensal: agenda liberada no mês; do dia 01 ao 15 paga o mês anterior.
+                                Pagamento mensal: agenda liberada no mês; do dia 01 ao 10 paga o mês vigente (mesmo mês).
                                 Ao realocar, a fatura continua no mês em que você agendou (ex.: marcou em 29/06
                                 e realocou para 07/07 — continua na fatura de junho).
                             </div>
@@ -2094,6 +2306,157 @@
 
             <div class="card shell-card mt-4" id="agenda-do-dia">
                 <div class="card-body p-4">
+                    <th:block th:if="${exibirPainelAcompanhamentoAgenda}">
+                        <div class="acompanhamento-painel__head">
+                            <div>
+                                <p class="acompanhamento-painel__kicker">Gestão da clínica</p>
+                                <h2 class="acompanhamento-painel__title">Acompanhar agendamentos</h2>
+                                <p class="acompanhamento-painel__meta">
+                                    <span th:text="${acompanhamentoIntervaloRotulo}">04/06/2026</span>
+                                    <span class="acompanhamento-painel__badge">
+                                        <span th:text="${totalAgendamentosAcompanhamento}">0</span>
+                                        <span th:text="${totalAgendamentosAcompanhamento == 1 ? ' atendimento' : ' atendimentos'}"> atendimentos</span>
+                                    </span>
+                                </p>
+                            </div>
+                            <p class="acompanhamento-painel__hint mb-0">
+                                Lista compilada de todos os profissionais, com filtros por período e tipo.
+                            </p>
+                        </div>
+
+                        <form class="acompanhamento-filtros" method="get" th:action="@{/agendamentos/dashboard}">
+                            <input type="hidden" name="salaId" th:value="${agendaSala.sala.id}">
+                            <input type="hidden" name="semana" th:value="${agendaSala.inicioSemana}">
+                            <div>
+                                <label class="form-label" for="acompProfissional">Profissional</label>
+                                <select class="form-select form-select-sm" id="acompProfissional" name="acompProfissional"
+                                        onchange="this.form.submit()">
+                                    <option value="todos" th:selected="${acompanhamentoProfissionalParam == 'todos'}">Todos os profissionais</option>
+                                    <option th:each="prof : ${profissionaisAcompanhamento}"
+                                            th:value="${prof.id}"
+                                            th:text="${prof.nome}"
+                                            th:selected="${acompanhamentoProfissionalParam == prof.id.toString()}">Maria Paula</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" for="acompPeriodo">Período</label>
+                                <select class="form-select form-select-sm" id="acompPeriodo" name="acompPeriodo"
+                                        onchange="this.form.submit()">
+                                    <option value="hoje" th:selected="${acompanhamentoPeriodoParam == 'hoje'}">Hoje</option>
+                                    <option value="amanha" th:selected="${acompanhamentoPeriodoParam == 'amanha'}">Amanhã</option>
+                                    <option value="proximos3" th:selected="${acompanhamentoPeriodoParam == 'proximos3'}">Próximos 3 dias</option>
+                                    <option value="semana" th:selected="${acompanhamentoPeriodoParam == 'semana'}">Semana inteira</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" for="acompRecorrencia">Tipo de consulta</label>
+                                <select class="form-select form-select-sm" id="acompRecorrencia" name="acompRecorrencia"
+                                        onchange="this.form.submit()">
+                                    <option value="todos" th:selected="${acompanhamentoRecorrenciaParam == 'todos'}">Todas</option>
+                                    <option value="avulso" th:selected="${acompanhamentoRecorrenciaParam == 'avulso'}">Avulso</option>
+                                    <option value="fixo" th:selected="${acompanhamentoRecorrenciaParam == 'fixo'}">Fixo semanal</option>
+                                    <option value="quinzenal" th:selected="${acompanhamentoRecorrenciaParam == 'quinzenal'}">Quinzenal</option>
+                                    <option value="mensal" th:selected="${acompanhamentoRecorrenciaParam == 'mensal'}">Mensal</option>
+                                </select>
+                            </div>
+                        </form>
+
+                        <div class="acompanhamento-cards d-lg-none">
+                            <div th:if="${#lists.isEmpty(agendamentosAcompanhamento)}" class="agenda-dia-card__empty">
+                                Nenhum agendamento neste período com os filtros escolhidos.
+                            </div>
+                            <article th:each="registro : ${agendamentosAcompanhamento}" class="agenda-dia-card">
+                                <div class="agenda-dia-card__head">
+                                    <span class="agenda-dia-card__hora"
+                                          th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM HH:mm') + ' – ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">04/06 19:00 – 20:00</span>
+                                    <span class="agenda-dia-card__sala"
+                                          th:text="${registro.sala != null ? registro.sala.nome : '—'}">Sala 2</span>
+                                </div>
+                                <div class="agenda-dia-card__cliente">
+                                    <span th:text="${registro.nomeCliente}">Cliente</span>
+                                    <span th:if="${registro.fixo == true}" class="fixed-badge ms-1" th:text="${registro.recorrenciaLabel}">Fixo</span>
+                                </div>
+                                <div class="agenda-dia-card__meta">
+                                    Profissional:
+                                    <strong th:text="${registro.profissional != null ? registro.profissional.nome : '—'}">Maria Paula</strong>
+                                </div>
+                                <div class="agenda-dia-card__meta" th:if="${registro.profissional != null}">
+                                    Pagamento do profissional:
+                                    <strong th:text="${pagamentoService.resolverPeriodicidade(registro.profissional).rotulo}">Semanal</strong>
+                                </div>
+                                <div class="agenda-dia-card__meta" th:if="${registro.possuiValoresConsulta()}">
+                                    Valores:
+                                    <strong>
+                                        <span th:text="${registro.valorProfissionalRecebeFormatado}">R$ 150,00</span>
+                                        /
+                                        <span th:text="${registro.valorClinicaCobraFormatado}">R$ 35,00</span>
+                                    </strong>
+                                </div>
+                                <div class="agenda-dia-card__footer">
+                                    <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${registro})}"></div>
+                                </div>
+                            </article>
+                        </div>
+
+                        <div class="acompanhamento-tabela-wrap d-none d-lg-block">
+                            <table class="table acompanhamento-table align-middle">
+                                <colgroup>
+                                    <col style="width: 9%">
+                                    <col style="width: 10%">
+                                    <col style="width: 7%">
+                                    <col style="width: 10%">
+                                    <col style="width: 18%">
+                                    <col style="width: 9%">
+                                    <col style="width: 9%">
+                                    <col style="width: 14%">
+                                    <col style="width: 14%">
+                                </colgroup>
+                                <thead>
+                                <tr>
+                                    <th class="col-data">Data</th>
+                                    <th class="col-hora">Horário</th>
+                                    <th class="col-sala">Sala</th>
+                                    <th class="col-prof">Profissional</th>
+                                    <th class="col-cliente">Cliente</th>
+                                    <th class="col-tipo">Tipo</th>
+                                    <th class="col-pag">Pagamento</th>
+                                    <th class="col-valores">Valores</th>
+                                    <th class="col-status">Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(agendamentosAcompanhamento)}">
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        Nenhum agendamento neste período com os filtros escolhidos.
+                                    </td>
+                                </tr>
+                                <tr th:each="registro : ${agendamentosAcompanhamento}">
+                                    <td class="col-data" th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM/yyyy')}">04/06/2026</td>
+                                    <td class="col-hora" th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' – ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">19:00 – 20:00</td>
+                                    <td class="col-sala" th:text="${registro.sala != null ? registro.sala.nome : '—'}">Sala 2</td>
+                                    <td class="col-prof" th:text="${registro.profissional != null ? registro.profissional.nome : '—'}">Maria Paula</td>
+                                    <td class="col-cliente" th:text="${registro.nomeCliente}">Cliente</td>
+                                    <td class="col-tipo" th:text="${registro.recorrenciaLabel}">Quinzenal</td>
+                                    <td class="col-pag" th:text="${registro.profissional != null ? pagamentoService.resolverPeriodicidade(registro.profissional).rotulo : '—'}">Semanal</td>
+                                    <td class="col-valores">
+                                        <div th:if="${registro.possuiValoresConsulta()}" class="acompanhamento-valores">
+                                            <span class="acompanhamento-valores__prof"
+                                                  th:text="${registro.valorProfissionalRecebeFormatado}">R$ 150,00</span>
+                                            <span class="acompanhamento-valores__clin"
+                                                  th:text="${registro.valorClinicaCobraFormatado}">R$ 35,00</span>
+                                        </div>
+                                        <span th:unless="${registro.possuiValoresConsulta()}" class="text-muted">—</span>
+                                    </td>
+                                    <td class="col-status">
+                                        <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${registro})}"></div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </th:block>
+
+                    <th:block th:unless="${exibirPainelAcompanhamentoAgenda}">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                         <div>
                             <h2 class="h5 mb-1">Agenda do dia</h2>
@@ -2211,6 +2574,7 @@
                             </tbody>
                         </table>
                     </div>
+                    </th:block>
 
                     <div class="ajuda-suporte-rodape border-top pt-3 mt-4">
                         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">

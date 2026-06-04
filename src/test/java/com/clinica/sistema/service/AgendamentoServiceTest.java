@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.AcompanhamentoAgendaFiltros;
 import com.clinica.sistema.dto.AgendaGradeCelula;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
@@ -1874,6 +1875,43 @@ class AgendamentoServiceTest {
         assertFalse(celula.isOcupada());
         assertFalse(celula.isDisponivelParaNovaReserva());
         assertTrue(celula.getAvisoProfissionalOcupadoOutraSala().contains("Sala 1"));
+    }
+
+    @Test
+    void listarAgendamentosAcompanhamento_filtraPorPeriodoEFormaPagamento() {
+        Usuario dona = new Usuario();
+        dona.setId(1L);
+        dona.setDonaClinica(true);
+
+        Usuario maria = new Usuario();
+        maria.setId(2L);
+        maria.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        LocalDate hoje = LocalDate.now();
+        Agendamento deMaria = new Agendamento();
+        deMaria.setId(10L);
+        deMaria.setProfissional(maria);
+        deMaria.setNomeCliente("Cliente A");
+        deMaria.setDataHoraInicio(hoje.atTime(10, 0));
+        deMaria.setDataHoraFim(hoje.atTime(11, 0));
+
+        when(agendamentoRepository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(deMaria));
+        when(pagamentoConsultaService.resolverPeriodicidade(maria)).thenReturn(PeriodicidadePagamento.SEMANAL);
+
+        var intervalo = AcompanhamentoAgendaFiltros.resolverIntervalo(
+                AcompanhamentoAgendaFiltros.Periodo.HOJE,
+                hoje
+        );
+        List<Agendamento> todos = agendamentoService.listarAgendamentosAcompanhamento(
+                new AcompanhamentoAgendaFiltros.FiltroProfissional(null),
+                intervalo,
+                AcompanhamentoAgendaFiltros.RecorrenciaConsulta.TODOS
+        );
+
+        assertEquals(1, todos.size());
     }
 
     private LocalDateTime proximaDataUtil(LocalTime horario) {

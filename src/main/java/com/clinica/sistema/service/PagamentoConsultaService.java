@@ -633,12 +633,11 @@ public class PagamentoConsultaService {
                 || resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.MENSAL) {
             return Collections.emptyList();
         }
-        return listarConsultasNaoPagasNoMes(usuarioLogado, YearMonth.from(LocalDate.now()).minusMonths(1));
+        return listarConsultasPagamentoMensalPendentes(usuarioLogado);
     }
 
     public String rotuloMesPagamentoPendente() {
-        YearMonth mesReferencia = YearMonth.from(LocalDate.now()).minusMonths(1);
-        return mesReferencia.format(DateTimeFormatter.ofPattern("MM/yyyy"));
+        return mesVigentePagamento().format(DateTimeFormatter.ofPattern("MM/yyyy"));
     }
 
     public boolean exibePagamentoMensalAgora(Usuario usuarioLogado) {
@@ -646,27 +645,12 @@ public class PagamentoConsultaService {
     }
 
     public boolean estaEmJanelaPagamentoMensal() {
-        LocalDate hoje = LocalDate.now();
-        int dia = hoje.getDayOfMonth();
-        if (dia >= 1 && dia <= diaLimitePagamentoMensal()) {
-            return true;
-        }
-        return dia == hoje.lengthOfMonth();
+        return estaDentroJanelaPagamentoMensal(LocalDate.now());
     }
 
-    /**
-     * Mensal: dias 01–limite, último dia do mês (véspera do dia 01) ou D-1 de consulta do mês em cobrança.
-     */
+    /** Mensal: cobrança do mês vigente, dias 01 ao limite (padrão 10). */
     public boolean estaEmJanelaPagamentoMensal(Usuario usuarioLogado) {
-        if (estaEmJanelaPagamentoMensal()) {
-            return true;
-        }
-        if (usuarioLogado == null) {
-            return false;
-        }
-        YearMonth mesReferencia = YearMonth.from(LocalDate.now()).minusMonths(1);
-        return listarConsultasNaoPagasNoMes(usuarioLogado, mesReferencia).stream()
-                .anyMatch(this::deveAbrirPagamentoAgora);
+        return estaEmJanelaPagamentoMensal();
     }
 
     public String rotuloJanelaPagamentoMensalAtual() {
@@ -753,13 +737,13 @@ public class PagamentoConsultaService {
     }
 
     @Transactional
-    public String gerarPagamentoUnicoMesAnterior(Usuario usuarioLogado) {
+    public String gerarPagamentoUnicoMesVigente(Usuario usuarioLogado) {
         if (resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.MENSAL) {
             throw new RuntimeException("Pagamento mensal não se aplica a este profissional.");
         }
         List<Agendamento> consultas = listarConsultasPagamentoMensal(usuarioLogado);
         if (consultas.isEmpty()) {
-            throw new RuntimeException("Não há consultas do mês anterior pendentes de pagamento.");
+            throw new RuntimeException("Não há consultas do mês vigente pendentes de pagamento.");
         }
         for (Agendamento consulta : consultas) {
             if (vagaPreenchidaPorOutroProfissional(consulta)) {
@@ -947,10 +931,9 @@ public class PagamentoConsultaService {
         if (!bloqueadoPorPagamentoMensal(usuarioLogado)) {
             return Collections.emptyList();
         }
-        return listarConsultasNaoPagasNoMes(
-                usuarioLogado,
-                YearMonth.from(LocalDate.now()).minusMonths(1)
-        );
+        return listarConsultasPagamentoMensalPendentes(usuarioLogado).stream()
+                .filter(agendamento -> mensalidadeVencida(agendamento, LocalDate.now()))
+                .toList();
     }
 
     /**
@@ -994,7 +977,7 @@ public class PagamentoConsultaService {
         return switch (resolverPeriodicidade(usuarioLogado)) {
             case SEMANAL -> "Você precisa quitar a semana anterior (pagamento sábado ou domingo) "
                     + "para voltar a usar a sala e fazer novo agendamento.";
-            case MENSAL -> "Você passou do dia " + diaLimitePagamentoMensal() + " sem pagar o mês anterior. "
+            case MENSAL -> "Você passou do dia " + diaLimitePagamentoMensal() + " sem pagar o mês vigente. "
                     + "Quite o pagamento para voltar a usar a sala e fazer novo agendamento.";
             case DIARIO -> mensagemBloqueioPagamentoDiario(usuarioLogado);
         };
@@ -1648,9 +1631,8 @@ public class PagamentoConsultaService {
                 }
                 YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
                 if (mesReferencia != null) {
-                    YearMonth mesPagamento = mesReferencia.plusMonths(1);
                     return nomeProfissional + ": pagamento do dia 01 ao " + diaLimitePagamentoMensal() + "/"
-                            + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+                            + mesReferencia.format(DateTimeFormatter.ofPattern("MM"));
                 }
             }
             if (profissionalUsaPagamentoSemanal(agendamento)) {
@@ -1865,25 +1847,22 @@ public class PagamentoConsultaService {
         if (mesReferencia == null) {
             return "—";
         }
-        YearMonth mesPagamento = mesReferencia.plusMonths(1);
         return "Você vai pagar do dia 01 ao " + diaLimitePagamentoMensal() + "/"
-                + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+                + mesReferencia.format(DateTimeFormatter.ofPattern("MM"));
     }
 
     private boolean cobrancaMensalVencendoNaData(Agendamento agendamento, LocalDate hoje) {
         if (!profissionalUsaPagamentoMensal(agendamento)) {
             return false;
         }
-        int dia = hoje.getDayOfMonth();
-        int diaLimite = diaLimitePagamentoMensal();
-        if (dia < 1 || dia > diaLimite) {
+        if (!estaDentroJanelaPagamentoMensal(hoje)) {
             return false;
         }
         YearMonth mesReferencia = resolverMesReferenciaCobranca(agendamento);
         if (mesReferencia == null) {
             return false;
         }
-        return mesReferencia.equals(YearMonth.from(hoje).minusMonths(1));
+        return mesReferencia.equals(YearMonth.from(hoje));
     }
 
     private LocalDate resolverDataReferenciaCobranca(Agendamento agendamento) {
@@ -1937,9 +1916,8 @@ public class PagamentoConsultaService {
         if (mesReferencia == null) {
             return "—";
         }
-        YearMonth mesPagamento = mesReferencia.plusMonths(1);
         return "01 ao " + diaLimitePagamentoMensal() + "/"
-                + mesPagamento.format(DateTimeFormatter.ofPattern("MM"));
+                + mesReferencia.format(DateTimeFormatter.ofPattern("MM"));
     }
 
     public String rotuloMesCobranca(Agendamento agendamento) {
@@ -2356,12 +2334,8 @@ public class PagamentoConsultaService {
     }
 
     private boolean bloqueadoPorPagamentoMensal(Usuario profissional) {
-        LocalDate hoje = LocalDate.now();
-        if (hoje.getDayOfMonth() <= diaLimitePagamentoMensal()) {
-            return false;
-        }
-        YearMonth mesAnterior = YearMonth.from(hoje).minusMonths(1);
-        return !listarConsultasNaoPagasNoMes(profissional, mesAnterior).isEmpty();
+        return listarConsultasPagamentoMensalPendentes(profissional).stream()
+                .anyMatch(agendamento -> mensalidadeVencida(agendamento, LocalDate.now()));
     }
 
     private PeriodoSemanaPagamento resolverSemanaAnteriorEncerrada(LocalDate referencia) {
@@ -2424,7 +2398,46 @@ public class PagamentoConsultaService {
 
     private int diaLimitePagamentoMensal() {
         int diaLimite = pagamentoProperties.getMensalDiaLimite();
-        return diaLimite > 0 ? diaLimite : 15;
+        return diaLimite > 0 ? diaLimite : 10;
+    }
+
+    private YearMonth mesVigentePagamento() {
+        return YearMonth.from(LocalDate.now());
+    }
+
+    private boolean estaDentroJanelaPagamentoMensal(LocalDate data) {
+        int dia = data.getDayOfMonth();
+        return dia >= 1 && dia <= diaLimitePagamentoMensal();
+    }
+
+    private List<Agendamento> listarConsultasPagamentoMensalPendentes(Usuario profissional) {
+        if (profissional == null || profissional.getId() == null) {
+            return Collections.emptyList();
+        }
+        YearMonth mesAtual = mesVigentePagamento();
+        return agendamentosDoProfissionalNaJanelaPagamento(profissional.getId()).stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> !consultaJaFoiPaga(agendamento))
+                .filter(agendamento -> {
+                    YearMonth mesCobranca = resolverMesReferenciaCobranca(agendamento);
+                    return mesCobranca != null && !mesCobranca.isAfter(mesAtual);
+                })
+                .toList();
+    }
+
+    private boolean mensalidadeVencida(Agendamento agendamento, LocalDate hoje) {
+        if (!profissionalUsaPagamentoMensal(agendamento) || consultaJaFoiPaga(agendamento)) {
+            return false;
+        }
+        YearMonth mesCobranca = resolverMesReferenciaCobranca(agendamento);
+        if (mesCobranca == null) {
+            return false;
+        }
+        YearMonth mesAtual = YearMonth.from(hoje);
+        if (mesCobranca.isBefore(mesAtual)) {
+            return true;
+        }
+        return mesCobranca.equals(mesAtual) && hoje.getDayOfMonth() > diaLimitePagamentoMensal();
     }
 
     /**

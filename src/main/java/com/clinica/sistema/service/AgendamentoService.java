@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.AcompanhamentoAgendaFiltros;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AgendaGradeCelula;
@@ -866,6 +867,45 @@ public class AgendamentoService {
                 inicio,
                 fim
         );
+    }
+
+    /**
+     * Painel de gestão da dona da clínica: lista compilada com filtros de período, profissional e tipo.
+     */
+    public List<Agendamento> listarAgendamentosAcompanhamento(
+            AcompanhamentoAgendaFiltros.FiltroProfissional filtroProfissional,
+            AcompanhamentoAgendaFiltros.IntervaloPeriodo intervalo,
+            AcompanhamentoAgendaFiltros.RecorrenciaConsulta recorrencia
+    ) {
+        if (intervalo == null) {
+            return List.of();
+        }
+        LocalDateTime inicio = intervalo.inicio().atStartOfDay();
+        LocalDateTime fim = intervalo.fim().plusDays(1).atStartOfDay();
+
+        List<Agendamento> base;
+        if (filtroProfissional != null && !filtroProfissional.todos()) {
+            base = repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                    filtroProfissional.profissionalId(),
+                    inicio,
+                    fim
+            );
+        } else {
+            base = repository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                    inicio,
+                    fim
+            );
+        }
+
+        return base.stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> !agendamento.isLocacaoTurno())
+                .filter(agendamento -> {
+                    String cliente = agendamento.getNomeCliente();
+                    return cliente != null && !cliente.isBlank();
+                })
+                .filter(recorrencia::aceita)
+                .toList();
     }
 
     @Transactional

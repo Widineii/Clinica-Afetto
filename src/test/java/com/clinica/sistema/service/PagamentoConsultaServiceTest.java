@@ -69,7 +69,7 @@ class PagamentoConsultaServiceTest {
 
     @BeforeEach
     void setUp() {
-        Mockito.lenient().when(pagamentoProperties.getMensalDiaLimite()).thenReturn(15);
+        Mockito.lenient().when(pagamentoProperties.getMensalDiaLimite()).thenReturn(10);
         agendamento = new Agendamento();
         agendamento.setId(1L);
         agendamento.setValorClinicaCobra(new BigDecimal("32.00"));
@@ -739,8 +739,8 @@ class PagamentoConsultaServiceTest {
 
         String rotulo = pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia);
         assertTrue(
-                "Você vai pagar do dia 01 ao 15/06".equals(rotulo)
-                        || "Você tem do dia 01 ao 15 para pagar".equals(rotulo),
+                "Você vai pagar do dia 01 ao 10/05".equals(rotulo)
+                        || "Você tem do dia 01 ao 10 para pagar".equals(rotulo),
                 () -> "Rotulo inesperado: " + rotulo
         );
     }
@@ -756,8 +756,8 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataReferenciaMesPagamento(LocalDate.of(2026, 6, 1));
         agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 29).atTime(10, 0));
 
-        assertEquals("Você tem do dia 01 ao 15 para pagar",
-                pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 7, 5)));
+        assertEquals("Você tem do dia 01 ao 10 para pagar",
+                pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 6, 5)));
     }
 
     @Test
@@ -772,8 +772,8 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(LocalDate.of(2026, 7, 7).atTime(10, 0));
 
         assertEquals("06/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
-        assertEquals("01 ao 15/07", pagamentoConsultaService.formatarJanelaPagamentoMensal(agendamento));
-        assertEquals("Você vai pagar do dia 01 ao 15/07",
+        assertEquals("01 ao 10/06", pagamentoConsultaService.formatarJanelaPagamentoMensal(agendamento));
+        assertEquals("Você vai pagar do dia 01 ao 10/06",
                 pagamentoConsultaService.rotuloPagamentoFuturoMensal(agendamento, LocalDate.of(2026, 6, 30)));
     }
 
@@ -789,11 +789,7 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(LocalDate.of(2026, 6, 8).atTime(10, 0));
 
         String rotulo = pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia);
-        assertTrue(
-                "Você vai pagar do dia 01 ao 15/06".equals(rotulo)
-                        || "Você tem do dia 01 ao 15 para pagar".equals(rotulo),
-                () -> "Rotulo inesperado: " + rotulo
-        );
+        assertEquals("Você vai pagar do dia 01 ao 10/05", rotulo);
         assertEquals("05/2026", pagamentoConsultaService.rotuloMesCobranca(agendamento));
     }
 
@@ -862,7 +858,7 @@ class PagamentoConsultaServiceTest {
         when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
-                "Ana Paula: pagamento do dia 01 ao 15/07",
+                "Ana Paula: pagamento do dia 01 ao 10",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
         );
     }
@@ -1548,7 +1544,7 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void listarConsultasPagamentoMensalRetornaConsultasDoMesAnterior() {
+    void listarConsultasPagamentoMensalRetornaConsultasDoMesVigente() {
         Usuario anaPaula = new Usuario();
         anaPaula.setId(7L);
         anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
@@ -1578,8 +1574,9 @@ class PagamentoConsultaServiceTest {
 
         var consultas = pagamentoConsultaService.listarConsultasPagamentoMensal(anaPaula);
 
-        assertEquals(1, consultas.size());
-        assertEquals(50L, consultas.get(0).getId());
+        assertEquals(2, consultas.size());
+        assertTrue(consultas.stream().anyMatch(c -> c.getId().equals(51L)));
+        assertTrue(consultas.stream().anyMatch(c -> c.getId().equals(50L)));
     }
 
     @Test
@@ -1592,20 +1589,20 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void gerarPixMesAnteriorRejeitaProfissionalDiario() {
+    void gerarPixMesVigenteRejeitaProfissionalDiario() {
         Usuario carol = new Usuario();
         carol.setId(4L);
         carol.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
 
         RuntimeException ex = assertThrows(
                 RuntimeException.class,
-                () -> pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(carol)
+                () -> pagamentoConsultaService.gerarPagamentoUnicoMesVigente(carol)
         );
         assertEquals("Pagamento mensal não se aplica a este profissional.", ex.getMessage());
     }
 
     @Test
-    void gerarPixMesAnteriorMarcaConsultasEmEsperandoConfirmacao() {
+    void gerarPixMesVigenteMarcaConsultasEmEsperandoConfirmacao() {
         Usuario anaPaula = new Usuario();
         anaPaula.setId(7L);
         anaPaula.setPeriodicidadePagamento(PeriodicidadePagamento.MENSAL);
@@ -1632,7 +1629,7 @@ class PagamentoConsultaServiceTest {
                 ));
         when(repository.save(consulta)).thenReturn(consulta);
 
-        String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoMesAnterior(anaPaula);
+        String orderNsu = pagamentoConsultaService.gerarPagamentoUnicoMesVigente(anaPaula);
 
         assertEquals("mes-7-abc12345", orderNsu);
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, consulta.getStatusPagamento());
@@ -1842,11 +1839,13 @@ class PagamentoConsultaServiceTest {
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
         if (pagamentoConsultaService.estaEmJanelaPagamentoMensal()) {
+            YearMonth mesVigente = YearMonth.now();
             Agendamento consulta = new Agendamento();
             consulta.setId(1L);
             consulta.setProfissional(profissional);
-            consulta.setDataHoraInicio(YearMonth.now().minusMonths(1).atDay(5).atTime(10, 0));
-            consulta.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+            consulta.setDataHoraInicio(mesVigente.atDay(5).atTime(10, 0));
+            consulta.setDataReferenciaMesPagamento(mesVigente.atDay(1));
+            consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
             when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(10L), any(LocalDateTime.class), any(LocalDateTime.class)))
                     .thenReturn(java.util.List.of(consulta));
 
@@ -1854,7 +1853,7 @@ class PagamentoConsultaServiceTest {
 
             assertTrue(notificacao.isPresent());
             assertEquals("Pagamento mensal", notificacao.get().getMensagemResumo());
-            assertTrue(notificacao.get().getMensagemPainel().contains("até o dia 15"));
+            assertTrue(notificacao.get().getMensagemPainel().contains("até o dia 10"));
         } else {
             assertTrue(pagamentoConsultaService.avaliarNotificacaoPagamentoProfissional(profissional).isEmpty());
         }
