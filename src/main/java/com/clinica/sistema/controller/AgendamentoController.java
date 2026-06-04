@@ -1123,7 +1123,7 @@ public class AgendamentoController {
             } else if (pagamentoConsultaService.realocacaoSemanalComCobrancaPendente(atualizado)) {
                 mensagemSucesso += ". A cobranca semanal continua na semana "
                         + pagamentoConsultaService.rotuloIntervaloSemanaCobranca(atualizado)
-                        + " (pagamento sabado ou domingo).";
+                        + " (pague em Meus pagamentos até domingo).";
             } else {
                 mensagemSucesso += ". O pagamento ja realizado foi mantido.";
             }

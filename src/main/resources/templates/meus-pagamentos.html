@@ -263,8 +263,8 @@
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <p class="small text-muted mb-0"
                        th:if="${periodicidadePagamento.name() == 'SEMANAL'}">
-                        Sua cobrança é semanal. O sistema fica liberado até domingo; pague no sábado ou domingo.
-                        Se passar de domingo sem pagar, a agenda bloqueia na segunda-feira.
+                        Sua cobrança é semanal. Após cada reserva, as consultas da semana aparecem aqui para pagar quando quiser.
+                        Prazo máximo: <strong>domingo</strong>. Se passar de domingo sem pagar, a agenda bloqueia na segunda-feira.
                     </p>
                     <p class="small text-muted mb-0"
                        th:if="${periodicidadePagamento.name() == 'DIARIO' and !pagamentoService.adiantamentoSemanaEhProxima()}">
@@ -280,12 +280,7 @@
                 </div>
 
                 <div th:if="${#lists.isEmpty(consultasPagamentoSemana)}" class="alert alert-light border mb-0">
-                    <span th:if="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal(usuarioLogado)}">
-                        Pagamento semanal disponível a partir de um dia antes da consulta, ou no sábado e domingo.
-                    </span>
-                    <span th:unless="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.estaEmJanelaPagamentoSemanal(usuarioLogado)}">
-                        Nenhuma consulta da semana disponível para pagamento no momento.
-                    </span>
+                    Nenhuma consulta da semana pendente de pagamento no momento.
                 </div>
 
                 <div th:if="${!#lists.isEmpty(consultasPagamentoSemana)}">

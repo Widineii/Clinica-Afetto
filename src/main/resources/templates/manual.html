@@ -409,7 +409,7 @@
                             Consultas de <strong>amanhã</strong> devem estar pagas até <strong>23:59 de hoje</strong> (regra D-1).
                         </li>
                         <li th:if="${ehProfissional and pagamentoSemanal}">
-                            Sua agenda fica liberada até <strong>domingo</strong>; o PIX da semana é no <strong>sábado ou domingo</strong>.
+                            Sua agenda fica liberada até <strong>domingo</strong>; o PIX da semana pode ser feito <strong>quando quiser</strong> após reservar.
                         </li>
                         <li th:if="${ehProfissional and pagamentoMensal}">
                             Você agenda o mês todo; o PIX do <strong>mês vigente</strong> fica disponível do <strong>dia 01 ao 10</strong>.
@@ -750,15 +750,15 @@
                     <div th:if="${pagamentoSemanal}">
                         <p class="manual-subtitulo">Quando pagar</p>
                         <p class="manual-lead">
-                            O PIX das consultas de <strong>segunda a sábado</strong> é feito no
-                            <strong>sábado ou domingo</strong>, em um único pagamento.
+                            Após reservar, as consultas de <strong>segunda a sábado</strong> da semana aparecem em
+                            <strong>Meus pagamentos → Pagamento da semana</strong>. Você paga <strong>quando quiser</strong>;
+                            o prazo máximo é <strong>domingo</strong>.
                         </p>
                         <p class="manual-subtitulo">Regras da semana</p>
                         <ul class="lista-curta">
                             <li>Durante a semana, você pode <strong>agendar normalmente</strong>.</li>
                             <li>O sistema fica <strong>liberado até domingo</strong>.</li>
-                            <li>O PIX da semana é feito no <strong>sábado ou domingo</strong>, em <strong>Meus pagamentos → Pagamento da semana</strong>.</li>
-                            <li>Um <strong>PIX único</strong> quita todas as consultas listadas daquela semana.</li>
+                            <li>O PIX pode ser feito <strong>logo após reservar</strong> (um único pagamento quita a lista da semana).</li>
                             <li>Se passar de <strong>domingo</strong> sem pagar, a agenda <strong>bloqueia na segunda</strong> até quitar.</li>
                         </ul>
                         <p class="manual-subtitulo">Realocar consulta</p>
@@ -766,9 +766,8 @@
                             Se mudar sala, data ou horário, a cobrança continua na <strong>semana em que você marcou</strong> —
                             o pagamento não “pula” sozinho para outra semana.
                         </p>
-                        <div class="manual-nota">
-                            Fora de sábado e domingo, a aba de pagamento semanal pode aparecer vazia ou informar que
-                            o PIX semanal só está disponível no <strong>fim de semana</strong>.
+                        <div class="manual-nota mb-0">
+                            Na segunda-feira, se a semana anterior não foi paga, a lista pode mostrar também essas consultas em atraso até você quitar.
                         </div>
                     </div>
 
@@ -829,7 +828,7 @@
                     <p class="manual-subtitulo">Resumo das três formas</p>
                     <ul class="lista-curta">
                         <li><strong>Diário:</strong> cobrança na véspera de cada consulta (D-1), até 23:59; recuperação no mesmo dia até o horário.</li>
-                        <li><strong>Semanal:</strong> semana liberada até domingo; PIX no sábado ou domingo; bloqueia na segunda se não pagar.</li>
+                        <li><strong>Semanal:</strong> PIX após reservar; prazo máximo domingo; bloqueia na segunda se não pagar.</li>
                         <li><strong>Mensal:</strong> mês liberado para agendar; do dia 01 ao 10 paga o mês vigente; bloqueia após o dia 10.</li>
                     </ul>
                     <div class="manual-nota mb-0">
@@ -957,7 +956,7 @@
                                 <td>Quer adiantar a semana</td><td>Meus pagamentos → Pagar a semana toda</td>
                             </tr>
                             <tr th:if="${ehProfissional and pagamentoSemanal}">
-                                <td>PIX da semana</td><td>Meus pagamentos → Pagamento da semana (sábado ou domingo)</td>
+                                <td>PIX da semana</td><td>Meus pagamentos → Pagamento da semana (quando quiser, até domingo)</td>
                             </tr>
                             <tr th:if="${ehProfissional and pagamentoSemanal}">
                                 <td>Segunda bloqueada</td><td>Quitar a semana anterior que venceu no domingo</td>

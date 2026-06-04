@@ -808,7 +808,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
 
-        assertEquals("Você vai pagar no dia 06/06",
+        assertEquals("Pague em Meus pagamentos (até 07/06)",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
     }
 
@@ -827,7 +827,7 @@ class PagamentoConsultaServiceTest {
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
 
-        assertEquals("Você vai pagar no dia 07/06",
+        assertEquals("Pague em Meus pagamentos (até 07/06)",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, julia));
     }
 
@@ -1378,9 +1378,9 @@ class PagamentoConsultaServiceTest {
     // --- Cobertura completa: diario, semanal, mensal e migracoes ---
 
     @Test
-    void janelaPagamentoSemanalSoSabadoEDomingo() {
+    void calendarioSemanalPermiteCobrancaSegundaASabado() {
         DayOfWeek dia = LocalDate.now().getDayOfWeek();
-        boolean esperado = dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY;
+        boolean esperado = dia != DayOfWeek.SUNDAY;
         assertEquals(esperado, pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
     }
 
@@ -1393,8 +1393,8 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void janelaPagamentoSemanalAbreNaVesperaDaConsulta() {
-        comDataReferencia(LocalDate.of(2026, 6, 5), LocalTime.of(10, 0), () -> {
+    void pagamentoSemanalListaConsultasLogoAposReservarNaSegunda() {
+        comDataReferencia(LocalDate.of(2026, 6, 1), LocalTime.of(10, 0), () -> {
             Usuario julia = new Usuario();
             julia.setId(3L);
             julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
@@ -1402,9 +1402,9 @@ class PagamentoConsultaServiceTest {
             Agendamento consulta = new Agendamento();
             consulta.setId(31L);
             consulta.setProfissional(julia);
-            consulta.setDataHoraInicio(LocalDate.of(2026, 6, 6).atTime(9, 0));
+            consulta.setDataHoraInicio(LocalDate.of(2026, 6, 3).atTime(9, 0));
             consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
-            consulta.setDataReferenciaSemanaPagamento(LocalDate.of(2026, 6, 6));
+            consulta.setDataReferenciaSemanaPagamento(LocalDate.of(2026, 6, 3));
 
             when(authService.isAdmin(julia)).thenReturn(false);
             when(authService.isDonaClinica(julia)).thenReturn(false);
@@ -1412,97 +1412,46 @@ class PagamentoConsultaServiceTest {
             when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
                     .thenReturn(java.util.List.of(consulta));
 
-            assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
             assertTrue(pagamentoConsultaService.estaEmJanelaPagamentoSemanal(julia));
-            assertFalse(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
+            var consultas = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
+            assertFalse(consultas.isEmpty());
+            assertEquals(31L, consultas.get(0).getId());
         });
     }
 
     @Test
-    void janelaPagamentoSemanalFechadaTresDiasAntesDaConsulta() {
-        comDataReferencia(LocalDate.of(2026, 6, 3), LocalTime.of(10, 0), () -> {
-            Usuario julia = new Usuario();
-            julia.setId(3L);
-            julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
-
-            Agendamento consulta = new Agendamento();
-            consulta.setId(31L);
-            consulta.setProfissional(julia);
-            consulta.setDataHoraInicio(LocalDate.of(2026, 6, 6).atTime(9, 0));
-            consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
-            consulta.setDataReferenciaSemanaPagamento(LocalDate.of(2026, 6, 6));
-
-            when(authService.isAdmin(julia)).thenReturn(false);
-            when(authService.isDonaClinica(julia)).thenReturn(false);
-            when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
-            when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
-                    .thenReturn(java.util.List.of(consulta));
-
-            assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal(julia));
-            assertTrue(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
-        });
-    }
-
-    @Test
-    void profissionalSemanalForaDaJanelaNaoListaConsultasParaPagamento() {
-        assumeFalse(
-                pagamentoConsultaService.estaEmJanelaPagamentoSemanal(),
-                "Lista vazia fora da janela: valido de segunda a sexta"
-        );
-
+    void profissionalSemanalSemConsultasNaoListaPagamento() {
         Usuario julia = new Usuario();
         julia.setId(3L);
         julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
-
-        assertTrue(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
-    }
-
-    @Test
-    void profissionalSemanalNaJanelaListaConsultasNaoPagasDaSemana() {
-        assumeTrue(
-                pagamentoConsultaService.estaEmJanelaPagamentoSemanal(),
-                "Lista na janela: valido sabado e domingo"
-        );
-
-        Usuario julia = new Usuario();
-        julia.setId(3L);
-        julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
-
-        LocalDate referencia = LocalDate.now();
-        Agendamento consulta = new Agendamento();
-        consulta.setId(31L);
-        consulta.setProfissional(julia);
-        consulta.setDataHoraInicio(referencia.atTime(10, 0));
-        consulta.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
-        consulta.setDataReferenciaSemanaPagamento(referencia);
 
         when(authService.isAdmin(julia)).thenReturn(false);
         when(authService.isDonaClinica(julia)).thenReturn(false);
         when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
         when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(java.util.List.of(consulta));
+                .thenReturn(java.util.List.of());
 
-        var consultas = pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia);
-        assertFalse(consultas.isEmpty());
-        assertEquals(31L, consultas.get(0).getId());
+        assertFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal(julia));
+        assertTrue(pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(julia).isEmpty());
     }
 
     @Test
-    void gerarPixSemanaRejeitaProfissionalSemanalForaDaJanela() {
-        assumeFalse(pagamentoConsultaService.estaEmJanelaPagamentoSemanal());
-
+    void gerarPixSemanaRejeitaQuandoNaoHaConsultasPendentes() {
         Usuario julia = new Usuario();
         julia.setId(3L);
         julia.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
+        when(repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(eq(3L), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(java.util.List.of());
 
         RuntimeException ex = assertThrows(
                 RuntimeException.class,
                 () -> pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(julia)
         );
-        assertEquals(
-                "Pagamento semanal disponível a partir de um dia antes da consulta, ou no sábado e domingo.",
-                ex.getMessage()
-        );
+        assertEquals("Não há consultas da semana disponíveis para pagamento.", ex.getMessage());
     }
 
     @Test
@@ -1782,7 +1731,7 @@ class PagamentoConsultaServiceTest {
         when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
-                "Ana Paula: pagamento no dia 06/06",
+                "Ana Paula: semanal até 07/06",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
         );
     }
