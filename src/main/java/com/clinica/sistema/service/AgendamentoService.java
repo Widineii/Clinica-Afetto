@@ -26,6 +26,7 @@ import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.util.MoedaBrasilUtil;
 import com.clinica.sistema.util.WhatsAppNumeroUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,8 +65,7 @@ public class AgendamentoService {
     private static final String RECORRENCIA_QUINZENAL = "QUINZENAL";
     private static final String RECORRENCIA_MENSAL = "MENSAL";
     private static final int LIMITE_DATAS_MENSAL_VISIVEIS = 6;
-    /** Evita carregar anos de fixos antigos nas listas do dashboard. */
-    private static final int MESES_HISTORICO_AGENDA = 4;
+    private static final int MESES_HISTORICO_AGENDA_PADRAO = 4;
     private static final Duration INTERVALO_RENOVACAO_SERIES = Duration.ofMinutes(10);
     private static final int ANTECEDENCIA_MINIMA_CANCELAMENTO_HORAS = 24;
 
@@ -77,6 +77,7 @@ public class AgendamentoService {
     private final PagamentoConsultaService pagamentoConsultaService;
     private final EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository;
     private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
+    private final int mesesHistoricoAgenda;
 
     public AgendamentoService(
             AgendamentoRepository repository,
@@ -86,7 +87,8 @@ public class AgendamentoService {
             ValorConsultaService valorConsultaService,
             PagamentoConsultaService pagamentoConsultaService,
             EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository,
-            NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService
+            NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService,
+            @Value("${app.agenda.meses-historico:4}") int mesesHistoricoAgenda
     ) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
@@ -96,6 +98,7 @@ public class AgendamentoService {
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.encerramentoSerieRegistroRepository = encerramentoSerieRegistroRepository;
         this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
+        this.mesesHistoricoAgenda = Math.max(1, Math.min(mesesHistoricoAgenda, MESES_HISTORICO_AGENDA_PADRAO));
     }
 
     private volatile Instant ultimaRenovacaoSeries = Instant.EPOCH;
@@ -121,7 +124,7 @@ public class AgendamentoService {
     }
 
     private IntervaloListaAgenda intervaloListaAgenda() {
-        LocalDateTime desde = LocalDateTime.now().minusMonths(MESES_HISTORICO_AGENDA);
+        LocalDateTime desde = LocalDateTime.now().minusMonths(mesesHistoricoAgenda);
         LocalDateTime ate = LocalDate.now().plusWeeks(SEMANAS_FIXAS_PADRAO + 2).plusDays(1).atStartOfDay();
         return new IntervaloListaAgenda(desde, ate);
     }
