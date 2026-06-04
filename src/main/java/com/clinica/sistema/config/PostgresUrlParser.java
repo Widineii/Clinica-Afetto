@@ -56,6 +56,22 @@ final class PostgresUrlParser {
         return new ParsedDatasource(jdbcUrl, username, password);
     }
 
+    /**
+     * Neon direct host (ep-xxx.c-...) vira pooled (ep-xxx-pooler.c-...) para menos latencia no Railway.
+     */
+    static String normalizarHostNeonPooler(String host) {
+        if (host == null || host.isBlank() || !host.contains("neon.tech")) {
+            return host;
+        }
+        if (host.contains("-pooler") || host.contains("pooler.")) {
+            return host;
+        }
+        if (host.matches("ep-[^.]+\\.c-.+")) {
+            return host.replaceFirst("\\.c-", "-pooler.c-");
+        }
+        return host;
+    }
+
     static String sslModePadrao(String databaseUrl) {
         String configurado = System.getenv("PGSSLMODE");
         if (configurado != null && !configurado.isBlank()) {

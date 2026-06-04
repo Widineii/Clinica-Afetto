@@ -64,15 +64,14 @@ public class PostgresDataSourceConfig {
             config.setJdbcUrl(ajustarJdbcUrlNeon(parsed.jdbcUrl()));
             config.setUsername(parsed.username());
             config.setPassword(parsed.password());
-            avisarNeonSemPooler(urlBanco);
         } else if (pgHost != null && !pgHost.isBlank()) {
+            pgHost = PostgresUrlParser.normalizarHostNeonPooler(pgHost);
             String banco = (pgDatabase == null || pgDatabase.isBlank()) ? "neondb" : pgDatabase;
             config.setJdbcUrl(ajustarJdbcUrlNeon(
                     "jdbc:postgresql://" + pgHost + ":" + pgPort + "/" + banco + "?sslmode=" + modoSsl
             ));
             config.setUsername(pgUser);
             config.setPassword(pgPassword);
-            avisarNeonSemPooler(pgHost);
         } else {
             throw new IllegalStateException(
                     "PostgreSQL nao configurado. Crie o banco no Neon e defina PGHOST, PGUSER, "
@@ -89,28 +88,38 @@ public class PostgresDataSourceConfig {
         return new HikariDataSource(config);
     }
 
-    /** Neon + Railway: pool menor e TCP keepalive reduzem latencia e cold start. */
+    /** Neon + Railway: pooler automatico e TCP keepalive reduzem latencia. */
     private static String ajustarJdbcUrlNeon(String jdbcUrl) {
         if (jdbcUrl == null || !jdbcUrl.contains("neon.tech")) {
             return jdbcUrl;
         }
-        if (jdbcUrl.contains("tcpKeepAlive")) {
-            return jdbcUrl;
+        String comPooler = aplicarPoolerNaJdbcUrl(jdbcUrl);
+        if (comPooler.contains("tcpKeepAlive")) {
+            return comPooler;
         }
-        return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + "tcpKeepAlive=true";
+        return comPooler + (comPooler.contains("?") ? "&" : "?") + "tcpKeepAlive=true";
     }
 
-    private static void avisarNeonSemPooler(String hostOuUrl) {
-        if (hostOuUrl == null || !hostOuUrl.contains("neon.tech")) {
-            return;
+    private static String aplicarPoolerNaJdbcUrl(String jdbcUrl) {
+        final String prefixo = "jdbc:postgresql://";
+        if (!jdbcUrl.startsWith(prefixo)) {
+            return jdbcUrl;
         }
-        if (hostOuUrl.contains("-pooler") || hostOuUrl.contains("pooler.")) {
-            return;
+        int inicioHost = prefixo.length();
+        int fimHost = jdbcUrl.indexOf(':', inicioHost);
+        if (fimHost < 0) {
+            fimHost = jdbcUrl.indexOf('/', inicioHost);
         }
-        log.warn(
-                "Neon sem pooler detectado. No dashboard Neon use a connection string "
-                        + "'Pooled' (host com -pooler) na variavel DATABASE_URL do Railway para menos lentidao."
-        );
+        if (fimHost < 0) {
+            return jdbcUrl;
+        }
+        String host = jdbcUrl.substring(inicioHost, fimHost);
+        String hostPooler = PostgresUrlParser.normalizarHostNeonPooler(host);
+        if (host.equals(hostPooler)) {
+            return jdbcUrl;
+        }
+        log.info("Neon: PGHOST sem pooler — conectando via {} automaticamente.", hostPooler);
+        return jdbcUrl.substring(0, inicioHost) + hostPooler + jdbcUrl.substring(fimHost);
     }
 
     private static String primeiroNaoVazio(String... valores) {

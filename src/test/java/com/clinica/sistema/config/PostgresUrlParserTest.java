@@ -28,4 +28,24 @@ class PostgresUrlParserTest {
         assertTrue(parsed.jdbcUrl().contains("neon.tech"));
         assertTrue(parsed.jdbcUrl().contains("sslmode=require"));
     }
+
+    @Test
+    void deveNormalizarHostNeonDirectParaPooler() {
+        assertEquals(
+                "ep-orange-shape-apb7aixp-pooler.c-7.us-east-1.aws.neon.tech",
+                PostgresUrlParser.normalizarHostNeonPooler(
+                        "ep-orange-shape-apb7aixp.c-7.us-east-1.aws.neon.tech"
+                )
+        );
+    }
+
+    @Test
+    void devePreservarHostNeonQueJaTemPooler() {
+        assertEquals(
+                "ep-orange-shape-apb7aixp-pooler.c-7.us-east-1.aws.neon.tech",
+                PostgresUrlParser.normalizarHostNeonPooler(
+                        "ep-orange-shape-apb7aixp-pooler.c-7.us-east-1.aws.neon.tech"
+                )
+        );
+    }
 }
