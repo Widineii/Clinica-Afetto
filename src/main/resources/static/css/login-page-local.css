@@ -3,6 +3,6 @@ body.login-page.login-page--local-compact .page-shell {
 }
 
 body.login-page.login-page--local-compact .login-shell {
-    width: min(1040px, 100%) !important;
+    width: min(1200px, 100%) !important;
     max-height: calc(100dvh - 32px) !important;
 }

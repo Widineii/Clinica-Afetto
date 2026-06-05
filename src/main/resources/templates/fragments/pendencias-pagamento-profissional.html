@@ -3,7 +3,7 @@
 <body>
 
 <section th:fragment="banner"
-         class="pendencias-alerta-principal mb-4"
+         class="pendencias-alerta-principal shell-card mb-4"
          id="pendencias-pagamento-destaque"
          role="region"
          aria-label="Pendências de pagamento"
@@ -12,7 +12,7 @@
         <span class="pendencias-alerta-principal__pulse" aria-hidden="true"></span>
         Pendência ativa
     </div>
-    <div class="pendencias-alerta-principal__grid">
+    <div class="pendencias-alerta-principal__layout">
         <div class="pendencias-alerta-principal__texto">
             <h2 class="pendencias-alerta-principal__titulo mb-2">
                 Você tem pagamentos em aberto
@@ -26,21 +26,30 @@
                 Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
             </p>
         </div>
+
         <div class="pendencias-alerta-principal__metricas">
             <div class="pendencias-alerta-principal__metrica">
+                <span class="pendencias-alerta-principal__metrica-icone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
+                </span>
                 <span class="pendencias-alerta-principal__metrica-label">Itens pendentes</span>
                 <span class="pendencias-alerta-principal__numero pendencias-alerta-principal__numero--qtd"
                       th:text="${resumoPendenciasPagamento.quantidade}">0</span>
             </div>
             <div class="pendencias-alerta-principal__metrica pendencias-alerta-principal__metrica--valor">
+                <span class="pendencias-alerta-principal__metrica-icone pendencias-alerta-principal__metrica-icone--valor" aria-hidden="true">
+                    <span>R$</span>
+                </span>
                 <span class="pendencias-alerta-principal__metrica-label">Total em aberto</span>
                 <span class="pendencias-alerta-principal__numero pendencias-alerta-principal__numero--valor"
                       th:text="${resumoPendenciasPagamento.valorTotalFormatado}">R$ 0,00</span>
             </div>
         </div>
+
         <div class="pendencias-alerta-principal__rodape">
             <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
                class="btn btn-danger btn-lg fw-bold pendencias-alerta-principal__cta">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
                 Resolver pendências agora
             </a>
         </div>

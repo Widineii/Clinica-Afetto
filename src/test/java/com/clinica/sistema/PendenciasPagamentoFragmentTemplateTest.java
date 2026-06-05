@@ -43,6 +43,8 @@ class PendenciasPagamentoFragmentTemplateTest {
         assertFalse(html.contains("Algo deu errado"), () -> "HTML: " + html);
         assertTrue(html.contains("R$ 150,00"), () -> "HTML: " + html);
         assertTrue(html.contains("pendencias-alerta-principal__numero--qtd"), () -> "HTML: " + html);
+        assertTrue(html.contains("pendencias-alerta-principal__metrica-icone"), () -> "HTML: " + html);
+        assertTrue(html.contains("Resolver pendências agora"), () -> "HTML: " + html);
         assertTrue(html.contains(">3<") || html.contains(">3</span>"), () -> "HTML: " + html);
     }
 }
