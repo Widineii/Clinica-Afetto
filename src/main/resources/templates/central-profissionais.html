@@ -482,6 +482,17 @@
             font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
         }
 
+        .prof-whatsapp {
+            font-size: 0.8rem;
+            color: #334155;
+            font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+            white-space: nowrap;
+        }
+
+        .prof-whatsapp--vazio {
+            color: #94a3b8;
+        }
+
         .badge-perfil {
             display: inline-block;
             padding: 4px 10px;
@@ -906,6 +917,7 @@
                         <col style="width: 2.75rem;">
                         <col>
                         <col class="d-none d-md-table-column" style="width: 8.5rem;">
+                        <col class="d-none d-lg-table-column" style="width: 9.5rem;">
                         <col style="width: 7.25rem;">
                         <col style="width: 11.5rem;">
                     </colgroup>
@@ -914,6 +926,7 @@
                         <th></th>
                         <th>Profissional</th>
                         <th class="d-none d-md-table-cell">Login</th>
+                        <th class="d-none d-lg-table-cell">WhatsApp</th>
                         <th>Perfil</th>
                         <th class="prof-pagamento-head">Pagamento</th>
                     </tr>
@@ -936,11 +949,19 @@
                                 <div>
                                     <div class="prof-name" th:text="${prof.nome}">Nome</div>
                                     <div class="prof-login d-md-none" th:text="${prof.login}">login</div>
+                                    <div class="prof-whatsapp d-lg-none"
+                                         th:classappend="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? ' prof-whatsapp--vazio' : ''}"
+                                         th:text="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? 'Sem WhatsApp' : prof.telefoneWhatsappFormulario}">37998550994</div>
                                 </div>
                             </div>
                         </td>
                         <td class="d-none d-md-table-cell">
                             <span class="prof-login" th:text="${prof.login}">login</span>
+                        </td>
+                        <td class="d-none d-lg-table-cell">
+                            <span class="prof-whatsapp"
+                                  th:classappend="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? ' prof-whatsapp--vazio' : ''}"
+                                  th:text="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? '—' : prof.telefoneWhatsappFormulario}">37998550994</span>
                         </td>
                         <td>
                             <span th:if="${prof.donaClinica}" class="badge-perfil badge-perfil--dona">Dona da clínica</span>
