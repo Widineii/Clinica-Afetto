@@ -81,10 +81,6 @@
                 <div class="fin-cronograma-card__topo">
                     <div class="fin-cronograma-card__intro">
                         <p class="fin-cronograma-card__titulo">Pendências do mês</p>
-                        <p class="fin-cronograma-card__hint" id="cronogramaRecebimentoHint">
-                            Taxas de sala ainda não pagas pelos profissionais. Separadas entre consultas já realizadas (atraso)
-                            e consultas futuras (previsão).
-                        </p>
                     </div>
                     <div class="fin-cronograma-modos" role="group" aria-label="Visualização das pendências">
                         <button type="button"
@@ -1094,18 +1090,6 @@
         return agruparPendentesPorSemana(pendentesFiltrados);
     }
 
-    function atualizarHintCronogramaModo() {
-        const hint = document.getElementById('cronogramaRecebimentoHint');
-        if (!hint) {
-            return;
-        }
-        if (cronogramaModo === 'mes') {
-            hint.textContent = 'Taxas de sala ainda não pagas pelos profissionais. Visão consolidada do mês (atraso e previsão).';
-            return;
-        }
-        hint.textContent = 'Taxas de sala ainda não pagas pelos profissionais. Separadas entre consultas já realizadas (atraso) e futuras (previsão), agrupadas por semana.';
-    }
-
     function separarPendentesAtrasoPrevisao(pendentesFiltrados) {
         const hoje = hojeIsoLocal();
         const atraso = [];
@@ -1183,7 +1167,6 @@
         }
 
         const partes = separarPendentesAtrasoPrevisao(pendentesFiltrados);
-        atualizarHintCronogramaModo();
         const gruposAtraso = agruparPendentesCronograma(
             partes.atraso,
             cronogramaModo,
