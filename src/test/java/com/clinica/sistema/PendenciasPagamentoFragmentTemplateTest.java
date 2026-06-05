@@ -26,6 +26,7 @@ class PendenciasPagamentoFragmentTemplateTest {
                 3,
                 "R$ 150,00",
                 "Pendências",
+                "Você tem 3 itens pendentes.",
                 "Você tem 3 itens. Total: R$ 150,00.",
                 "03/06/2026",
                 "/agendamentos/meus-pagamentos#pagamentos-pendentes"

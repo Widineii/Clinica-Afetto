@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Meu relatorio - Clinica Afetto</title>
     <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
+    <th:block th:replace="~{fragments/site-menu-principal :: estilos}"></th:block>
     <style>
         @media (max-width: 991px) {
             .fin-dashboard-graficos {
@@ -69,12 +70,7 @@
 <body class="financeiro-page">
 <div class="financeiro-wrap">
 
-    <div th:replace="~{fragments/meu-relatorio-hero :: hero(
-        titulo='Meu relatorio',
-        subtitulo=${exibirTaxasRelatorio}
-            ? 'Resumo dos seus atendimentos e taxas PIX pagas no mes selecionado.'
-            : 'Resumo dos seus atendimentos no mes selecionado (a dona da clinica nao paga taxa de sala).'
-    )}"></div>
+    <th:block th:replace="~{fragments/site-menu-principal :: barra(paginaAtiva='RELATORIO')}"></th:block>
 
     <div th:if="${erro}" class="alert alert-danger financeiro-card mb-3" th:text="${erro}"></div>
     <div th:if="${sucesso}" class="alert alert-success financeiro-card mb-3" th:text="${sucesso}"></div>
@@ -279,6 +275,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<th:block th:replace="~{fragments/site-menu-principal :: scripts}"></th:block>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (function () {

@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.YearMonth;
 import java.util.Arrays;
+import java.util.List;
 
 @Controller
 @RequestMapping("/agendamentos/meu-relatorio")
@@ -94,6 +95,16 @@ public class RelatorioProfissionalController {
 
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
+        model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
+        model.addAttribute("podeGerenciarEquipe", authService.podeGerenciarEquipe(usuarioLogado));
+        model.addAttribute("podeAcessarGestaoFinanceira", false);
+        model.addAttribute("podeVerRelatorioProprio", true);
+        model.addAttribute("podeTrocarPropriaSenha", authService.podeTrocarPropriaSenha(usuarioLogado));
+        model.addAttribute("resumoPendenciasPagamento", com.clinica.sistema.dto.ResumoPendenciasPagamentoView.vazio());
+        model.addAttribute("exibirBolinhaNotificacaoEncerramento", false);
+        model.addAttribute("exibirBolinhaNotificacaoPagamento", false);
+        model.addAttribute("exibirBolinhaNotificacaoNovoAgendamento", false);
+        model.addAttribute("notificacoesNovosAgendamentos", List.of());
         return "meu-relatorio";
     }
 

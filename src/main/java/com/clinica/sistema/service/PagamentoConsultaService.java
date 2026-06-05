@@ -1116,7 +1116,8 @@ public class PagamentoConsultaService {
         String total = formatarTotalTaxaPix(consultas);
         String rotulo = rotuloPeriodoPendencias(periodicidade);
         String url = urlMeusPagamentosPorPeriodicidade(periodicidade);
-        String mensagem = montarMensagemConvitePendencias(
+        String mensagemResumo = montarMensagemResumoPendencias(periodicidade, quantidade, rotulo);
+        String mensagemConvite = montarMensagemConvitePendencias(
                 usuarioLogado,
                 periodicidade,
                 quantidade,
@@ -1127,7 +1128,8 @@ public class PagamentoConsultaService {
                 quantidade,
                 total,
                 "Pendências de pagamento",
-                mensagem,
+                mensagemResumo,
+                mensagemConvite,
                 rotulo,
                 url
         );
@@ -1183,6 +1185,19 @@ public class PagamentoConsultaService {
         };
     }
 
+    private String montarMensagemResumoPendencias(
+            PeriodicidadePagamento periodicidade,
+            int quantidade,
+            String rotuloPeriodo
+    ) {
+        String consultas = quantidade == 1 ? "1 item pendente" : quantidade + " itens pendentes";
+        return switch (periodicidade) {
+            case DIARIO -> "Você tem " + consultas + " de taxa de sala (próximo dia: " + rotuloPeriodo + ").";
+            case SEMANAL -> "Você tem " + consultas + " da semana " + rotuloPeriodo + " ainda em aberto.";
+            case MENSAL -> "Você tem " + consultas + " do mês vigente (" + rotuloPeriodo + ") ainda em aberto.";
+        };
+    }
+
     private String montarMensagemConvitePendencias(
             Usuario usuarioLogado,
             PeriodicidadePagamento periodicidade,
@@ -1195,15 +1210,10 @@ public class PagamentoConsultaService {
                     + totalFormatado
                     + ". Confirme o pagamento para liberar a agenda.";
         }
-        String consultas = quantidade == 1 ? "1 item pendente" : quantidade + " itens pendentes";
-        String intro = switch (periodicidade) {
-            case DIARIO -> "Você tem " + consultas + " de taxa de sala (próximo dia: " + rotuloPeriodo + ").";
-            case SEMANAL -> "Você tem " + consultas + " da semana " + rotuloPeriodo + " ainda em aberto.";
-            case MENSAL -> "Você tem " + consultas + " do mês vigente (" + rotuloPeriodo + ") ainda em aberto.";
-        };
-        StringBuilder mensagem = new StringBuilder(intro);
+        StringBuilder mensagem = new StringBuilder(
+                montarMensagemResumoPendencias(periodicidade, quantidade, rotuloPeriodo)
+        );
         mensagem.append(" Total: ").append(totalFormatado).append('.');
-        mensagem.append(" Não é obrigatório pagar agora, mas quanto antes você resolver, mais tranquilo fica sua agenda.");
         if (profissionalBloqueadoPorPendenciaPagamento(usuarioLogado)) {
             mensagem.append(" No momento, novos agendamentos estão bloqueados até quitar.");
         }

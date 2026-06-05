@@ -8,6 +8,7 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <th:block th:replace="~{fragments/estilos-notificacao-relatorio :: css}"></th:block>
+    <th:block th:replace="~{fragments/site-menu-principal :: estilos}"></th:block>
     <style>
         html {
             width: 100%;
@@ -1496,6 +1497,11 @@
         .pendencias-alerta-principal__grid {
             display: grid;
             gap: 1.25rem;
+            text-align: center;
+        }
+
+        .pendencias-alerta-principal__texto {
+            text-align: center;
         }
 
         @media (min-width: 768px) {
@@ -1506,18 +1512,22 @@
             }
 
             .pendencias-alerta-principal__texto {
-                grid-column: 1;
+                grid-column: 1 / -1;
                 grid-row: 1;
+                width: 100%;
             }
 
             .pendencias-alerta-principal__metricas {
-                grid-column: 2;
-                grid-row: 1 / span 2;
+                grid-column: 1;
+                grid-row: 2;
+                justify-content: center;
+                justify-self: center;
             }
 
             .pendencias-alerta-principal__rodape {
-                grid-column: 1;
+                grid-column: 2;
                 grid-row: 2;
+                justify-self: center;
             }
         }
 
@@ -1532,6 +1542,8 @@
             font-size: 0.95rem;
             color: #7f1d1d;
             max-width: 42rem;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .pendencias-alerta-principal__metricas {
@@ -1596,8 +1608,9 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             gap: 1rem;
+            width: 100%;
         }
 
         .pendencias-alerta-principal__cta {
@@ -1981,72 +1994,7 @@
 <body th:attr="data-pagamento-auto-sync=${pagamentoService != null and !pagamentoService.modoTestePagamento()}">
 <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 <div class="app-shell">
-    <div class="hero-band mb-4">
-        <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 afetto-hero-stack">
-            <div class="hero-band__brand">
-                <img class="hero-band__logo"
-                     th:src="@{/images/afetto-logo.png}"
-                     alt="Afetto Psicologia e Saúde">
-                <div class="hero-band__copy">
-                    <p class="text-uppercase small mb-2 opacity-75 hero-band__kicker">Sistema de agenda da clínica</p>
-                    <h1 class="h2 hero-band-headline__title mb-2">Agende seus horários na Clinica Afetto</h1>
-                    <p class="mb-0 opacity-75 hero-band__user">
-                        Usuário: <strong th:text="${usuarioLogado.nome}">Nome</strong>
-                    </p>
-                </div>
-            </div>
-            <div class="top-actions afetto-top-actions">
-                <a th:if="${isAdmin}"
-                   th:href="@{/agendamentos/admin/uso-banco}"
-                   class="btn btn-warning">Uso do banco</a>
-                <a th:if="${podeGerenciarEquipe}"
-                   th:href="@{/agendamentos/central-profissionais}"
-                   class="btn btn-warning">Central dos profissionais</a>
-                <a th:href="@{/agendamentos/manual}"
-                   class="btn btn-light"
-                   title="Manual de uso e regras da clínica">Manual</a>
-                <button th:if="${!isAdmin and !isDonaClinica and resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}"
-                        type="button"
-                        class="btn btn-pendencias-header position-relative fw-semibold"
-                        data-bs-toggle="modal"
-                        data-bs-target="#pendenciasPagamentoModal"
-                        title="Você tem pagamentos em aberto">
-                    Pendências
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-light text-danger border border-danger"
-                          th:text="${resumoPendenciasPagamento.quantidade}">1</span>
-                </button>
-                <button th:if="${totalNovidadesVisiveis != null and totalNovidadesVisiveis > 0}"
-                        type="button"
-                        class="btn btn-light position-relative"
-                        data-bs-toggle="modal"
-                        data-bs-target="#novidadesModal"
-                        title="Novidades e atualizações do sistema">
-                    Novidades
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning"
-                          th:text="${totalNovidadesVisiveis}">1</span>
-                </button>
-                <a th:if="${podeAcessarGestaoFinanceira}"
-                   th:href="@{/agendamentos/financeiro}"
-                   class="btn btn-light">Gestão financeira</a>
-                <button th:if="${podeTrocarPropriaSenha}" type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
-                    Trocar senha
-                </button>
-                <a th:if="${!isAdmin and !isDonaClinica}"
-                        th:href="@{/agendamentos/meus-pagamentos}"
-                        class="btn btn-warning"
-                        th:classappend="${totalMeusPagamentosPendentes > 0} ? ' btn-meus-pagamentos-destaque' : ''"
-                        th:text="${totalMeusPagamentosPendentes > 0 ? 'Meus pagamentos (' + totalMeusPagamentosPendentes + ' pendentes)' : 'Meus pagamentos'}">Meus pagamentos</a>
-                <a th:if="${podeVerRelatorioProprio}"
-                   th:href="@{/agendamentos/meu-relatorio}"
-                   class="btn btn-warning">Meu relatório</a>
-                <form th:action="@{/logout}" method="post">
-                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                    <button type="submit" class="btn btn-light">Sair</button>
-                </form>
-                <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
-            </div>
-        </div>
-    </div>
+    <th:block th:replace="~{fragments/site-menu-principal :: barra(paginaAtiva='AGENDA')}"></th:block>
 
     <section th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}"
              class="pendencias-alerta-principal shell-card mb-4"
@@ -2060,9 +2008,13 @@
         <div class="pendencias-alerta-principal__grid">
             <div class="pendencias-alerta-principal__texto">
                 <h2 class="pendencias-alerta-principal__titulo mb-2">Você tem pagamentos em aberto</h2>
-                <p class="pendencias-alerta-principal__subtitulo mb-0"
-                   th:text="${resumoPendenciasPagamento.mensagemConvite}">
+                <p class="pendencias-alerta-principal__subtitulo mb-2"
+                   th:text="${resumoPendenciasPagamento.mensagemResumo}">
                     Resolva com antecedência para manter a agenda liberada.
+                </p>
+                <p class="pendencias-alerta-principal__periodo mb-0"
+                   th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
+                    Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
                 </p>
             </div>
             <div class="pendencias-alerta-principal__metricas">
@@ -2078,10 +2030,6 @@
                 </div>
             </div>
             <div class="pendencias-alerta-principal__rodape">
-                <p class="pendencias-alerta-principal__periodo mb-3 mb-md-0"
-                   th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
-                    Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
-                </p>
                 <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
                    class="btn btn-danger btn-lg fw-bold pendencias-alerta-principal__cta">
                     Resolver pendências agora
@@ -2236,10 +2184,8 @@
                                             Locação da sala por turno (meio período)
                                         </label>
                                         <p class="hint-opcao-extra mb-0 mt-2" id="hintLocacaoTurnoAgenda">
-                                            Opcional — quem não usa deixa desligado e marca só 1 hora (07:00–21:00).
-                                            Ligado: manhã 08:00–13:00 ou tarde 13:00–18:00, clínica R$ 500,00; bloqueia o turno inteiro na sala.
-                                            Avulso, semanal, quinzenal e mensal iguais à consulta normal.
-                                            Ex.: Sala 1 · João · 10/06 · turno tarde · semanal.
+                                            Desligado: consulta de 1 hora (07:00–21:00).
+                                            Ligado: turno manhã (08:00–13:00) ou tarde (13:00–18:00) por R$ 500,00 — bloqueia a sala no período.
                                         </p>
                                     </div>
                                 </div>
@@ -2263,9 +2209,8 @@
                                 </select>
                                 <div class="form-text">A administração ou a dona da clínica podem escolher qual profissional será vinculado ao agendamento.</div>
                                 <div class="form-text" id="hintValorProfissionalCadastrado">
-                                    Selecione o profissional: <strong>Clínica cobra</strong> usa a taxa de sala cadastrada em
-                                    <strong>Central → Taxas de sala</strong>.
-                                    Informe em <strong>Profissional recebe</strong> quanto o cliente paga na consulta.
+                                    <strong>Clínica cobra:</strong> taxa de sala (Central → Taxas de sala).
+                                    <strong>Profissional recebe:</strong> valor pago pelo cliente.
                                 </div>
                             </div>
                             <div th:unless="${isAdmin or isDonaClinica}">
@@ -2325,19 +2270,17 @@
                                 <option value="MENSAL">Mensal</option>
                             </select>
                             <div class="form-text mt-1 d-none" id="recorrenciaHintMensalAgenda">
-                                Mensal: só esta consulta (ex.: 08/06). No mês seguinte, marque de novo quando o cliente voltar — pode ser outro dia e outro horário.
+                                Mensal marca só esta consulta. No mês seguinte, agende de novo quando o cliente voltar.
                             </div>
                             <div class="form-text mt-1" id="pagamentoRecorrenciaHintSemanal"
                                  th:unless="${isDonaClinica}"
                                  th:if="${periodicidadePagamento != null and periodicidadePagamento.name() == 'SEMANAL'}">
-                                Pagamento semanal: pague quando quiser em Meus pagamentos (prazo máximo domingo). Ao realocar, a fatura continua na semana em que você agendou.
+                                Pague em Meus pagamentos até domingo. Ao realocar, a fatura permanece na semana do agendamento.
                             </div>
                             <div class="form-text mt-1" id="pagamentoRecorrenciaHintMensal"
                                  th:unless="${isDonaClinica}"
                                  th:if="${periodicidadePagamento != null and periodicidadePagamento.name() == 'MENSAL'}">
-                                Pagamento mensal: agenda liberada no mês; do dia 01 ao 10 paga o mês vigente (mesmo mês).
-                                Ao realocar, a fatura continua no mês em que você agendou (ex.: marcou em 29/06
-                                e realocou para 07/07 — continua na fatura de junho).
+                                Pagamento até o dia 10 do mês vigente. Ao realocar, a fatura permanece no mês do agendamento.
                             </div>
                         </div>
 
@@ -2359,7 +2302,7 @@
                             <div id="cabecalhoValoresLocacaoTurno" class="painel-locacao-turno d-none">
                                 <h3 class="h6 mb-2">Locação da sala por turno</h3>
                                 <p class="painel-locacao-turno__taxa-fixa mb-3">
-                                    Taxa fixa da clínica: <strong>R$ 500,00</strong> no turno inteiro (manhã 08:00–13:00 ou tarde 13:00–18:00).
+                                    Taxa fixa: <strong>R$ 500,00</strong> por turno (manhã ou tarde).
                                 </p>
                                 <label class="form-label" for="turnoLocacaoSelect">Turno</label>
                                 <select th:field="*{turnoLocacao}" class="form-select mb-3" id="turnoLocacaoSelect">
@@ -2460,20 +2403,19 @@
                     </form>
 
                     <div th:if="${isAdmin != true and isDonaClinica != true}" class="alert alert-info mt-4 mb-0 small">
-                        <p class="fw-semibold mb-2">Cancelamento de horários</p>
+                        <p class="fw-semibold mb-2">Política de cancelamento</p>
                         <ul class="mb-0 ps-3">
                             <li class="mb-1">
                                 <strong>Série fixa ou quinzenal:</strong> em <strong>Meus agendamentos</strong>,
-                                selecione a data e toque em <strong>Cancelar data</strong>.
-                                Só funciona com <strong>mais de 24 horas</strong> de antecedência e se aquela data
-                                <strong>ainda não estiver paga</strong>.
+                                utilize <strong>Cancelar data</strong> com antecedência mínima de 24 horas,
+                                desde que o pagamento da data não esteja confirmado.
                             </li>
                             <li class="mb-1">
-                                <strong>Avulso:</strong> em <strong>Meus agendamentos</strong>, use <strong>Cancelar</strong>
-                                enquanto <strong>não tiver pago</strong> (errou data ou desistiu).
+                                <strong>Avulso:</strong> cancelamento disponível em <strong>Meus agendamentos</strong>
+                                antes da confirmação do pagamento.
                             </li>
                             <li>
-                                <strong>Já pagou?</strong> É locação de sala, <strong>sem reembolso</strong>.
+                                <strong>Pagamento confirmado:</strong> não há reembolso (locação de sala).
                             </li>
                         </ul>
                     </div>
@@ -2536,7 +2478,6 @@
                 <div class="card-body p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
                         <div>
-                            <p class="text-uppercase small text-muted mb-1">Visual inspirado na planilha</p>
                             <h2 class="h4 mb-1" th:text="${'Grade semanal da ' + agendaSala.sala.nome}">Grade semanal</h2>
                             <p class="text-muted mb-0">
                                 Semana de
@@ -2565,7 +2506,6 @@
                     </p>
                     <p class="small text-muted mb-3" th:if="${!isAdmin and !isDonaClinica}">
                         Dê dois cliques nos seus horários semanal ou quinzenal na grade para encerrar a série.
-                        Cancelamento de data avulsa só com dona da clínica ou administração.
                     </p>
 
                     <div th:if="${avisoAgendamentoOutraSala}" class="alert alert-warning py-2 small mb-3" th:text="${avisoAgendamentoOutraSala}">
@@ -3207,7 +3147,6 @@
         <div class="modal-content pendencias-pagamento-modal">
             <div class="modal-header border-0 pb-0">
                 <div>
-                    <p class="pendencias-pagamento-modal__kicker mb-1">Lembrete ao entrar na agenda</p>
                     <h2 class="modal-title h4 mb-0" id="pendenciasPagamentoModalTitulo">
                         Você tem pagamentos em aberto
                     </h2>
@@ -3241,28 +3180,18 @@
                 </p>
             </div>
             <div class="modal-footer flex-column align-items-stretch gap-2 border-0 pt-0">
-                <p class="small text-muted mb-0 text-start">
-                    Não é cobrança automática — é só um lembrete. Quanto antes você resolver, mais tranquilo fica sua agenda.
-                </p>
                 <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
                    class="btn btn-danger btn-lg fw-bold w-100"
                    id="pendenciasPagamentoModalIrPagar">
                     Ir para Meus pagamentos
                 </a>
-                <form th:action="@{/conta/pendencias-pagamento/pular}" method="post" class="d-grid">
-                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                    <button type="submit"
-                            class="btn btn-outline-secondary w-100"
-                            id="pendenciasPagamentoModalVerDepois">
-                        Ver depois (continuar na agenda)
-                    </button>
-                </form>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+<th:block th:replace="~{fragments/site-menu-principal :: scripts}"></th:block>
 <script type="application/json"
         id="valores-consulta-padrao-json"
         th:if="${exibirPainelValoresConsulta}"
@@ -3318,12 +3247,27 @@
         }
         var modalPendencias = bootstrap.Modal.getOrCreateInstance(pendenciasModalEl);
         pendenciasModalEl.addEventListener('hidden.bs.modal', function () {
+            dispensarLembretePendenciasSessao();
             rolarParaPendenciasDestaque();
             if (abrirNovidadesDepois) {
                 abrirModalNovidadesEntrada();
             }
         }, { once: true });
         modalPendencias.show();
+    }
+
+    function dispensarLembretePendenciasSessao() {
+        var csrf = document.querySelector('input[name="_csrf"]');
+        if (!csrf) {
+            return;
+        }
+        var body = new URLSearchParams();
+        body.append(csrf.name, csrf.value);
+        fetch('/conta/pendencias-pagamento/pular', {
+            method: 'POST',
+            body: body,
+            credentials: 'same-origin'
+        });
     }
 
     function rolarParaGradeSemanal() {
@@ -4141,7 +4085,8 @@
 
         var modalSenhaEl = document.getElementById('trocarSenhaModal');
         var painelSenhaErro = document.getElementById('trocarSenhaErroPainel');
-        if (exibirModalTrocarSenhaObrigatoria || erroSenhaModal || painelSenhaErro) {
+        var abrirModalAlterarSenha = /*[[${abrirModalAlterarSenha}]]*/ false;
+        if (exibirModalTrocarSenhaObrigatoria || abrirModalAlterarSenha || erroSenhaModal || painelSenhaErro) {
             fecharAvisoErroAgendamento();
             if (modalSenhaEl) {
                 var opcoesModalSenha = exibirModalTrocarSenhaObrigatoria

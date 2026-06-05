@@ -3,7 +3,7 @@ package com.clinica.sistema.model;
 public enum PeriodicidadePagamento {
     DIARIO("Diário", "Paga na véspera de cada consulta (D-1)."),
     SEMANAL("Semanal", "Semana liberada até domingo; pague quando quiser em Meus pagamentos."),
-    MENSAL("Mensal", "Mês liberado para agendar; paga do dia 01 ao 10 do mesmo mês.");
+    MENSAL("Mensal", "Pagamento até o dia 10 do mês vigente.");
 
     private final String rotulo;
     private final String descricao;

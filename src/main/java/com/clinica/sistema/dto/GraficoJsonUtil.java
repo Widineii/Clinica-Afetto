@@ -103,7 +103,11 @@ public final class GraficoJsonUtil {
                     .append("\"valorTaxaFormatado\":").append(texto(linha.getValorTaxaFormatado())).append(',')
                     .append("\"statusPagamentoRotulo\":").append(texto(linha.getStatusPagamentoRotulo())).append(',')
                     .append("\"nomeCliente\":").append(texto(linha.getNomeCliente())).append(',')
-                    .append("\"consultaRotulo\":").append(texto(linha.getConsultaRotulo()))
+                    .append("\"consultaRotulo\":").append(texto(linha.getConsultaRotulo())).append(',')
+                    .append("\"dataConsulta\":").append(texto(
+                            linha.getDataConsulta() != null ? linha.getDataConsulta().toString() : ""
+                    )).append(',')
+                    .append("\"dataConsultaRotulo\":").append(texto(linha.getDataConsultaRotulo()))
                     .append('}');
         }
         json.append(']');

@@ -6,6 +6,7 @@ import com.clinica.sistema.util.MoedaBrasilUtil;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 @Getter
@@ -13,6 +14,8 @@ public class ReceitaPendenteLinhaView {
 
     private static final DateTimeFormatter DATA_HORA =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter DATA =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final Long agendamentoId;
     private final String profissionalNome;
@@ -23,6 +26,8 @@ public class ReceitaPendenteLinhaView {
     private final String tipoRecorrencia;
     private final String tipoRecorrenciaRotulo;
     private final String consultaRotulo;
+    private final LocalDate dataConsulta;
+    private final String dataConsultaRotulo;
     private final String statusPagamentoRotulo;
     private final BigDecimal valorTaxa;
     private final String valorTaxaFormatado;
@@ -40,6 +45,12 @@ public class ReceitaPendenteLinhaView {
         this.tipoRecorrenciaRotulo = rotularTipoRecorrencia(this.tipoRecorrencia);
         this.consultaRotulo = agendamento.getDataHoraInicio() != null
                 ? agendamento.getDataHoraInicio().format(DATA_HORA)
+                : "—";
+        this.dataConsulta = agendamento.getDataHoraInicio() != null
+                ? agendamento.getDataHoraInicio().toLocalDate()
+                : null;
+        this.dataConsultaRotulo = this.dataConsulta != null
+                ? this.dataConsulta.format(DATA)
                 : "—";
         this.statusPagamentoRotulo = rotularStatusPagamento(agendamento.getStatusPagamento());
         this.valorTaxa = valorTaxa;

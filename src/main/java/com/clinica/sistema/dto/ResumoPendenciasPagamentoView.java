@@ -7,6 +7,7 @@ public record ResumoPendenciasPagamentoView(
         int quantidade,
         String valorTotalFormatado,
         String titulo,
+        String mensagemResumo,
         String mensagemConvite,
         String rotuloPeriodo,
         String urlMeusPagamentos
@@ -23,6 +24,7 @@ public record ResumoPendenciasPagamentoView(
         return new ResumoPendenciasPagamentoView(
                 0,
                 "R$ 0,00",
+                "",
                 "",
                 "",
                 "",

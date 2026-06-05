@@ -248,6 +248,7 @@ public class AgendamentoController {
             @RequestParam(required = false) Long abrirRemarcarMensal,
             @RequestParam(required = false, defaultValue = "false") boolean secaoMensal,
             @RequestParam(required = false, defaultValue = "false") boolean viaNotificacaoNovoAgendamento,
+            @RequestParam(required = false, defaultValue = "false") boolean alterarSenha,
             @RequestParam(required = false, defaultValue = "todos") String acompProfissional,
             @RequestParam(required = false, defaultValue = "hoje") String acompPeriodo,
             @RequestParam(required = false, defaultValue = "todos") String acompRecorrencia,
@@ -343,6 +344,7 @@ public class AgendamentoController {
         model.addAttribute("isDonaClinica", isDonaClinica);
         model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuarioLogado));
         model.addAttribute("podeTrocarPropriaSenha", podeTrocarPropriaSenha);
+        model.addAttribute("abrirModalAlterarSenha", alterarSenha && podeTrocarPropriaSenha);
         model.addAttribute(
                 "podeAcessarGestaoFinanceira",
                 financeiroPolyanaAcessoService.podeAcessarGestaoFinanceira(usuarioLogado)
@@ -898,6 +900,8 @@ public class AgendamentoController {
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuarioLogado));
         model.addAttribute("podeAcessarCentralProfissionais", authService.podeAcessarCentralProfissionais(usuarioLogado));
+        model.addAttribute("podeVerRelatorioProprio", authService.podeVerRelatorioProprio(usuarioLogado));
+        model.addAttribute("podeTrocarPropriaSenha", authService.podeTrocarPropriaSenha(usuarioLogado));
         model.addAttribute("manualVideoUrl", manualProperties.getVideoUrlNormalizada());
         model.addAttribute("manualVideoTitulo", manualProperties.getVideoTitulo());
         model.addAttribute("manualVideoDescricao", manualProperties.getVideoDescricao());
@@ -923,6 +927,10 @@ public class AgendamentoController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", false);
         model.addAttribute("isDonaClinica", false);
+        model.addAttribute("podeGerenciarEquipe", false);
+        model.addAttribute("podeAcessarGestaoFinanceira", false);
+        model.addAttribute("podeVerRelatorioProprio", authService.podeVerRelatorioProprio(usuarioLogado));
+        model.addAttribute("podeTrocarPropriaSenha", authService.podeTrocarPropriaSenha(usuarioLogado));
         model.addAttribute("podeEscolherFormaPagamento", true);
         model.addAttribute("periodicidadePagamento", periodicidade);
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());

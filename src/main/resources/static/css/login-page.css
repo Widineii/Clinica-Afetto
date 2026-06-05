@@ -1,4 +1,3 @@
-/* Plano de fundo = halftone em tela cheia; card escuro flutua por cima (.login-shell) */
 html.login-page-root,
 body.login-page {
     min-height: 100vh;
@@ -8,8 +7,8 @@ body.login-page {
 body.login-page {
     position: relative;
     isolation: isolate;
-    background-color: #12b5b2;
-    background-image: url("/images/login-halftone-bg.png?v=10");
+    background-color: #0d8f8c;
+    background-image: url("/images/login-bg-wellness.png?v=1");
     background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
@@ -22,33 +21,24 @@ body.login-page::before {
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background: radial-gradient(
-        ellipse 85% 75% at 50% 42%,
-        rgba(255, 255, 255, 0.06) 0%,
-        transparent 55%
-    );
+    background:
+        linear-gradient(135deg, rgba(8, 120, 118, 0.35) 0%, rgba(4, 78, 76, 0.25) 45%, rgba(2, 56, 54, 0.4) 100%),
+        radial-gradient(ellipse 70% 60% at 75% 40%, rgba(255, 255, 255, 0.12) 0%, transparent 60%);
 }
 
 body.login-page::after {
-    content: none;
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 40%);
 }
 
 body.login-page .page-shell {
     position: relative;
     z-index: 1;
     background: transparent;
-}
-
-body.login-page .login-shell {
-    box-shadow:
-        0 32px 64px rgba(0, 48, 46, 0.5),
-        0 12px 32px rgba(0, 0, 0, 0.28);
-}
-
-body.login-page .feature-item {
-    background: rgba(6, 72, 70, 0.48);
-    border-color: rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(8px);
 }
 
 @media (max-width: 991.98px) {

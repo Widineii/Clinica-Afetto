@@ -36,8 +36,10 @@
         </style>
         <div class="financeiro-hero__topo">
             <div>
-                <h1 class="financeiro-hero__titulo" th:text="${titulo}">Gestao financeira</h1>
-                <p class="financeiro-hero__subtitulo" th:text="${subtitulo}">Despesas mensais e unicas.</p>
+                <h1 class="financeiro-hero__titulo" th:text="${titulo}">Gestão financeira</h1>
+                <p class="financeiro-hero__subtitulo"
+                   th:if="${subtitulo != null and !#strings.isEmpty(subtitulo)}"
+                   th:text="${subitulo}">Despesas mensais e unicas.</p>
             </div>
             <div th:replace="~{fragments/financeiro-topo-acoes :: acoes}"></div>
         </div>

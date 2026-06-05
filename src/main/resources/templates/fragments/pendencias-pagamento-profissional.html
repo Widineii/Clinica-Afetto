@@ -17,9 +17,13 @@
             <h2 class="pendencias-alerta-principal__titulo mb-2">
                 Você tem pagamentos em aberto
             </h2>
-            <p class="pendencias-alerta-principal__subtitulo mb-0"
-               th:text="${resumoPendenciasPagamento.mensagemConvite}">
+            <p class="pendencias-alerta-principal__subtitulo mb-2"
+               th:text="${resumoPendenciasPagamento.mensagemResumo}">
                 Resolva com antecedência para manter a agenda liberada.
+            </p>
+            <p class="pendencias-alerta-principal__periodo mb-0"
+               th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
+                Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
             </p>
         </div>
         <div class="pendencias-alerta-principal__metricas">
@@ -35,10 +39,6 @@
             </div>
         </div>
         <div class="pendencias-alerta-principal__rodape">
-            <p class="pendencias-alerta-principal__periodo mb-3 mb-md-0"
-               th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
-                Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
-            </p>
             <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
                class="btn btn-danger btn-lg fw-bold pendencias-alerta-principal__cta">
                 Resolver pendências agora

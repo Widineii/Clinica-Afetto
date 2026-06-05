@@ -221,6 +221,14 @@ public class FinanceiroController {
 
         model.addAttribute("podeGerenciarEquipe", authService.podeGerenciarEquipe(usuarioLogado));
 
+        model.addAttribute("podeAcessarGestaoFinanceira", true);
+
+        model.addAttribute("podeVerRelatorioProprio", authService.podeVerRelatorioProprio(usuarioLogado));
+
+        model.addAttribute("podeTrocarPropriaSenha", authService.podeTrocarPropriaSenha(usuarioLogado));
+
+        model.addAttribute("resumoPendenciasPagamento", com.clinica.sistema.dto.ResumoPendenciasPagamentoView.vazio());
+
         relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model, session);
 
         encerramentoSerieNotificacaoService.adicionarNotificacaoAoModelSeAplicavel(model, session);

@@ -322,6 +322,99 @@
                 min-height: 120px;
             }
 
+            .fin-cronograma-card {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 4px;
+                padding: 1rem 1.15rem 1.1rem;
+                box-shadow: none;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            .fin-cronograma-card__titulo {
+                font-size: 0.88rem;
+                font-weight: 700;
+                color: #252423;
+                margin: 0 0 0.2rem;
+            }
+
+            .fin-cronograma-card__hint {
+                font-size: 0.78rem;
+                color: #605e5c;
+                margin: 0 0 0.75rem;
+                line-height: 1.35;
+            }
+
+            .fin-cronograma-lista {
+                display: flex;
+                flex-direction: column;
+                gap: 0.45rem;
+                max-height: 220px;
+                overflow-y: auto;
+                margin: 0;
+                padding: 0;
+                list-style: none;
+            }
+
+            .fin-cronograma-item {
+                display: grid;
+                grid-template-columns: 4.8rem 1fr auto;
+                gap: 0.45rem;
+                align-items: center;
+                font-size: 0.8rem;
+            }
+
+            .fin-cronograma-item__data {
+                font-weight: 700;
+                color: #0a8785;
+            }
+
+            .fin-cronograma-item__barra {
+                height: 6px;
+                border-radius: 999px;
+                background: #f1f5f9;
+                overflow: hidden;
+            }
+
+            .fin-cronograma-item__barra-fill {
+                display: block;
+                height: 100%;
+                border-radius: inherit;
+                background: linear-gradient(90deg, #f59e0b, #d97706);
+            }
+
+            .fin-cronograma-item__valor {
+                font-weight: 700;
+                color: #9a3412;
+                white-space: nowrap;
+                text-align: right;
+            }
+
+            .fin-cronograma-item__meta {
+                grid-column: 1 / -1;
+                font-size: 0.72rem;
+                color: #64748b;
+                margin-top: -0.15rem;
+            }
+
+            .fin-cronograma-rodape {
+                margin-top: 0.75rem;
+                padding-top: 0.65rem;
+                border-top: 1px solid #e2e8f0;
+                font-size: 0.78rem;
+                color: #475569;
+                line-height: 1.4;
+            }
+
+            .fin-cronograma-vazio {
+                font-size: 0.82rem;
+                color: #64748b;
+                margin: 0;
+                line-height: 1.45;
+            }
+
             .fin-badge-pendente {
                 background: #fff7ed;
                 border-color: #fdba74;
