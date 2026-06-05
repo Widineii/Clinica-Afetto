@@ -340,10 +340,58 @@
                 margin: 0 0 0.2rem;
             }
 
+            .fin-cronograma-card__topo {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .fin-cronograma-card__intro {
+                min-width: 0;
+                flex: 1 1 auto;
+            }
+
+            .fin-cronograma-modos {
+                display: inline-flex;
+                flex-shrink: 0;
+                border: 1px solid #cbd5e1;
+                border-radius: 999px;
+                overflow: hidden;
+                background: #f8fafc;
+            }
+
+            .fin-cronograma-modo {
+                border: 0;
+                background: transparent;
+                color: #475569;
+                font-size: 0.72rem;
+                font-weight: 700;
+                padding: 0.35rem 0.65rem;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: background 0.12s ease, color 0.12s ease;
+            }
+
+            .fin-cronograma-modo + .fin-cronograma-modo {
+                border-left: 1px solid #cbd5e1;
+            }
+
+            .fin-cronograma-modo.is-active {
+                background: #0a8785;
+                color: #fff;
+            }
+
+            .fin-cronograma-modo:focus-visible {
+                outline: 2px solid #0a8785;
+                outline-offset: 1px;
+            }
+
             .fin-cronograma-card__hint {
                 font-size: 0.78rem;
                 color: #605e5c;
-                margin: 0 0 0.75rem;
+                margin: 0;
                 line-height: 1.35;
             }
 

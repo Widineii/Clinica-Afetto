@@ -78,11 +78,29 @@
                 </div>
             </div>
             <div class="fin-cronograma-card" id="cronogramaRecebimentoCard">
-                <p class="fin-cronograma-card__titulo">Pendências do mês</p>
-                <p class="fin-cronograma-card__hint">
-                    Taxas de sala ainda não pagas pelos profissionais. Separadas entre consultas já realizadas (atraso)
-                    e consultas futuras (previsão), agrupadas por semana.
-                </p>
+                <div class="fin-cronograma-card__topo">
+                    <div class="fin-cronograma-card__intro">
+                        <p class="fin-cronograma-card__titulo">Pendências do mês</p>
+                        <p class="fin-cronograma-card__hint" id="cronogramaRecebimentoHint">
+                            Taxas de sala ainda não pagas pelos profissionais. Separadas entre consultas já realizadas (atraso)
+                            e consultas futuras (previsão).
+                        </p>
+                    </div>
+                    <div class="fin-cronograma-modos" role="group" aria-label="Visualização das pendências">
+                        <button type="button"
+                                class="fin-cronograma-modo is-active"
+                                data-cronograma-modo="semana"
+                                aria-pressed="true">
+                            Por semana
+                        </button>
+                        <button type="button"
+                                class="fin-cronograma-modo"
+                                data-cronograma-modo="mes"
+                                aria-pressed="false">
+                            Mês todo
+                        </button>
+                    </div>
+                </div>
                 <p class="fin-cronograma-vazio mb-0" id="cronogramaRecebimentoVazio">
                     Nenhuma reserva pendente neste mês.
                 </p>
@@ -358,6 +376,7 @@
     });
 
     const filtros = { sala: '', profissional: '' };
+    let cronogramaModo = 'semana';
     const mesAtualLabel = /*[[${receita.mesAnoLabel}]]*/ 'Mes atual';
     let painelProfissionais = [];
     try {
@@ -1048,6 +1067,45 @@
         });
     }
 
+    function agruparPendentesPorMes(pendentesFiltrados, rotuloBase) {
+        if (!pendentesFiltrados.length) {
+            return [];
+        }
+        let valor = 0;
+        let quantidade = 0;
+        pendentesFiltrados.forEach(function (linha) {
+            valor += linha.valor;
+            quantidade += 1;
+        });
+        return [{
+            chave: 'mes',
+            inicioIso: '',
+            fimIso: '',
+            rotulo: rotuloBase,
+            valor: valor,
+            quantidade: quantidade
+        }];
+    }
+
+    function agruparPendentesCronograma(pendentesFiltrados, modo, rotuloConsolidado) {
+        if (modo === 'mes') {
+            return agruparPendentesPorMes(pendentesFiltrados, rotuloConsolidado);
+        }
+        return agruparPendentesPorSemana(pendentesFiltrados);
+    }
+
+    function atualizarHintCronogramaModo() {
+        const hint = document.getElementById('cronogramaRecebimentoHint');
+        if (!hint) {
+            return;
+        }
+        if (cronogramaModo === 'mes') {
+            hint.textContent = 'Taxas de sala ainda não pagas pelos profissionais. Visão consolidada do mês (atraso e previsão).';
+            return;
+        }
+        hint.textContent = 'Taxas de sala ainda não pagas pelos profissionais. Separadas entre consultas já realizadas (atraso) e futuras (previsão), agrupadas por semana.';
+    }
+
     function separarPendentesAtrasoPrevisao(pendentesFiltrados) {
         const hoje = hojeIsoLocal();
         const atraso = [];
@@ -1125,8 +1183,17 @@
         }
 
         const partes = separarPendentesAtrasoPrevisao(pendentesFiltrados);
-        const gruposAtraso = agruparPendentesPorSemana(partes.atraso);
-        const gruposPrevisao = agruparPendentesPorSemana(partes.previsao);
+        atualizarHintCronogramaModo();
+        const gruposAtraso = agruparPendentesCronograma(
+            partes.atraso,
+            cronogramaModo,
+            'Atraso · ' + mesAtualLabel
+        );
+        const gruposPrevisao = agruparPendentesCronograma(
+            partes.previsao,
+            cronogramaModo,
+            'Previsão · ' + mesAtualLabel
+        );
         const totalGeral = montarResumoGrupos(gruposAtraso.concat(gruposPrevisao));
 
         if (totalGeral.quantidade === 0) {
@@ -1170,11 +1237,15 @@
         }
 
         const ultimaPrevisao = gruposPrevisao.filter(function (grupo) { return grupo.fimIso; }).pop();
-        rodape.innerHTML =
-            totalGeral.quantidade + ' reserva(s) no mês · <strong>' + formatarMoeda(totalGeral.valor) + '</strong>' +
-            (ultimaPrevisao
-                ? ' · previsão até <strong>Sem. ' + rotuloSemanaConsulta(ultimaPrevisao.inicioIso, ultimaPrevisao.fimIso) + '</strong>'
-                : (gruposAtraso.length > 0 ? ' · somente consultas em atraso' : ''));
+        if (cronogramaModo === 'mes') {
+            rodape.innerHTML = totalGeral.quantidade + ' reserva(s) no mês · <strong>' + formatarMoeda(totalGeral.valor) + '</strong>';
+        } else {
+            rodape.innerHTML =
+                totalGeral.quantidade + ' reserva(s) no mês · <strong>' + formatarMoeda(totalGeral.valor) + '</strong>' +
+                (ultimaPrevisao
+                    ? ' · previsão até <strong>Sem. ' + rotuloSemanaConsulta(ultimaPrevisao.inicioIso, ultimaPrevisao.fimIso) + '</strong>'
+                    : (gruposAtraso.length > 0 ? ' · somente consultas em atraso' : ''));
+        }
     }
 
     function renderizarPainel() {
@@ -1188,6 +1259,18 @@
         atualizarGraficos(linhasFiltradas);
         atualizarPainelProfissional(pendentesFiltrados);
     }
+
+    document.querySelectorAll('[data-cronograma-modo]').forEach(function (botao) {
+        botao.addEventListener('click', function () {
+            cronogramaModo = botao.getAttribute('data-cronograma-modo') || 'semana';
+            document.querySelectorAll('[data-cronograma-modo]').forEach(function (item) {
+                const ativo = item === botao;
+                item.classList.toggle('is-active', ativo);
+                item.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+            });
+            renderizarPainel();
+        });
+    });
 
     document.querySelectorAll('.fin-chip, .fin-prof-card').forEach(function (botao) {
         botao.addEventListener('click', function () {
