@@ -38,8 +38,9 @@
         <div class="meus-agendamentos-serie-linha__datas mb-2">
             <span th:each="ocorrencia : ${linha.datasHistorico}"
                   class="meus-agendamentos-data-badge me-2 mb-1"
-                  th:classappend="${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}">
+                  th:classappend="|${ocorrencia.passado ? ' meus-agendamentos-data-badge--passado' : ''}${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}|">
                 <span th:text="${ocorrencia.dataRotulo}">04/06</span>
+                <span th:if="${ocorrencia.passado}" class="ms-1 small opacity-75" title="Data já passou">↩</span>
                 <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
                 <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}"
                       class="ms-1 text-warning"
@@ -49,6 +50,7 @@
         <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
         <p class="meus-agendamentos-serie-linha__dica mb-2">
             Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas consultas pendentes — pagas não mudam.
+            Datas que <strong>já passaram</strong> (últimos 14 dias) continuam visíveis enquanto você marca as próximas (até 5 no card: 1 passada + 4 futuras).
             Marque a próxima consulta quando o cliente voltar no mês seguinte.
         </p>
         <div class="meus-agendamentos-serie-linha__acoes mt-2"
@@ -76,7 +78,7 @@
             <button th:if="${agendamentoService.podeAlterarValorProfissionalSerie(linha.agendamentoReferenciaId, usuarioLogado)}"
                     type="button"
                     class="btn btn-sm btn-outline-secondary me-2 meus-agendamentos-alterar-valor-prof-btn"
-                    th:attr="data-agendamento-referencia-id=${linha.agendamentoReferenciaId},data-valor-atual=${agendamento.valorProfissionalRecebe != null ? T(com.clinica.sistema.util.MoedaBrasilUtil).formatarDecimal(agendamento.valorProfissionalRecebe) : ''},data-serie-rotulo=${linha.rotuloCabecalho}">
+                    th:attr="data-agendamento-referencia-id=${linha.agendamentoReferenciaId},data-valor-atual=${linha.valorProfissionalRecebeInput},data-serie-rotulo=${linha.rotuloCabecalho}">
                 Alterar valor
             </button>
         </div>
@@ -95,7 +97,7 @@
                         <strong th:text="${agendamento.nomeCliente}">Cliente</strong>.
                         Data sugerida:
                         <strong th:text="${#temporals.format(dataSugerida, 'dd/MM/yyyy')}">05/07/2026</strong>
-                        — a nova data aparecerá ao lado das anteriores neste card (até 6; na 7ª, reinicia).
+                        — a nova data aparecerá ao lado das anteriores neste card (até 5; quando a 5ª passa, ela fica e você renova as outras 4).
                     </p>
                     <form th:action="@{/agendamentos}" method="post" class="row g-2 align-items-end">
                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
@@ -162,21 +164,27 @@
         <p th:if="${serie.valoresConsultaResumo != null}"
            class="agendamento-valores small text-muted mb-2"
            th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
-        <p class="meus-agendamentos-serie-linha__dica mb-2">
-            Selecione uma data para cancelar, pagar ou realocar. Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas datas pendentes — pagas não mudam.
+        <p class="meus-agendamentos-serie-linha__dica mb-2" th:if="${isAdmin or isDonaClinica}">
+            Selecione uma data para cancelar ou realocar. Datas <strong>já passadas</strong> (últimos 14 dias) aparecem esmaecidas — a gestão pode desmarcar ou remarcar mesmo após o horário (ex.: falta por saúde).
+            Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas datas pendentes.
+        </p>
+        <p class="meus-agendamentos-serie-linha__dica mb-2" th:unless="${isAdmin or isDonaClinica}">
+            Selecione uma data para cancelar, pagar ou realocar. Datas que <strong>já passaram</strong> (últimos 14 dias) continuam visíveis na lista enquanto as próximas são renovadas.
+            Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas datas pendentes — pagas não mudam.
             Encerrar série remove todos os horários de uma vez.
             Cancelar data: mais de 24h de antecedência e sem pagamento na data (fixo e quinzenal).
         </p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
             <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
                    class="meus-agendamentos-data-badge meus-agendamentos-data-badge--selectable"
-                   th:classappend="${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}">
+                   th:classappend="|${ocorrencia.passado ? ' meus-agendamentos-data-badge--passado' : ''}${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}|">
                 <input type="radio"
                        class="meus-agendamentos-data-radio"
                        th:name="${radioPrefix + serie.agendamentoReferenciaId}"
                        th:value="${ocorrencia.agendamentoId}"
                        th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar ? 'true' : 'false'},data-pode-realocar=${ocorrencia.podeRealocar ? 'true' : 'false'},data-pode-cancelar=${ocorrencia.podeCancelar ? 'true' : 'false'},data-aguardando-qr=${ocorrencia.statusPagamento != null and ocorrencia.statusPagamento.name() == 'ESPERANDO_CONFIRMACAO' ? 'true' : 'false'},data-pago=${ocorrencia.pagamentoPago ? 'true' : 'false'}">
                 <span th:text="${ocorrencia.dataRotulo}">25/05</span>
+                <span th:if="${ocorrencia.passado}" class="ms-1 small opacity-75" title="Data já passou">↩</span>
                 <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
                 <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
             </label>

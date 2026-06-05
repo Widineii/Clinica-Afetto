@@ -1121,6 +1121,18 @@
             color: #7f1d1d;
         }
 
+        .meus-agendamentos-data-badge--passado {
+            opacity: 0.72;
+            border-style: dashed;
+        }
+
+        .meus-agendamentos-data-badge--selectable.meus-agendamentos-data-badge--passado.is-selected {
+            opacity: 1;
+            border-style: solid;
+            border-color: rgba(108, 117, 125, 0.55);
+            background: rgba(108, 117, 125, 0.12);
+        }
+
         .meus-agendamentos-data-radio {
             position: absolute;
             opacity: 0;
@@ -2052,9 +2064,6 @@
             Trocar senha agora
         </button>
     </div>
-    <th:block th:if="${podeEscolherFormaPagamento}">
-        <div th:replace="~{fragments/periodicidade-pagamento-resumo :: bloco(periodicidadeAtual=${periodicidadePagamento}, retornoUrl=@{/agendamentos/dashboard})}"></div>
-    </th:block>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${erro != null and erroContexto == 'uso-site'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${pagamentoBloqueioAtivo and (resumoPendenciasPagamento == null or resumoPendenciasPagamento.quantidade == 0)}"
@@ -2439,7 +2448,7 @@
                         Meus agendamentos
                         <span class="badge rounded-pill text-bg-success">Layout caderno</span>
                     </h2>
-                    <p class="small text-muted mb-3">Somente os agendamentos do usuário logado. Fixo: 12 datas; quinzenal: 6. Mensal: 1 consulta por vez — marque a próxima no mês seguinte.</p>
+                    <p class="small text-muted mb-3">Somente os agendamentos do usuário logado. Fixo: até 12 (passada recente fica + renova futuras). Quinzenal: até 6. Mensal: até 5 (passada recente fica + renova 4 futuras).</p>
 
                         <details class="agenda-section">
                             <summary class="agenda-toggle">
@@ -3198,6 +3207,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+<th:block th:replace="~{fragments/site-menu-principal :: modais-conta}"></th:block>
 <th:block th:replace="~{fragments/site-menu-principal :: scripts}"></th:block>
 <script type="application/json"
         id="valores-consulta-padrao-json"

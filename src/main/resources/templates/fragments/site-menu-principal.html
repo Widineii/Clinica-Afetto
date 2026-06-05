@@ -3,7 +3,59 @@
 <head>
     <th:block th:fragment="estilos">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <link th:href="@{/css/afetto-site-menu.css(v=3)}" rel="stylesheet">
+        <link th:href="@{/css/afetto-site-menu.css(v=15)}" rel="stylesheet">
+        <style>
+            .afetto-site-nav__perfil-btn {
+                min-height: 68px !important;
+                padding: 0.2rem 0.55rem 0.2rem 0.2rem !important;
+            }
+
+            .afetto-site-nav__perfil-avatar {
+                width: 58px !important;
+                height: 58px !important;
+                min-width: 58px !important;
+                min-height: 58px !important;
+                border: 3px solid rgba(255, 255, 255, 0.95) !important;
+            }
+
+            .afetto-site-nav__perfil-foto {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
+                object-position: center center !important;
+            }
+
+            .afetto-site-nav__perfil-foto:not(.d-none) {
+                display: block !important;
+            }
+
+            .afetto-site-nav__perfil-foto.d-none {
+                display: none !important;
+            }
+
+            .afetto-site-nav__perfil-iniciais.d-none {
+                display: none !important;
+            }
+
+            .afetto-site-nav__perfil-iniciais:not(.d-none) {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+
+            @media (max-width: 1199.98px) {
+                .afetto-site-nav__perfil-avatar {
+                    width: 64px !important;
+                    height: 64px !important;
+                    min-width: 64px !important;
+                    min-height: 64px !important;
+                }
+
+                .afetto-site-nav__perfil-btn {
+                    min-height: 72px !important;
+                }
+            }
+        </style>
     </th:block>
 </head>
 <body>
@@ -49,10 +101,11 @@
                 <span class="afetto-site-nav__item-label">Agenda</span>
             </a>
 
-            <a th:if="${ehProfissional}"
-               th:href="@{/agendamentos/dashboard#meus-agendamentos}"
+            <a th:if="${podeAcessarMeusPacientes}"
+               th:href="@{/agendamentos/meus-pacientes}"
                class="afetto-site-nav__item"
-               th:classappend="${pagina == 'AGENDAMENTOS'} ? ' is-active' : ''">
+               th:classappend="${pagina == 'PACIENTES'} ? ' is-active' : ''"
+               th:attr="aria-current=${pagina == 'PACIENTES'} ? 'page' : null">
                 <i class="afetto-site-nav__item-icon fa-solid fa-users" aria-hidden="true"></i>
                 <span class="afetto-site-nav__item-label">Pacientes</span>
             </a>
@@ -101,6 +154,16 @@
                 <span class="afetto-site-nav__item-label">Manual</span>
             </a>
 
+            <form th:action="@{/logout}" method="post" class="afetto-site-nav__sair-form">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit"
+                        class="afetto-site-nav__item afetto-site-nav__item--sair"
+                        title="Encerrar sessão">
+                    <i class="afetto-site-nav__item-icon fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                    <span class="afetto-site-nav__item-label">Sair</span>
+                </button>
+            </form>
+
             <button th:if="${temPendencias and pagina == 'AGENDA'}"
                     type="button"
                     class="afetto-site-nav__item"
@@ -118,23 +181,6 @@
                 <i class="afetto-site-nav__item-icon fa-solid fa-bell" aria-hidden="true"></i>
                 <span class="afetto-site-nav__item-label">Pendências</span>
                 <span class="afetto-site-nav__badge" th:text="${qtdPendencias}">1</span>
-            </a>
-
-            <button th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina == 'AGENDA'}"
-                    type="button"
-                    class="afetto-site-nav__item"
-                    data-bs-toggle="modal"
-                    data-bs-target="#trocarSenhaModal"
-                    title="Alterar senha de acesso">
-                <i class="afetto-site-nav__item-icon fa-solid fa-lock" aria-hidden="true"></i>
-                <span class="afetto-site-nav__item-label">Alterar senha</span>
-            </button>
-            <a th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina != 'AGENDA'}"
-               th:href="@{/agendamentos/dashboard(alterarSenha=true)}"
-               class="afetto-site-nav__item"
-               title="Alterar senha de acesso">
-                <i class="afetto-site-nav__item-icon fa-solid fa-lock" aria-hidden="true"></i>
-                <span class="afetto-site-nav__item-label">Alterar senha</span>
             </a>
 
             <a th:if="${isAdmin}"
@@ -157,6 +203,59 @@
                 <i class="afetto-site-nav__item-icon fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
                 <span class="afetto-site-nav__badge" th:text="${totalNovidadesVisiveis}">1</span>
             </button>
+
+            <div class="dropdown afetto-site-nav__acoes-wrap"
+                 th:if="${ehProfissional and menuQtdAcoesPendentes != null and menuQtdAcoesPendentes > 0}">
+                <button type="button"
+                        class="afetto-site-nav__acoes-btn dropdown-toggle"
+                        data-bs-toggle="dropdown"
+                        data-bs-display="static"
+                        data-bs-auto-close="outside"
+                        aria-expanded="false"
+                        title="Ações pendentes">
+                    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                    <span class="afetto-site-nav__badge afetto-site-nav__badge--acoes"
+                          th:text="${menuQtdAcoesPendentes}">2</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow afetto-perfil-panel afetto-acoes-panel">
+                    <p class="afetto-perfil-panel__kicker mb-1">Ações pendentes</p>
+                    <p class="afetto-perfil-panel__sub mb-3">
+                        Resolva com antecedência para manter a agenda tranquila.
+                    </p>
+                    <div th:if="${temPendencias}" class="afetto-acoes-item mb-2">
+                        <p class="afetto-acoes-item__titulo mb-1">
+                            <i class="fa-solid fa-credit-card text-danger" aria-hidden="true"></i>
+                            Pagamentos em aberto
+                        </p>
+                        <p class="afetto-acoes-item__texto mb-2"
+                           th:text="${qtdPendencias + ' item(ns)' + (resumoPendenciasPagamento != null and resumoPendenciasPagamento.valorTotalFormatado != null ? ' · ' + resumoPendenciasPagamento.valorTotalFormatado : '')}">
+                            2 itens · R$ 70,00
+                        </p>
+                        <a th:href="@{/agendamentos/meus-pagamentos}"
+                           class="btn btn-sm btn-danger w-100">Ir para pagamentos</a>
+                    </div>
+                    <div th:if="${trocaSenhaAindaPendente}" class="afetto-acoes-item">
+                        <p class="afetto-acoes-item__titulo mb-1">
+                            <i class="fa-solid fa-lock text-warning" aria-hidden="true"></i>
+                            Trocar senha
+                        </p>
+                        <p class="afetto-acoes-item__texto mb-2">Você ainda precisa definir uma senha pessoal.</p>
+                        <button th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina == 'AGENDA'}"
+                                type="button"
+                                class="btn btn-sm btn-warning w-100"
+                                data-bs-toggle="modal"
+                                data-bs-target="#trocarSenhaModal">
+                            Alterar senha agora
+                        </button>
+                        <a th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina != 'AGENDA'}"
+                           class="btn btn-sm btn-warning w-100"
+                           th:href="@{/agendamentos/dashboard(alterarSenha=true)}">
+                            Alterar senha agora
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
 
             <div class="dropdown afetto-site-nav__perfil-wrap" th:if="${usuarioLogado != null}">
@@ -165,36 +264,217 @@
                         data-bs-toggle="dropdown"
                         data-bs-display="static"
                         aria-expanded="false"
-                        th:attr="aria-label=${'Menu de ' + usuarioLogado.nome}">
+                        th:attr="aria-label=${'Menu de ' + usuarioLogado.nome},
+                                 data-login=${usuarioLogado.login}">
                     <span class="afetto-site-nav__perfil-avatar" aria-hidden="true">
-                        <i class="fa-solid fa-user"></i>
+                        <img th:if="${fotoPerfilUrl != null}"
+                             class="afetto-site-nav__perfil-foto"
+                             id="navPerfilAvatarImg"
+                             th:src="${fotoPerfilUrl}"
+                             alt=""
+                             aria-hidden="true">
+                        <span class="afetto-site-nav__perfil-iniciais"
+                              id="navPerfilAvatarIniciais"
+                              th:classappend="${fotoPerfilUrl != null} ? ' d-none' : ''"
+                              th:text="${usuarioLogado != null and usuarioLogado.nome != null and !#strings.isEmpty(#strings.trim(usuarioLogado.nome)) ? #strings.toUpperCase(#strings.substring(#strings.trim(usuarioLogado.nome), 0, 1)) : '?'}">J</span>
                     </span>
                     <i class="fa-solid fa-chevron-down afetto-site-nav__perfil-chevron" aria-hidden="true"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow">
-                    <li class="dropdown-header text-truncate" th:text="${usuarioLogado.nome}">Usuário</li>
-                    <li th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina == 'AGENDA'}">
-                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
-                            Alterar senha
-                        </button>
-                    </li>
-                    <li th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina != 'AGENDA'}">
-                        <a class="dropdown-item" th:href="@{/agendamentos/dashboard(alterarSenha=true)}">Alterar senha</a>
-                    </li>
-                    <li><a class="dropdown-item" th:href="@{/agendamentos/manual}">Manual</a></li>
-                </ul>
-            </div>
+                <div class="dropdown-menu dropdown-menu-end shadow afetto-perfil-panel">
+                    <div class="afetto-perfil-panel__header">
+                        <p class="afetto-perfil-panel__nome mb-1 text-truncate" th:text="${usuarioLogado.nome}">Usuário</p>
+                        <p class="afetto-perfil-panel__meta mb-0">
+                            <span class="afetto-perfil-panel__chip" th:text="${menuPerfilRotulo}">Profissional</span>
+                            <span th:if="${ehProfissional and periodicidadePagamento != null}"
+                                  class="afetto-perfil-panel__chip afetto-perfil-panel__chip--muted"
+                                  th:text="${periodicidadePagamento.rotulo}">Semanal</span>
+                        </p>
+                        <p th:if="${ehProfissional and temPendencias}"
+                           class="afetto-perfil-panel__alerta mb-0 mt-2">
+                            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                            <span th:text="${qtdPendencias + ' pagamento(s) em aberto'}">2 pagamentos em aberto</span>
+                        </p>
+                    </div>
 
-            <form th:action="@{/logout}" method="post" class="afetto-site-nav__sair-form">
-                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                <button type="submit" class="afetto-site-nav__sair" title="Encerrar sessão">
-                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                    <span>Sair</span>
-                </button>
-            </form>
+                    <div class="afetto-perfil-panel__secao"
+                         th:if="${podeEditarPerfil or (podeTrocarPropriaSenha != null and podeTrocarPropriaSenha)}">
+                        <p class="afetto-perfil-panel__secao-titulo">Minha conta</p>
+                        <ul class="list-unstyled mb-0">
+                            <li th:if="${podeEditarPerfil}">
+                                <button type="button"
+                                        class="dropdown-item afetto-perfil-panel__item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editarPerfilModal">
+                                    <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
+                                    Editar perfil
+                                </button>
+                            </li>
+                            <li th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina == 'AGENDA'}">
+                                <button type="button"
+                                        class="dropdown-item afetto-perfil-panel__item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#trocarSenhaModal">
+                                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                    Alterar senha
+                                </button>
+                            </li>
+                            <li th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and pagina != 'AGENDA'}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/dashboard(alterarSenha=true)}">
+                                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                    Alterar senha
+                                </a>
+                            </li>
+                            <li th:if="${ehProfissional and podeEscolherFormaPagamento != null and podeEscolherFormaPagamento}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/meus-pagamentos#forma-pagamento}">
+                                    <i class="fa-solid fa-wallet" aria-hidden="true"></i>
+                                    Forma de pagamento
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__secao"
+                         th:if="${isDonaClinica != null and isDonaClinica and !isAdmin}">
+                        <p class="afetto-perfil-panel__secao-titulo">Gestão da clínica</p>
+                        <ul class="list-unstyled mb-0">
+                            <li th:if="${podeAcessarCentralProfissionais != null and podeAcessarCentralProfissionais}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/central-profissionais}">
+                                    <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+                                    Central de profissionais
+                                </a>
+                            </li>
+                            <li th:if="${podeAcessarGestaoFinanceira != null and podeAcessarGestaoFinanceira}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/financeiro}">
+                                    <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                                    Financeiro
+                                </a>
+                            </li>
+                            <li th:if="${podeVerRelatorioUsoSite != null and podeVerRelatorioUsoSite}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/central-profissionais(aba='uso-site')}">
+                                    <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                                    Uso do site
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__secao" th:if="${isAdmin}">
+                        <p class="afetto-perfil-panel__secao-titulo">Administração</p>
+                        <ul class="list-unstyled mb-0">
+                            <li th:if="${podeAcessarCentralProfissionais != null and podeAcessarCentralProfissionais}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/central-profissionais}">
+                                    <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+                                    Central de profissionais
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/admin/uso-banco}">
+                                    <i class="fa-solid fa-database" aria-hidden="true"></i>
+                                    Uso do banco
+                                </a>
+                            </li>
+                            <li th:if="${podeVerRelatorioUsoSite != null and podeVerRelatorioUsoSite}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/central-profissionais(aba='uso-site')}">
+                                    <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                                    Uso do site
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__secao" th:if="${ehProfissional or (isDonaClinica != null and isDonaClinica and !isAdmin)}">
+                        <p class="afetto-perfil-panel__secao-titulo">Atalhos</p>
+                        <ul class="list-unstyled mb-0">
+                            <li>
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/dashboard#agenda-do-dia}">
+                                    <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+                                    Agenda de hoje
+                                </a>
+                            </li>
+                            <li th:if="${isDonaClinica != null and isDonaClinica and !isAdmin}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/dashboard#meus-agendamentos}">
+                                    <i class="fa-solid fa-book" aria-hidden="true"></i>
+                                    Meus agendamentos
+                                </a>
+                            </li>
+                            <li th:if="${ehProfissional}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/meus-pagamentos}">
+                                    <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+                                    Meus pagamentos
+                                    <span th:if="${totalMeusPagamentosPendentes != null and totalMeusPagamentosPendentes > 0}"
+                                          class="afetto-perfil-panel__badge"
+                                          th:text="${totalMeusPagamentosPendentes}">2</span>
+                                </a>
+                            </li>
+                            <li th:if="${podeVerRelatorioProprio != null and podeVerRelatorioProprio}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/meu-relatorio}">
+                                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                                    Meu relatório
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__secao">
+                        <p class="afetto-perfil-panel__secao-titulo">Ajuda</p>
+                        <ul class="list-unstyled mb-0">
+                            <li th:if="${ehProfissional or (isDonaClinica != null and isDonaClinica)}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/manual#acc-agenda}">
+                                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                                    Regras da clínica
+                                </a>
+                            </li>
+                            <li th:if="${manualWhatsappAtivo}">
+                                <a class="dropdown-item afetto-perfil-panel__item afetto-perfil-panel__item--whatsapp"
+                                   th:href="${manualWhatsappUrl}"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                                    <span>
+                                        Falar com a clínica
+                                        <small class="afetto-perfil-panel__whatsapp-numero d-block"
+                                               th:if="${manualWhatsappRotulo != null and !#strings.isEmpty(manualWhatsappRotulo)}"
+                                               th:text="${manualWhatsappRotulo}">(31) 8283-5857</small>
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__rodape">
+                        <p th:if="${versaoSiteRotulo != null}"
+                           class="afetto-perfil-panel__versao mb-2"
+                           th:text="${versaoSiteRotulo}">Versão</p>
+                        <form th:action="@{/logout}" method="post" class="mb-0">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <button type="submit" class="dropdown-item afetto-perfil-panel__item afetto-perfil-panel__item--sair">
+                                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                                Sair
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </header>
+
+<th:block th:fragment="modais-conta">
+    <div th:replace="~{fragments/editar-perfil-profissional :: modal}"></div>
+</th:block>
 
 <th:block th:fragment="scripts">
 <script>
@@ -268,6 +548,34 @@
         if (!isMobileNav()) {
             fecharMenu();
         }
+    });
+})();
+
+(function () {
+    var input = document.getElementById('editarPerfilWhatsapp');
+    if (input) {
+        function manterSomenteDigitos() {
+            input.value = input.value.replace(/\D/g, '');
+        }
+        input.addEventListener('input', manterSomenteDigitos);
+        input.addEventListener('paste', function (evento) {
+            evento.preventDefault();
+            var texto = (evento.clipboardData || window.clipboardData).getData('text') || '';
+            input.value = texto.replace(/\D/g, '').slice(0, input.maxLength);
+        });
+    }
+
+})();
+
+(function () {
+    var navImg = document.getElementById('navPerfilAvatarImg');
+    var navIniciais = document.getElementById('navPerfilAvatarIniciais');
+    if (!navImg || !navIniciais) {
+        return;
+    }
+    navImg.addEventListener('error', function () {
+        navImg.classList.add('d-none');
+        navIniciais.classList.remove('d-none');
     });
 })();
 </script>

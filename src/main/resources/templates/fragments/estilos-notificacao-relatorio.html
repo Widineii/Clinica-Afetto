@@ -149,6 +149,19 @@
             .notif-bell-action {
                 margin-bottom: 0;
             }
+
+            @media (max-width: 1199.98px) {
+                .notif-bell-wrap .dropdown-menu {
+                    left: auto !important;
+                    right: 0 !important;
+                    transform: none !important;
+                }
+
+                .notif-bell-panel {
+                    width: min(20rem, calc(100vw - 1.5rem)) !important;
+                    max-width: calc(100vw - 1.5rem) !important;
+                }
+            }
         </style>
     </th:block>
 </head>

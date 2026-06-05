@@ -57,8 +57,17 @@ public class Usuario {
     @Column(name = "telefone_whatsapp", length = 20)
     private String telefoneWhatsapp;
 
+    /** Caminho publico da foto de perfil, ex.: /uploads/perfis/12.jpg */
+    @Column(name = "foto_perfil", length = 120)
+    private String fotoPerfil;
+
     @Transient
     public String getTelefoneWhatsappFormulario() {
         return WhatsAppNumeroUtil.paraCampoFormulario(telefoneWhatsapp);
+    }
+
+    @Transient
+    public boolean temFotoPerfil() {
+        return fotoPerfil != null && !fotoPerfil.isBlank();
     }
 }

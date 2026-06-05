@@ -1,6 +1,8 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.dto.AcompanhamentoAgendaFiltros;
+import com.clinica.sistema.dto.ClienteProfissionalLinhaView;
+import com.clinica.sistema.dto.PacienteAgendamentoCardView;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AgendaGradeCelula;
@@ -50,6 +52,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -65,8 +68,9 @@ public class AgendamentoService {
     private static final String RECORRENCIA_SEMANAL = "SEMANAL";
     private static final String RECORRENCIA_QUINZENAL = "QUINZENAL";
     private static final String RECORRENCIA_MENSAL = "MENSAL";
-    private static final int LIMITE_DATAS_MENSAL_VISIVEIS = 6;
+    private static final int LIMITE_DATAS_MENSAL_VISIVEIS = 5;
     private static final int MESES_HISTORICO_AGENDA_PADRAO = 4;
+    private static final int DIAS_HISTORICO_GESTAO_PADRAO = 14;
     private static final Duration INTERVALO_RENOVACAO_SERIES = Duration.ofMinutes(10);
     private static final int ANTECEDENCIA_MINIMA_CANCELAMENTO_HORAS = 24;
 
@@ -80,6 +84,7 @@ public class AgendamentoService {
     private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
     private final FeriadoBeloHorizonteService feriadoBeloHorizonteService;
     private final int mesesHistoricoAgenda;
+    private final int diasHistoricoGestao;
 
     public AgendamentoService(
             AgendamentoRepository repository,
@@ -91,7 +96,8 @@ public class AgendamentoService {
             EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository,
             NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService,
             FeriadoBeloHorizonteService feriadoBeloHorizonteService,
-            @Value("${app.agenda.meses-historico:4}") int mesesHistoricoAgenda
+            @Value("${app.agenda.meses-historico:4}") int mesesHistoricoAgenda,
+            @Value("${app.agenda.dias-historico-gestao:14}") int diasHistoricoGestao
     ) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
@@ -103,6 +109,7 @@ public class AgendamentoService {
         this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
         this.feriadoBeloHorizonteService = feriadoBeloHorizonteService;
         this.mesesHistoricoAgenda = Math.max(1, Math.min(mesesHistoricoAgenda, MESES_HISTORICO_AGENDA_PADRAO));
+        this.diasHistoricoGestao = Math.max(1, Math.min(diasHistoricoGestao, DIAS_HISTORICO_GESTAO_PADRAO));
     }
 
     private volatile Instant ultimaRenovacaoSeries = Instant.EPOCH;
@@ -204,14 +211,23 @@ public class AgendamentoService {
     }
 
     public List<Agendamento> listarProximosPorSerie(List<Agendamento> agendamentos, Predicate<Agendamento> filtro) {
-        LocalDateTime limite = LocalDateTime.now();
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime historicoDesde = agora.minusDays(diasHistoricoGestao);
         Map<String, Agendamento> proximoPorSerie = new LinkedHashMap<>();
 
         agendamentos.stream()
                 .filter(filtro)
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
-                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(limite))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(agora))
                 .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .forEach(agendamento -> proximoPorSerie.putIfAbsent(chaveSerie(agendamento), agendamento));
+
+        agendamentos.stream()
+                .filter(filtro)
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> agendamento.getDataHoraInicio().isBefore(agora))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(historicoDesde))
+                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio).reversed())
                 .forEach(agendamento -> proximoPorSerie.putIfAbsent(chaveSerie(agendamento), agendamento));
 
         return proximoPorSerie.values().stream()
@@ -257,7 +273,17 @@ public class AgendamentoService {
                         .add(agendamento));
 
         return porCliente.values().stream()
-                .map(lista -> montarMensalAgendamentoLinha(lista, formatoData, usuarioLogado))
+                .map(lista -> {
+                    Agendamento referencia = lista.stream()
+                            .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                            .max(Comparator.comparing(Agendamento::getDataHoraInicio))
+                            .orElse(lista.get(lista.size() - 1));
+                    List<Agendamento> completa = listarConsultasMensaisDoCliente(referencia);
+                    if (completa.isEmpty()) {
+                        completa = lista;
+                    }
+                    return montarMensalAgendamentoLinha(completa, formatoData, usuarioLogado);
+                })
                 .sorted(Comparator.comparing(
                         linha -> linha.getAgendamentoReferencia() != null
                                 && linha.getAgendamentoReferencia().getDataHoraInicio() != null
@@ -281,9 +307,7 @@ public class AgendamentoService {
             throw new IllegalStateException("Série mensal sem datas.");
         }
 
-        List<Agendamento> paraExibir = ordenados.size() > LIMITE_DATAS_MENSAL_VISIVEIS
-                ? List.of(ordenados.get(ordenados.size() - 1))
-                : ordenados;
+        List<Agendamento> paraExibir = listarOcorrenciasMensalParaExibicao(ordenados);
 
         Agendamento referencia = ordenados.get(ordenados.size() - 1);
         Agendamento referenciaValores = resolverReferenciaValoresExibicaoSerie(ordenados, referencia);
@@ -295,10 +319,15 @@ public class AgendamentoService {
                 usuarioLogado
         );
 
+        String valorProfInput = referenciaValores.getValorProfissionalRecebe() != null
+                && referenciaValores.getValorProfissionalRecebe().signum() > 0
+                ? MoedaBrasilUtil.formatarDecimal(referenciaValores.getValorProfissionalRecebe())
+                : null;
         return new MensalAgendamentoLinha(
                 referencia,
                 datasHistorico,
-                referenciaValores.getValoresConsultaResumo()
+                referenciaValores.getValoresConsultaResumo(),
+                valorProfInput
         );
     }
 
@@ -309,33 +338,37 @@ public class AgendamentoService {
             DateTimeFormatter formatoData,
             Usuario usuarioLogado
     ) {
-        List<String> rotulos = parseHistoricoDatasMensal(referencia.getHistoricoDatasMensal());
-        if (rotulos.isEmpty()) {
-            return fallbackAgendamentos.stream()
-                    .map(agendamento -> ocorrenciaMensal(agendamento, formatoData, usuarioLogado))
-                    .toList();
+        List<Agendamento> visiveis = listarOcorrenciasMensalParaExibicao(ordenados);
+        if (visiveis.isEmpty()) {
+            visiveis = fallbackAgendamentos != null ? fallbackAgendamentos : List.of();
         }
-        if (rotulos.size() > LIMITE_DATAS_MENSAL_VISIVEIS) {
-            rotulos = List.of(rotulos.get(rotulos.size() - 1));
-        }
-        return rotulos.stream()
-                .map(rotulo -> {
-                    Agendamento agendamento = encontrarAgendamentoPorRotulo(ordenados, rotulo, formatoData)
-                            .orElse(null);
-                    if (agendamento != null) {
-                        return ocorrenciaMensal(agendamento, formatoData, usuarioLogado);
-                    }
-                    return new SerieAgendamentoOcorrencia(
-                            null,
-                            rotulo,
-                            null,
-                            false,
-                            false,
-                            false,
-                            false
-                    );
-                })
+        return visiveis.stream()
+                .map(agendamento -> ocorrenciaMensal(agendamento, formatoData, usuarioLogado))
                 .toList();
+    }
+
+    /**
+     * Datas passadas recentes permanecem visiveis; as futuras respeitam o limite mensal (5 no total).
+     */
+    private List<Agendamento> listarOcorrenciasMensalParaExibicao(List<Agendamento> ordenados) {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime historicoDesde = agora.minusDays(diasHistoricoGestao);
+
+        List<Agendamento> passadas = ordenados.stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio().isBefore(agora))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(historicoDesde))
+                .toList();
+
+        int maxFuturas = Math.max(0, LIMITE_DATAS_MENSAL_VISIVEIS - passadas.size());
+        List<Agendamento> futuras = ordenados.stream()
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(agora))
+                .limit(maxFuturas)
+                .toList();
+
+        List<Agendamento> exibicao = new ArrayList<>(passadas.size() + futuras.size());
+        exibicao.addAll(passadas);
+        exibicao.addAll(futuras);
+        return exibicao;
     }
 
     private SerieAgendamentoOcorrencia ocorrenciaMensal(
@@ -343,26 +376,7 @@ public class AgendamentoService {
             DateTimeFormatter formatoData,
             Usuario usuarioLogado
     ) {
-        return new SerieAgendamentoOcorrencia(
-                agendamento.getId(),
-                agendamento.getDataHoraInicio().format(formatoData),
-                agendamento.getStatusPagamento(),
-                pagamentoConsultaService.exibirBotaoPagar(agendamento),
-                agendamento.isPagamentoPago(),
-                podeRealocar(agendamento, usuarioLogado),
-                podeCancelarAgendamento(agendamento, usuarioLogado)
-        );
-    }
-
-    private Optional<Agendamento> encontrarAgendamentoPorRotulo(
-            List<Agendamento> agendamentos,
-            String rotulo,
-            DateTimeFormatter formatoData
-    ) {
-        return agendamentos.stream()
-                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
-                .filter(agendamento -> rotulo.equals(agendamento.getDataHoraInicio().format(formatoData)))
-                .findFirst();
+        return montarOcorrenciaSerie(agendamento, formatoData, usuarioLogado);
     }
 
     private List<String> parseHistoricoDatasMensal(String historico) {
@@ -384,21 +398,36 @@ public class AgendamentoService {
     }
 
     private void registrarHistoricoMensal(Agendamento origem, Agendamento novo) {
-        List<String> historico = new ArrayList<>();
-        if (origem != null && origem.getHistoricoDatasMensal() != null && !origem.getHistoricoDatasMensal().isBlank()) {
-            historico.addAll(parseHistoricoDatasMensal(origem.getHistoricoDatasMensal()));
-        } else if (origem != null && origem.getDataHoraInicio() != null) {
-            historico.add(formatarDataHistoricoMensal(origem.getDataHoraInicio()));
+        List<Agendamento> todos = new ArrayList<>();
+        if (origem != null
+                && origem.getProfissional() != null
+                && origem.getNomeCliente() != null
+                && !origem.getNomeCliente().isBlank()) {
+            todos.addAll(listarConsultasMensaisDoCliente(origem));
         }
-        if (novo.getDataHoraInicio() != null) {
-            String novaData = formatarDataHistoricoMensal(novo.getDataHoraInicio());
-            if (!historico.contains(novaData)) {
-                historico.add(novaData);
+        if (novo != null && novo.getDataHoraInicio() != null) {
+            boolean jaIncluido = todos.stream()
+                    .anyMatch(agendamento -> agendamento.getId() != null
+                            && novo.getId() != null
+                            && agendamento.getId().equals(novo.getId()));
+            if (!jaIncluido) {
+                todos.add(novo);
             }
         }
-        if (historico.size() > LIMITE_DATAS_MENSAL_VISIVEIS) {
-            historico = new ArrayList<>(List.of(historico.get(historico.size() - 1)));
+        todos = todos.stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .toList();
+        if (todos.isEmpty()) {
+            if (novo != null && novo.getDataHoraInicio() != null) {
+                novo.setHistoricoDatasMensal(formatarDataHistoricoMensal(novo.getDataHoraInicio()));
+            }
+            return;
         }
+        List<String> historico = listarOcorrenciasMensalParaExibicao(todos).stream()
+                .map(agendamento -> formatarDataHistoricoMensal(agendamento.getDataHoraInicio()))
+                .distinct()
+                .toList();
         novo.setHistoricoDatasMensal(serializarHistoricoDatasMensal(historico));
     }
 
@@ -442,14 +471,14 @@ public class AgendamentoService {
             Usuario usuarioLogado
     ) {
         String chaveSerie = chaveSerie(representante);
-        List<SerieAgendamentoOcorrencia> proximasOcorrencias = agendamentos.stream()
-                .filter(agendamento -> chaveSerie(agendamento).equals(chaveSerie))
-                .filter(agendamento -> agendamento.getId() != null)
-                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
-                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(limite))
-                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
+        String recorrencia = recorrenciaDoAgendamento(representante);
+        List<Agendamento> agendamentosSerie = carregarAgendamentosSerie(representante, agendamentos, chaveSerie);
+        List<SerieAgendamentoOcorrencia> proximasOcorrencias = listarOcorrenciasSerieParaExibicao(
+                        agendamentosSerie,
+                        chaveSerie,
+                        recorrencia
+                ).stream()
                 .map(agendamento -> montarOcorrenciaSerie(agendamento, formatoData, usuarioLogado))
-                .limit(obterLimiteOcorrenciasFuturas(recorrenciaDoAgendamento(representante)))
                 .toList();
 
         String salaNome = representante.getSala() != null && representante.getSala().getNome() != null
@@ -457,9 +486,7 @@ public class AgendamentoService {
                 : "-";
         String diaSemanaRotulo = formatarHorarioDiaSemana(representante.getDataHoraInicio());
         Agendamento referenciaValores = resolverReferenciaValoresExibicaoSerie(
-                agendamentos,
-                chaveSerie,
-                limite,
+                agendamentosSerie,
                 representante
         );
         String valorProfInput = referenciaValores.getValorProfissionalRecebe() != null
@@ -476,6 +503,61 @@ public class AgendamentoService {
                 referenciaValores.getValoresConsultaResumo(),
                 valorProfInput
         );
+    }
+
+    /**
+     * Datas passadas recentes permanecem visiveis; as futuras respeitam o limite da serie
+     * (12 semanal, 6 quinzenal) descontando as passadas exibidas.
+     */
+    private List<Agendamento> carregarAgendamentosSerie(
+            Agendamento representante,
+            List<Agendamento> agendamentosContexto,
+            String chaveSerieAlvo
+    ) {
+        if (representante.getSerieFixaId() != null && !representante.getSerieFixaId().isBlank()) {
+            List<Agendamento> daSerie = repository.findBySerieFixaIdOrderByDataHoraInicioAsc(representante.getSerieFixaId());
+            if (!daSerie.isEmpty()) {
+                return daSerie;
+            }
+        }
+        return agendamentosContexto.stream()
+                .filter(agendamento -> chaveSerie(agendamento).equals(chaveSerieAlvo))
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .toList();
+    }
+
+    private List<Agendamento> listarOcorrenciasSerieParaExibicao(
+            List<Agendamento> agendamentos,
+            String chaveSerie,
+            String recorrencia
+    ) {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime historicoDesde = agora.minusDays(diasHistoricoGestao);
+        int limiteFuturas = obterLimiteOcorrenciasFuturas(recorrencia);
+
+        List<Agendamento> daSerie = agendamentos.stream()
+                .filter(agendamento -> chaveSerie(agendamento).equals(chaveSerie))
+                .filter(agendamento -> agendamento.getId() != null)
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .toList();
+
+        List<Agendamento> passadas = daSerie.stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio().isBefore(agora))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(historicoDesde))
+                .toList();
+
+        int maxFuturas = Math.max(0, limiteFuturas - passadas.size());
+        List<Agendamento> futuras = daSerie.stream()
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(agora))
+                .limit(maxFuturas)
+                .toList();
+
+        List<Agendamento> exibicao = new ArrayList<>(passadas.size() + futuras.size());
+        exibicao.addAll(passadas);
+        exibicao.addAll(futuras);
+        return exibicao;
     }
 
     /**
@@ -522,8 +604,28 @@ public class AgendamentoService {
                 pagamentoConsultaService.exibirBotaoPagar(agendamento) && podeVerPagamento,
                 agendamento.isPagamentoPago() && podeVerPagamento,
                 podeRealocar(agendamento, usuarioLogado),
-                podeCancelarAgendamento(agendamento, usuarioLogado)
+                podeCancelarAgendamento(agendamento, usuarioLogado),
+                ocorrenciaPassada(agendamento)
         );
+    }
+
+    private boolean ocorrenciaPassada(Agendamento agendamento) {
+        return agendamento != null
+                && agendamento.getDataHoraInicio() != null
+                && agendamento.getDataHoraInicio().isBefore(LocalDateTime.now());
+    }
+
+    private boolean dentroJanelaGestaoRetroativa(LocalDateTime inicio) {
+        if (inicio == null) {
+            return false;
+        }
+        return !inicio.isBefore(LocalDateTime.now().minusDays(diasHistoricoGestao));
+    }
+
+    private boolean realocacaoRetroativaGestao(Agendamento agendamento, Usuario usuarioLogado) {
+        return podeGerenciarAgendamentoDeOutros(usuarioLogado)
+                && ocorrenciaPassada(agendamento)
+                && dentroJanelaGestaoRetroativa(agendamento.getDataHoraInicio());
     }
 
     private String formatarHorarioDiaSemana(LocalDateTime dataHora) {
@@ -1065,7 +1167,7 @@ public class AgendamentoService {
                 .orElseThrow(() -> new RuntimeException("Consulta mensal de origem não encontrada."));
         if (requerPagamentoUltimaConsultaParaRenovarMensal(origem)) {
             throw new RuntimeException(
-                    "Com 6 consultas marcadas, pague a última antes de renovar. Sem pagamento, a série não continua."
+                    "Com 5 consultas marcadas, pague a última antes de renovar. Sem pagamento, a série não continua."
             );
         }
     }
@@ -1268,12 +1370,12 @@ public class AgendamentoService {
         if (agendamento.getDataHoraInicio() == null) {
             return false;
         }
-        if (!LocalDateTime.now().isBefore(agendamento.getDataHoraInicio())) {
-            return false;
-        }
         if (agendamento.getProfissional() != null
                 && authService.profissionalIgnoraValoresEPagamento(agendamento.getProfissional())) {
             return false;
+        }
+        if (ocorrenciaPassada(agendamento)) {
+            return realocacaoRetroativaGestao(agendamento, usuarioLogado);
         }
         if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
             return true;
@@ -1340,7 +1442,8 @@ public class AgendamentoService {
             throw new RuntimeException("Não é possível realocar para data ou horário no passado.");
         }
 
-        if (!dataPermitidaParaRealocacao(agendamento, form.getDataAtendimento())) {
+        if (!realocacaoRetroativaGestao(agendamento, usuarioLogado)
+                && !dataPermitidaParaRealocacao(agendamento, form.getDataAtendimento())) {
             String recorrencia = recorrenciaDoAgendamento(agendamento);
             if (RECORRENCIA_QUINZENAL.equals(recorrencia)) {
                 throw new RuntimeException(
@@ -1436,7 +1539,15 @@ public class AgendamentoService {
         }
 
         int limiteOcorrencias = obterLimiteOcorrenciasFuturas(recorrencia);
-        LocalDateTime limiteFuturo = LocalDateTime.now().minusDays(1);
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime historicoDesde = agora.minusDays(diasHistoricoGestao);
+        List<Agendamento> serieCompleta = repository.findBySerieFixaIdOrderByDataHoraInicioAsc(serieFixaId);
+        long passadasRecentes = serieCompleta.stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> agendamento.getDataHoraInicio().isBefore(agora))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(historicoDesde))
+                .count();
+        int limiteFuturas = Math.max(0, limiteOcorrencias - (int) passadasRecentes);
         LocalDateTime fimReferencia = ultimo.getDataHoraFim() != null
                 ? ultimo.getDataHoraFim()
                 : ultimo.getDataHoraInicio().plusHours(1);
@@ -1450,9 +1561,12 @@ public class AgendamentoService {
         int guarda = 0;
 
         while (guarda++ < 52) {
-            long futuras = repository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(serieFixaId, limiteFuturo)
+            long futuras = serieCompleta.stream()
+                    .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                    .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(agora))
+                    .count()
                     + novos.size();
-            if (futuras >= limiteOcorrencias) {
+            if (futuras >= limiteFuturas) {
                 break;
             }
 
@@ -1521,27 +1635,27 @@ public class AgendamentoService {
         if (agendamento == null || usuarioLogado == null) {
             return false;
         }
-        if (agendamento.getDataHoraInicio() == null
-                || !agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
-            return false;
-        }
-        if (agendamento.getProfissional() == null) {
+        if (agendamento.getDataHoraInicio() == null || agendamento.getProfissional() == null) {
             return false;
         }
         if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
-            return true;
+            if (agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
+                return true;
+            }
+            return dentroJanelaGestaoRetroativa(agendamento.getDataHoraInicio());
+        }
+        if (!agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
+            return false;
         }
         if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
             return false;
         }
         String recorrencia = recorrenciaDoAgendamento(agendamento);
-        if (!podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
-            if (RECORRENCIA_AVULSO.equals(recorrencia)) {
-                return !pagamentoConsultaService.consultaJaFoiPaga(agendamento);
-            }
-            if (RECORRENCIA_MENSAL.equals(recorrencia)) {
-                return false;
-            }
+        if (RECORRENCIA_AVULSO.equals(recorrencia)) {
+            return !pagamentoConsultaService.consultaJaFoiPaga(agendamento);
+        }
+        if (RECORRENCIA_MENSAL.equals(recorrencia)) {
+            return false;
         }
         if (pagamentoConsultaService.consultaJaFoiPaga(agendamento)) {
             return false;
@@ -2514,5 +2628,167 @@ public class AgendamentoService {
             base = hoje.getDayOfWeek() == DayOfWeek.FRIDAY ? hoje.plusWeeks(1) : hoje;
         }
         return base.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    }
+
+    public List<PacienteAgendamentoCardView> listarCardsPacientesAgendamento(Usuario profissional, Usuario usuarioLogado) {
+        if (profissional == null || profissional.getId() == null) {
+            return List.of();
+        }
+        List<Agendamento> agendamentos = buscarPorProfissional(profissional.getId());
+        Map<Long, Agendamento> agendamentosPorId = agendamentos.stream()
+                .filter(agendamento -> agendamento.getId() != null)
+                .collect(java.util.stream.Collectors.toMap(Agendamento::getId, agendamento -> agendamento, (a, b) -> a));
+        LocalDateTime agora = LocalDateTime.now();
+        ProfissionalAgendamentosResumo resumo = montarResumoAgendamentos(profissional, agendamentos, usuarioLogado);
+        List<PacienteAgendamentoCardView> cards = new ArrayList<>();
+
+        for (Agendamento avulso : resumo.getAgendamentosAvulsos()) {
+            cards.add(PacienteAgendamentoCardView.deAvulso(avulso, agora));
+        }
+        for (SerieAgendamentoLinha serie : resumo.getSeriesFixas()) {
+            Agendamento representante = agendamentosPorId.get(serie.getAgendamentoReferenciaId());
+            cards.add(PacienteAgendamentoCardView.deSerie(
+                    serie,
+                    PacienteAgendamentoCardView.TipoCard.FIXO,
+                    telefoneSerie(representante),
+                    proximaOcorrenciaSerie(serie, agendamentosPorId, agora),
+                    ultimaOcorrenciaSerie(serie, agendamentosPorId, agora)
+            ));
+        }
+        for (SerieAgendamentoLinha serie : resumo.getSeriesQuinzenais()) {
+            Agendamento representante = agendamentosPorId.get(serie.getAgendamentoReferenciaId());
+            cards.add(PacienteAgendamentoCardView.deSerie(
+                    serie,
+                    PacienteAgendamentoCardView.TipoCard.QUINZENAL,
+                    telefoneSerie(representante),
+                    proximaOcorrenciaSerie(serie, agendamentosPorId, agora),
+                    ultimaOcorrenciaSerie(serie, agendamentosPorId, agora)
+            ));
+        }
+        for (MensalAgendamentoLinha mensal : resumo.getLinhasMensais()) {
+            Agendamento referencia = mensal.getAgendamentoReferencia();
+            cards.add(PacienteAgendamentoCardView.deMensal(
+                    mensal,
+                    telefoneSerie(referencia),
+                    proximaOcorrenciaMensal(mensal, agendamentosPorId, agora),
+                    ultimaOcorrenciaMensal(mensal, agendamentosPorId, agora)
+            ));
+        }
+
+        cards.sort(Comparator.comparing(PacienteAgendamentoCardView::getNomeExibicao, String.CASE_INSENSITIVE_ORDER));
+        return cards;
+    }
+
+    private String telefoneSerie(Agendamento agendamento) {
+        return agendamento != null ? agendamento.getTelefoneCliente() : null;
+    }
+
+    private LocalDateTime proximaOcorrenciaSerie(
+            SerieAgendamentoLinha serie,
+            Map<Long, Agendamento> agendamentosPorId,
+            LocalDateTime agora
+    ) {
+        if (serie.getProximasOcorrencias() == null) {
+            return null;
+        }
+        return serie.getProximasOcorrencias().stream()
+                .filter(ocorrencia -> !ocorrencia.isPassado())
+                .map(SerieAgendamentoOcorrencia::getAgendamentoId)
+                .map(agendamentosPorId::get)
+                .filter(Objects::nonNull)
+                .map(Agendamento::getDataHoraInicio)
+                .filter(Objects::nonNull)
+                .filter(data -> data.isAfter(agora))
+                .min(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    private LocalDateTime ultimaOcorrenciaSerie(
+            SerieAgendamentoLinha serie,
+            Map<Long, Agendamento> agendamentosPorId,
+            LocalDateTime agora
+    ) {
+        if (serie.getProximasOcorrencias() == null) {
+            return null;
+        }
+        return serie.getProximasOcorrencias().stream()
+                .filter(SerieAgendamentoOcorrencia::isPassado)
+                .map(SerieAgendamentoOcorrencia::getAgendamentoId)
+                .map(agendamentosPorId::get)
+                .filter(Objects::nonNull)
+                .map(Agendamento::getDataHoraInicio)
+                .filter(Objects::nonNull)
+                .filter(data -> !data.isAfter(agora))
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    private LocalDateTime proximaOcorrenciaMensal(
+            MensalAgendamentoLinha mensal,
+            Map<Long, Agendamento> agendamentosPorId,
+            LocalDateTime agora
+    ) {
+        if (mensal.getDatasHistorico() == null) {
+            return null;
+        }
+        return mensal.getDatasHistorico().stream()
+                .filter(ocorrencia -> !ocorrencia.isPassado())
+                .map(SerieAgendamentoOcorrencia::getAgendamentoId)
+                .map(agendamentosPorId::get)
+                .filter(Objects::nonNull)
+                .map(Agendamento::getDataHoraInicio)
+                .filter(Objects::nonNull)
+                .filter(data -> data.isAfter(agora))
+                .min(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    private LocalDateTime ultimaOcorrenciaMensal(
+            MensalAgendamentoLinha mensal,
+            Map<Long, Agendamento> agendamentosPorId,
+            LocalDateTime agora
+    ) {
+        if (mensal.getDatasHistorico() == null) {
+            return null;
+        }
+        return mensal.getDatasHistorico().stream()
+                .filter(SerieAgendamentoOcorrencia::isPassado)
+                .map(SerieAgendamentoOcorrencia::getAgendamentoId)
+                .map(agendamentosPorId::get)
+                .filter(Objects::nonNull)
+                .map(Agendamento::getDataHoraInicio)
+                .filter(Objects::nonNull)
+                .filter(data -> !data.isAfter(agora))
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    public List<ClienteProfissionalLinhaView> listarClientesDoProfissional(Long profissionalId) {
+        if (profissionalId == null) {
+            return List.of();
+        }
+        LocalDateTime agora = LocalDateTime.now();
+        Map<String, List<ClienteProfissionalLinhaView.AgendamentoClienteAgrupado>> porCliente =
+                new LinkedHashMap<>();
+        for (Agendamento agendamento : repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissionalId)) {
+            if (agendamento.getNomeCliente() == null || agendamento.getNomeCliente().isBlank()) {
+                continue;
+            }
+            String chave = agendamento.getNomeCliente().trim().toLowerCase(Locale.ROOT);
+            porCliente.computeIfAbsent(chave, ignored -> new ArrayList<>())
+                    .add(new ClienteProfissionalLinhaView.AgendamentoClienteAgrupado(
+                            agendamento.getNomeCliente(),
+                            agendamento.getTelefoneCliente(),
+                            agendamento.getDataHoraInicio(),
+                            agendamento.getRecorrenciaLabel(),
+                            agendamento.isFixoSemanal(),
+                            agendamento.isMensal(),
+                            agendamento.isQuinzenal()
+                    ));
+        }
+        return porCliente.values().stream()
+                .map(grupo -> ClienteProfissionalLinhaView.agregar(grupo, agora))
+                .sorted(Comparator.comparing(ClienteProfissionalLinhaView::getNome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 }

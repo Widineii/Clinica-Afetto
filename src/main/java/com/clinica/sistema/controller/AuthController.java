@@ -16,12 +16,14 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -146,9 +148,40 @@ public class AuthController {
         }
     }
 
+    @PostMapping(value = "/conta/perfil", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String atualizarPerfil(
+            @ModelAttribute AtualizarTelefoneWhatsappForm atualizarTelefoneWhatsappForm,
+            @RequestParam(name = "fotoPerfil", required = false) MultipartFile fotoPerfil,
+            @RequestParam(name = "removerFoto", defaultValue = "false") boolean removerFoto,
+            @RequestParam(name = "retorno", defaultValue = "/agendamentos/dashboard") String retorno,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.atualizarPerfilProfissional(
+                    atualizarTelefoneWhatsappForm,
+                    fotoPerfil,
+                    removerFoto,
+                    usuarioLogado
+            );
+            usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+            redirectAttributes.addFlashAttribute("sucesso", "Perfil atualizado com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erroPerfil", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroWhatsapp", e.getMessage());
+            redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", atualizarTelefoneWhatsappForm);
+            redirectAttributes.addFlashAttribute("reabrirModalEditarPerfil", true);
+            redirectAttributes.addFlashAttribute("reabrirModalTelefoneWhatsapp", true);
+        }
+        return "redirect:" + normalizarRetornoPerfil(retorno);
+    }
+
     @PostMapping("/conta/telefone-whatsapp")
     public String cadastrarTelefoneWhatsapp(
             @ModelAttribute AtualizarTelefoneWhatsappForm atualizarTelefoneWhatsappForm,
+            @org.springframework.web.bind.annotation.RequestParam(name = "retorno", defaultValue = "/agendamentos/dashboard")
+            String retorno,
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
@@ -156,13 +189,25 @@ public class AuthController {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             usuarioService.atualizarTelefoneWhatsapp(atualizarTelefoneWhatsappForm, usuarioLogado);
             usuarioService.dispensarCadastroTelefoneWhatsapp(session);
-            redirectAttributes.addFlashAttribute("sucesso", "WhatsApp cadastrado com sucesso.");
+            redirectAttributes.addFlashAttribute("sucesso", "Perfil atualizado com sucesso.");
         } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erroPerfil", e.getMessage());
             redirectAttributes.addFlashAttribute("erroWhatsapp", e.getMessage());
             redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", atualizarTelefoneWhatsappForm);
+            redirectAttributes.addFlashAttribute("reabrirModalEditarPerfil", true);
             redirectAttributes.addFlashAttribute("reabrirModalTelefoneWhatsapp", true);
         }
-        return "redirect:/agendamentos/dashboard";
+        return "redirect:" + normalizarRetornoPerfil(retorno);
+    }
+
+    private String normalizarRetornoPerfil(String retorno) {
+        if (retorno == null || retorno.isBlank()) {
+            return "/agendamentos/dashboard";
+        }
+        if (!retorno.startsWith("/agendamentos/")) {
+            return "/agendamentos/dashboard";
+        }
+        return retorno;
     }
 
     @PostMapping("/conta/telefone-whatsapp/pular")

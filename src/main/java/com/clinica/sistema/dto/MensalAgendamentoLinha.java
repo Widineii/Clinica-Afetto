@@ -11,15 +11,26 @@ public class MensalAgendamentoLinha {
     private final Agendamento agendamentoReferencia;
     private final List<SerieAgendamentoOcorrencia> datasHistorico;
     private final String valoresConsultaResumo;
+    private final String valorProfissionalRecebeInput;
 
     public MensalAgendamentoLinha(
             Agendamento agendamentoReferencia,
             List<SerieAgendamentoOcorrencia> datasHistorico,
             String valoresConsultaResumo
     ) {
+        this(agendamentoReferencia, datasHistorico, valoresConsultaResumo, null);
+    }
+
+    public MensalAgendamentoLinha(
+            Agendamento agendamentoReferencia,
+            List<SerieAgendamentoOcorrencia> datasHistorico,
+            String valoresConsultaResumo,
+            String valorProfissionalRecebeInput
+    ) {
         this.agendamentoReferencia = agendamentoReferencia;
         this.datasHistorico = datasHistorico != null ? datasHistorico : List.of();
         this.valoresConsultaResumo = valoresConsultaResumo;
+        this.valorProfissionalRecebeInput = valorProfissionalRecebeInput;
     }
 
     public Long getAgendamentoReferenciaId() {

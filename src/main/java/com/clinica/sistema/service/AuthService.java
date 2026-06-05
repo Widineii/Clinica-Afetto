@@ -139,6 +139,11 @@ public class AuthService {
                 && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
     }
 
+    /** Foto e WhatsApp proprios: profissionais e dona da clinica. */
+    public boolean podeEditarProprioPerfil(Usuario usuario) {
+        return podeAcessarMeusPacientes(usuario);
+    }
+
     /** Lista da aba Valores: profissionais comuns, sem admin, Polyana nem perfil de teste. */
     public boolean elegivelParaGestaoValoresConsulta(Usuario profissional) {
         if (profissional == null || isAdmin(profissional)) {
@@ -160,6 +165,11 @@ public class AuthService {
         return usuario != null
                 && !isAdmin(usuario)
                 && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
+    }
+
+    /** Meus pacientes: profissionais e dona da clinica veem os proprios atendimentos. */
+    public boolean podeAcessarMeusPacientes(Usuario usuario) {
+        return podeVerRelatorioProprio(usuario);
     }
 
     /** Dona da clinica acompanha somente o valor que ela recebe nas proprias consultas (formulario da agenda). */

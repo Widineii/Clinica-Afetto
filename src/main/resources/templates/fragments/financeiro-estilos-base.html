@@ -347,11 +347,50 @@
                 line-height: 1.35;
             }
 
+            .fin-cronograma-bloco + .fin-cronograma-bloco {
+                margin-top: 0.85rem;
+                padding-top: 0.85rem;
+                border-top: 1px dashed #e2e8f0;
+            }
+
+            .fin-cronograma-bloco__cabecalho {
+                margin-bottom: 0.55rem;
+            }
+
+            .fin-cronograma-bloco__titulo {
+                margin: 0;
+                font-size: 0.82rem;
+                font-weight: 800;
+                color: #252423;
+            }
+
+            .fin-cronograma-bloco--atraso .fin-cronograma-bloco__titulo {
+                color: #b91c1c;
+            }
+
+            .fin-cronograma-bloco--previsao .fin-cronograma-bloco__titulo {
+                color: #0a8785;
+            }
+
+            .fin-cronograma-bloco__subtitulo {
+                margin: 0.12rem 0 0;
+                font-size: 0.72rem;
+                color: #64748b;
+                line-height: 1.35;
+            }
+
+            .fin-cronograma-bloco__resumo {
+                margin: 0.35rem 0 0;
+                font-size: 0.74rem;
+                font-weight: 600;
+                color: #475569;
+            }
+
             .fin-cronograma-lista {
                 display: flex;
                 flex-direction: column;
                 gap: 0.45rem;
-                max-height: 220px;
+                max-height: 160px;
                 overflow-y: auto;
                 margin: 0;
                 padding: 0;
@@ -360,7 +399,7 @@
 
             .fin-cronograma-item {
                 display: grid;
-                grid-template-columns: 4.8rem 1fr auto;
+                grid-template-columns: minmax(5.5rem, 6.8rem) 1fr auto;
                 gap: 0.45rem;
                 align-items: center;
                 font-size: 0.8rem;
@@ -369,6 +408,18 @@
             .fin-cronograma-item__data {
                 font-weight: 700;
                 color: #0a8785;
+            }
+
+            .fin-cronograma-item--atraso .fin-cronograma-item__data {
+                color: #b91c1c;
+            }
+
+            .fin-cronograma-item--atraso .fin-cronograma-item__valor {
+                color: #b91c1c;
+            }
+
+            .fin-cronograma-item--atraso .fin-cronograma-item__barra-fill {
+                background: linear-gradient(90deg, #f87171, #dc2626);
             }
 
             .fin-cronograma-item__barra {

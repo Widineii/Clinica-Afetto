@@ -159,6 +159,25 @@ public class ManualProperties {
                 + UriUtils.encode(mensagem, StandardCharsets.UTF_8);
     }
 
+    /** Ex.: 553182835857 → (31) 8283-5857 */
+    public String resolverRotuloWhatsappExibicao() {
+        String numero = normalizarNumeroWhatsapp(whatsappNumero);
+        if (numero == null) {
+            return "";
+        }
+        if (numero.startsWith("55") && numero.length() >= 12) {
+            String ddd = numero.substring(2, 4);
+            String local = numero.substring(4);
+            if (local.length() == 8) {
+                return "(" + ddd + ") " + local.substring(0, 4) + "-" + local.substring(4);
+            }
+            if (local.length() == 9) {
+                return "(" + ddd + ") " + local.substring(0, 5) + "-" + local.substring(5);
+            }
+        }
+        return numero;
+    }
+
     private String normalizarNumeroWhatsapp(String numeroBruto) {
         if (numeroBruto == null || numeroBruto.isBlank()) {
             return null;

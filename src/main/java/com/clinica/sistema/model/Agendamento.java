@@ -117,7 +117,7 @@ public class Agendamento {
     @Column(name = "motivo_encerramento_serie", length = 500)
     private String motivoEncerramentoSerie;
 
-    /** Histórico de datas remarcadas (dd/MM separadas por |), máx. 6 visíveis — reseta na 7ª. */
+    /** Histórico de datas remarcadas (dd/MM separadas por |), máx. 5 visíveis — a passada recente fica e renova 4 futuras. */
     @Column(name = "historico_datas_mensal", length = 120)
     private String historicoDatasMensal;
 

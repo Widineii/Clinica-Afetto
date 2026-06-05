@@ -95,6 +95,12 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             jdbcTemplate.execute(
                     """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS foto_perfil VARCHAR(120)
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
                     ALTER TABLE agendamentos
                     ADD COLUMN IF NOT EXISTS data_referencia_semana_pagamento DATE
                     """

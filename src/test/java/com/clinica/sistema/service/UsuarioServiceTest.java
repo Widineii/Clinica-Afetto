@@ -55,6 +55,9 @@ class UsuarioServiceTest {
     @Mock
     private ValorConsultaService valorConsultaService;
 
+    @Mock
+    private PerfilFotoService perfilFotoService;
+
     @InjectMocks
     private UsuarioService usuarioService;
 

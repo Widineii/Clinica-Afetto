@@ -29,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -57,6 +58,7 @@ public class UsuarioService {
     private final PagamentoConsultaService pagamentoConsultaService;
     private final SegurancaProperties segurancaProperties;
     private final ValorConsultaService valorConsultaService;
+    private final PerfilFotoService perfilFotoService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -68,7 +70,8 @@ public class UsuarioService {
             PasswordEncoder passwordEncoder,
             PagamentoConsultaService pagamentoConsultaService,
             SegurancaProperties segurancaProperties,
-            ValorConsultaService valorConsultaService
+            ValorConsultaService valorConsultaService,
+            PerfilFotoService perfilFotoService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
@@ -77,10 +80,28 @@ public class UsuarioService {
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.segurancaProperties = segurancaProperties;
         this.valorConsultaService = valorConsultaService;
+        this.perfilFotoService = perfilFotoService;
     }
 
     public List<Usuario> listarProfissionaisDaEquipe() {
         return usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL");
+    }
+
+    public Map<Long, String> mapaFotosPerfil(List<Usuario> usuarios) {
+        Map<Long, String> mapa = new LinkedHashMap<>();
+        if (usuarios == null) {
+            return mapa;
+        }
+        for (Usuario usuario : usuarios) {
+            if (usuario == null || usuario.getId() == null) {
+                continue;
+            }
+            String url = perfilFotoService.resolverUrlPublica(usuario);
+            if (url != null) {
+                mapa.put(usuario.getId(), url);
+            }
+        }
+        return mapa;
     }
 
     public String jsonValoresConsultaPadraoPorProfissional() {
@@ -681,9 +702,42 @@ public class UsuarioService {
 
     @Transactional
     public void atualizarTelefoneWhatsapp(AtualizarTelefoneWhatsappForm form, Usuario usuarioLogado) {
-        if (!authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado)) {
-            throw new RuntimeException("Cadastro de WhatsApp nao disponivel para este usuario.");
+        validarEdicaoPerfilProfissional(usuarioLogado);
+        Usuario usuario = carregarUsuarioPersistido(usuarioLogado);
+        aplicarTelefoneWhatsappNoUsuario(usuario, form);
+        usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public void atualizarPerfilProfissional(
+            AtualizarTelefoneWhatsappForm form,
+            MultipartFile fotoPerfil,
+            boolean removerFoto,
+            Usuario usuarioLogado
+    ) {
+        validarEdicaoPerfilProfissional(usuarioLogado);
+        Usuario usuario = carregarUsuarioPersistido(usuarioLogado);
+        aplicarTelefoneWhatsappNoUsuario(usuario, form);
+        if (removerFoto) {
+            perfilFotoService.removerFoto(usuario);
+        } else if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
+            usuario.setFotoPerfil(perfilFotoService.salvarFoto(usuario, fotoPerfil));
         }
+        usuarioRepository.save(usuario);
+    }
+
+    private void validarEdicaoPerfilProfissional(Usuario usuarioLogado) {
+        if (!authService.podeEditarProprioPerfil(usuarioLogado)) {
+            throw new RuntimeException("Edicao de perfil nao disponivel para este usuario.");
+        }
+    }
+
+    private Usuario carregarUsuarioPersistido(Usuario usuarioLogado) {
+        return usuarioRepository.findById(usuarioLogado.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
+    }
+
+    private void aplicarTelefoneWhatsappNoUsuario(Usuario usuario, AtualizarTelefoneWhatsappForm form) {
         if (form == null || form.getTelefoneWhatsapp() == null || form.getTelefoneWhatsapp().isBlank()) {
             throw new RuntimeException("Informe seu WhatsApp com DDD (ex.: 11987654321).");
         }
@@ -691,10 +745,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new RuntimeException(
                         "WhatsApp invalido. Use DDD + numero, somente digitos (ex.: 11987654321)."
                 ));
-        Usuario usuario = usuarioRepository.findById(usuarioLogado.getId())
-                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
         usuario.setTelefoneWhatsapp(normalizado);
-        usuarioRepository.save(usuario);
     }
 
     @Transactional

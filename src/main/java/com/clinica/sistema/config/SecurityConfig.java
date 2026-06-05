@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .authenticationProvider(clinicaAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/error", "/actuator/health", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/uploads/perfis/**").authenticated()
                         .requestMatchers("/api/webhooks/**").permitAll()
                         .requestMatchers("/agendamentos/**", "/conta/**", "/pagamentos/**", "/indicacoes/**").authenticated()
                         .anyRequest().authenticated()

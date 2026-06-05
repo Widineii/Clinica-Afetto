@@ -89,7 +89,6 @@ class AgendamentoServiceTest {
     @Spy
     private FeriadoBeloHorizonteService feriadoBeloHorizonteService = new FeriadoBeloHorizonteService();
 
-    @InjectMocks
     private AgendamentoService agendamentoService;
 
     private Usuario profissional;
@@ -97,6 +96,20 @@ class AgendamentoServiceTest {
 
     @BeforeEach
     void setUp() {
+        agendamentoService = new AgendamentoService(
+                agendamentoRepository,
+                usuarioRepository,
+                salaRepository,
+                authService,
+                valorConsultaService,
+                pagamentoConsultaService,
+                encerramentoSerieRegistroRepository,
+                novoAgendamentoNotificacaoService,
+                feriadoBeloHorizonteService,
+                4,
+                14
+        );
+
         profissional = new Usuario();
         profissional.setId(10L);
         profissional.setNome("Julia");
@@ -296,17 +309,20 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void agruparMensaisDeveExibirSomenteUltimaDataAposSeisRemarcacoes() {
+    void agruparMensaisMantemPassadaRecenteERenovaQuatroFuturas() {
+        LocalDateTime passado = LocalDateTime.now().minusDays(2).withHour(8).withMinute(0).withSecond(0).withNano(0);
         List<Agendamento> consultas = new ArrayList<>();
-        for (int indice = 0; indice < 7; indice++) {
-            consultas.add(agendamentoMensal("Maria", LocalDateTime.of(2026, 1, 4, 8, 0).plusMonths(indice)));
+        consultas.add(agendamentoMensal("Maria", passado));
+        for (int indice = 1; indice <= 6; indice++) {
+            consultas.add(agendamentoMensal("Maria", passado.plusMonths(indice)));
         }
 
         List<MensalAgendamentoLinha> linhas = agendamentoService.agruparMensaisAtivos(consultas, profissional);
 
         assertEquals(1, linhas.size());
-        assertEquals(1, linhas.get(0).getDatasHistorico().size());
-        assertEquals("04/07", linhas.get(0).getDatasHistorico().get(0).getDataRotulo());
+        assertEquals(5, linhas.get(0).getDatasHistorico().size());
+        assertTrue(linhas.get(0).getDatasHistorico().get(0).isPassado());
+        assertFalse(linhas.get(0).getDatasHistorico().get(4).isPassado());
     }
 
     private Agendamento agendamentoMensal(String cliente, LocalDateTime inicio) {
@@ -333,7 +349,7 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        lenient().when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -343,6 +359,8 @@ class AgendamentoServiceTest {
         origem.setId(10L);
         origem.setHistoricoDatasMensal("04/06");
         when(agendamentoRepository.findById(10L)).thenReturn(Optional.of(origem));
+        when(agendamentoRepository.findByProfissionalIdOrderByDataHoraInicioAsc(profissional.getId()))
+                .thenReturn(List.of(origem));
 
         agendamentoService.salvar(form, profissional);
 
@@ -351,10 +369,10 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void renovacaoMensalComSeisConsultasDeveExigirPagamentoDaUltima() {
-        Agendamento origem = agendamentoMensal("Maria", LocalDateTime.of(2026, 11, 4, 8, 0));
+    void renovacaoMensalComCincoConsultasDeveExigirPagamentoDaUltima() {
+        Agendamento origem = agendamentoMensal("Maria", LocalDateTime.of(2026, 10, 4, 8, 0));
         origem.setId(60L);
-        origem.setHistoricoDatasMensal("04/06|04/07|04/08|04/09|04/10|04/11");
+        origem.setHistoricoDatasMensal("04/06|04/07|04/08|04/09|04/10");
         origem.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
 
         assertTrue(agendamentoService.requerPagamentoUltimaConsultaParaRenovarMensal(origem));
@@ -366,15 +384,15 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void salvarContinuacaoMensalComSeisConsultasNaoPagasDeveFalhar() {
+    void salvarContinuacaoMensalComCincoConsultasNaoPagasDeveFalhar() {
         AgendamentoForm form = novoForm(proximaDataUtil(LocalTime.of(11, 0)));
         form.setRecorrencia("MENSAL");
         form.setContinuacaoMensal(true);
         form.setAgendamentoOrigemId(60L);
 
-        Agendamento origem = agendamentoMensal("Maria", LocalDateTime.of(2026, 11, 4, 8, 0));
+        Agendamento origem = agendamentoMensal("Maria", LocalDateTime.of(2026, 10, 4, 8, 0));
         origem.setId(60L);
-        origem.setHistoricoDatasMensal("04/06|04/07|04/08|04/09|04/10|04/11");
+        origem.setHistoricoDatasMensal("04/06|04/07|04/08|04/09|04/10");
         origem.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
         when(agendamentoRepository.findById(60L)).thenReturn(Optional.of(origem));
 
@@ -383,12 +401,12 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void renovacaoMensalComSeisRegistrosSemHistoricoDeveExigirPagamentoDaUltima() {
-        Agendamento origem = agendamentoMensal("Maria", LocalDateTime.of(2026, 11, 4, 8, 0));
+    void renovacaoMensalComCincoRegistrosSemHistoricoDeveExigirPagamentoDaUltima() {
+        Agendamento origem = agendamentoMensal("Maria", LocalDateTime.of(2026, 10, 4, 8, 0));
         origem.setId(60L);
         origem.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
         when(agendamentoRepository.countMensalByProfissionalIdAndNomeCliente(profissional.getId(), "Maria"))
-                .thenReturn(6);
+                .thenReturn(5);
 
         assertTrue(agendamentoService.requerPagamentoUltimaConsultaParaRenovarMensal(origem));
         assertFalse(agendamentoService.podeMarcarProximaConsultaMensal(origem, profissional));
@@ -881,6 +899,133 @@ class AgendamentoServiceTest {
 
         assertDoesNotThrow(() -> agendamentoService.cancelar(1L, polyana));
         verify(agendamentoRepository).deleteById(1L);
+    }
+
+    @Test
+    void gestaoPodeCancelarERealocarOcorrenciaPassadaRecente() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setId(2L);
+
+        Agendamento passado = agendamentoSerieSemanal(julia);
+        passado.setId(10L);
+        passado.setDataHoraInicio(LocalDateTime.now().minusHours(4));
+        passado.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(pagamentoConsultaService.resolverPeriodicidade(julia)).thenReturn(PeriodicidadePagamento.SEMANAL);
+        when(agendamentoRepository.findById(10L)).thenReturn(Optional.of(passado));
+
+        assertTrue(agendamentoService.podeCancelarAgendamento(passado, polyana));
+        assertTrue(agendamentoService.podeRealocar(passado, polyana));
+        assertDoesNotThrow(() -> agendamentoService.cancelar(10L, polyana));
+    }
+
+    @Test
+    void profissionalNaoPodeCancelarNemRealocarOcorrenciaPassada() {
+        Agendamento passado = agendamentoSerieSemanal(profissional);
+        passado.setId(11L);
+        passado.setDataHoraInicio(LocalDateTime.now().minusHours(2));
+        passado.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(pagamentoConsultaService.resolverPeriodicidade(profissional)).thenReturn(PeriodicidadePagamento.SEMANAL);
+
+        assertFalse(agendamentoService.podeCancelarAgendamento(passado, profissional));
+        assertFalse(agendamentoService.podeRealocar(passado, profissional));
+    }
+
+    @Test
+    void serieFixaExibeOcorrenciasPassadasRecentesNaLista() {
+        LocalDateTime passado = LocalDateTime.now().minusDays(2).withHour(10).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime futuro = passado.plusWeeks(1);
+
+        Agendamento ocorrenciaPassada = agendamentoSerie("semanal-janela-teste", passado);
+        ocorrenciaPassada.setId(901L);
+        ocorrenciaPassada.setProfissional(profissional);
+        Agendamento ocorrenciaFutura = agendamentoSerie("semanal-janela-teste", futuro);
+        ocorrenciaFutura.setId(902L);
+        ocorrenciaFutura.setProfissional(profissional);
+
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        lenient().when(pagamentoConsultaService.podeVerPagamento(any(), eq(polyana))).thenReturn(true);
+        lenient().when(pagamentoConsultaService.exibirBotaoPagar(any())).thenReturn(false);
+
+        List<SerieAgendamentoLinha> series = agendamentoService.agruparSeriesAtivas(
+                List.of(ocorrenciaPassada, ocorrenciaFutura),
+                Agendamento::isFixoSemanal,
+                polyana
+        );
+
+        assertEquals(1, series.size());
+        assertEquals(2, series.get(0).getProximasOcorrencias().size());
+        assertTrue(series.get(0).getProximasOcorrencias().get(0).isPassado());
+        assertFalse(series.get(0).getProximasOcorrencias().get(1).isPassado());
+    }
+
+    @Test
+    void serieSemanalMantemPassadaRecenteERenovaOnzeFuturas() {
+        LocalDateTime passado = LocalDateTime.now().minusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+        List<Agendamento> agendamentos = new ArrayList<>();
+        agendamentos.add(criarOcorrenciaSerieExibicao("semanal-renovacao-ui", passado, 901L));
+        for (int i = 1; i <= 11; i++) {
+            agendamentos.add(criarOcorrenciaSerieExibicao("semanal-renovacao-ui", passado.plusWeeks(i), 901L + i));
+        }
+
+        List<SerieAgendamentoLinha> series = agendamentoService.agruparSeriesAtivas(
+                agendamentos,
+                Agendamento::isFixoSemanal,
+                profissional
+        );
+
+        assertEquals(1, series.size());
+        assertEquals(12, series.get(0).getProximasOcorrencias().size());
+        assertTrue(series.get(0).getProximasOcorrencias().get(0).isPassado());
+        assertFalse(series.get(0).getProximasOcorrencias().get(11).isPassado());
+    }
+
+    @Test
+    void serieQuinzenalMantemPassadaRecenteERenovaCincoFuturas() {
+        LocalDateTime passado = LocalDateTime.now().minusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+        List<Agendamento> agendamentos = new ArrayList<>();
+        agendamentos.add(criarOcorrenciaQuinzenalExibicao("quinzenal-renovacao-ui", passado, 801L));
+        for (int i = 1; i <= 5; i++) {
+            agendamentos.add(criarOcorrenciaQuinzenalExibicao("quinzenal-renovacao-ui", passado.plusWeeks(2L * i), 801L + i));
+        }
+
+        List<SerieAgendamentoLinha> series = agendamentoService.agruparSeriesAtivas(
+                agendamentos,
+                Agendamento::isQuinzenal,
+                profissional
+        );
+
+        assertEquals(1, series.size());
+        assertEquals(6, series.get(0).getProximasOcorrencias().size());
+        assertTrue(series.get(0).getProximasOcorrencias().get(0).isPassado());
+        assertFalse(series.get(0).getProximasOcorrencias().get(5).isPassado());
+    }
+
+    private Agendamento criarOcorrenciaSerieExibicao(String serieFixaId, LocalDateTime inicio, long id) {
+        Agendamento agendamento = agendamentoSerie(serieFixaId, inicio);
+        agendamento.setId(id);
+        agendamento.setProfissional(profissional);
+        return agendamento;
+    }
+
+    private Agendamento criarOcorrenciaQuinzenalExibicao(String serieFixaId, LocalDateTime inicio, long id) {
+        Agendamento agendamento = agendamentoSerie(serieFixaId, inicio);
+        agendamento.setId(id);
+        agendamento.setProfissional(profissional);
+        return agendamento;
     }
 
     @Test
@@ -1497,17 +1642,26 @@ class AgendamentoServiceTest {
         ultimo.setNomeCliente("Cliente");
         ultimo.setSala(sala);
         ultimo.setProfissional(profissional);
+        List<Agendamento> onzeFuturas = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            Agendamento o = agendamentoSerie(serieId, LocalDateTime.now().plusWeeks(i + 1L));
+            o.setId(500L + i);
+            o.setNomeCliente("Cliente");
+            o.setSala(sala);
+            o.setProfissional(profissional);
+            onzeFuturas.add(o);
+        }
 
         when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
                 .thenReturn(List.of(serieId));
-        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
-                .thenReturn(11L);
+        when(agendamentoRepository.findBySerieFixaIdOrderByDataHoraInicioAsc(serieId))
+                .thenReturn(onzeFuturas);
         when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
                 .thenReturn(Optional.of(ultimo));
         when(agendamentoRepository.existsBySerieFixaIdAndDataHoraInicio(eq(serieId), any(LocalDateTime.class)))
                 .thenReturn(false);
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        lenient().when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -1672,17 +1826,26 @@ class AgendamentoServiceTest {
         ultimo.setNomeCliente("Cliente");
         ultimo.setSala(sala);
         ultimo.setProfissional(profissional);
+        List<Agendamento> cincoFuturas = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Agendamento o = agendamentoSerie(serieId, LocalDateTime.now().plusWeeks(2L * (i + 1)));
+            o.setId(600L + i);
+            o.setNomeCliente("Cliente");
+            o.setSala(sala);
+            o.setProfissional(profissional);
+            cincoFuturas.add(o);
+        }
 
         when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
                 .thenReturn(List.of(serieId));
-        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
-                .thenReturn(5L);
+        when(agendamentoRepository.findBySerieFixaIdOrderByDataHoraInicioAsc(serieId))
+                .thenReturn(cincoFuturas);
         when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
                 .thenReturn(Optional.of(ultimo));
         when(agendamentoRepository.existsBySerieFixaIdAndDataHoraInicio(eq(serieId), any(LocalDateTime.class)))
                 .thenReturn(false);
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        lenient().when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -1699,11 +1862,19 @@ class AgendamentoServiceTest {
         Agendamento ultimo = agendamentoSerie(serieId, ultimoHorario);
         ultimo.setSala(sala);
         ultimo.setProfissional(profissional);
+        List<Agendamento> seisFuturas = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            Agendamento o = agendamentoSerie(serieId, LocalDateTime.now().plusWeeks(2L * (i + 1)));
+            o.setId(700L + i);
+            o.setSala(sala);
+            o.setProfissional(profissional);
+            seisFuturas.add(o);
+        }
 
         when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
                 .thenReturn(List.of(serieId));
-        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
-                .thenReturn(6L);
+        when(agendamentoRepository.findBySerieFixaIdOrderByDataHoraInicioAsc(serieId))
+                .thenReturn(seisFuturas);
         when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
                 .thenReturn(Optional.of(ultimo));
 

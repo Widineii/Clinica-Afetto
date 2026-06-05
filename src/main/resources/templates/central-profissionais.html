@@ -445,9 +445,13 @@
             box-shadow: inset 3px 0 0 var(--afetto-teal-dark);
         }
 
-        .prof-row.selected .prof-avatar {
+        .prof-row.selected .prof-avatar:not(.prof-avatar--com-foto) {
             background: var(--afetto-teal-dark);
             color: #fff;
+        }
+
+        .prof-row.selected .prof-avatar--com-foto {
+            box-shadow: 0 0 0 2px var(--afetto-teal-dark);
         }
 
         .prof-identity {
@@ -469,6 +473,23 @@
             align-items: center;
             justify-content: center;
             letter-spacing: 0.02em;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prof-avatar__foto {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .prof-avatar__foto.d-none {
+            display: none !important;
+        }
+
+        .prof-avatar__iniciais.d-none {
+            display: none !important;
         }
 
         .prof-name {
@@ -912,6 +933,7 @@
                     <tbody>
                     <tr th:each="prof : ${profissionais}"
                         class="prof-row"
+                        th:with="fotoEquipeUrl=${fotosPerfilEquipe != null and fotosPerfilEquipe.containsKey(prof.id) ? fotosPerfilEquipe[prof.id] : null}"
                         th:attr="data-id=${prof.id},data-nome=${prof.nome},data-login=${prof.login},data-whatsapp=${prof.telefoneWhatsappFormulario},data-iniciais=${#strings.substring(prof.nome, 0, 1)}">
                         <td>
                             <input type="radio"
@@ -923,7 +945,17 @@
                         <td>
                             <div class="prof-identity">
                                 <span class="prof-avatar"
-                                      th:text="${#strings.toUpperCase(#strings.substring(prof.nome, 0, 1))}">A</span>
+                                      th:classappend="${fotoEquipeUrl != null} ? ' prof-avatar--com-foto' : ''">
+                                    <img th:if="${fotoEquipeUrl != null}"
+                                         class="prof-avatar__foto"
+                                         th:src="${fotoEquipeUrl}"
+                                         th:alt="${'Foto de ' + prof.nome}"
+                                         loading="lazy"
+                                         onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
+                                    <span class="prof-avatar__iniciais"
+                                          th:classappend="${fotoEquipeUrl != null} ? ' d-none' : ''"
+                                          th:text="${#strings.toUpperCase(#strings.substring(prof.nome, 0, 1))}">A</span>
+                                </span>
                                 <div>
                                     <div class="prof-name" th:text="${prof.nome}">Nome</div>
                                     <div class="prof-login d-md-none" th:text="${prof.login}">login</div>
@@ -1274,6 +1306,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<th:block th:replace="~{fragments/site-menu-principal :: modais-conta}"></th:block>
 <th:block th:replace="~{fragments/site-menu-principal :: scripts}"></th:block>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

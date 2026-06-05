@@ -78,13 +78,33 @@
                 </div>
             </div>
             <div class="fin-cronograma-card" id="cronogramaRecebimentoCard">
-                <p class="fin-cronograma-card__titulo">Previsão por data</p>
-                <p class="fin-cronograma-card__hint">Valores esperados conforme a data de cada consulta agendada.</p>
-                <ul class="fin-cronograma-lista" id="cronogramaRecebimentoLista" hidden></ul>
+                <p class="fin-cronograma-card__titulo">Pendências do mês</p>
+                <p class="fin-cronograma-card__hint">
+                    Taxas de sala ainda não pagas pelos profissionais. Separadas entre consultas já realizadas (atraso)
+                    e consultas futuras (previsão), agrupadas por semana.
+                </p>
                 <p class="fin-cronograma-vazio mb-0" id="cronogramaRecebimentoVazio">
                     Nenhuma reserva pendente neste mês.
                 </p>
-                <div class="fin-cronograma-rodape" id="cronogramaRecebimentoRodape" hidden></div>
+                <div id="cronogramaRecebimentoConteudo" hidden>
+                    <section class="fin-cronograma-bloco fin-cronograma-bloco--atraso" id="cronogramaAtrasoBloco" hidden>
+                        <div class="fin-cronograma-bloco__cabecalho">
+                            <p class="fin-cronograma-bloco__titulo">Em atraso</p>
+                            <p class="fin-cronograma-bloco__subtitulo">Consulta já passou e o pagamento ainda não entrou.</p>
+                            <p class="fin-cronograma-bloco__resumo" id="cronogramaAtrasoResumo"></p>
+                        </div>
+                        <ul class="fin-cronograma-lista" id="cronogramaAtrasoLista"></ul>
+                    </section>
+                    <section class="fin-cronograma-bloco fin-cronograma-bloco--previsao" id="cronogramaPrevisaoBloco" hidden>
+                        <div class="fin-cronograma-bloco__cabecalho">
+                            <p class="fin-cronograma-bloco__titulo">Previsão</p>
+                            <p class="fin-cronograma-bloco__subtitulo">Consultas futuras com taxa ainda pendente.</p>
+                            <p class="fin-cronograma-bloco__resumo" id="cronogramaPrevisaoResumo"></p>
+                        </div>
+                        <ul class="fin-cronograma-lista" id="cronogramaPrevisaoLista"></ul>
+                    </section>
+                    <div class="fin-cronograma-rodape" id="cronogramaRecebimentoRodape"></div>
+                </div>
             </div>
         </div>
 
@@ -260,6 +280,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<th:block th:replace="~{fragments/site-menu-principal :: modais-conta}"></th:block>
 <th:block th:replace="~{fragments/site-menu-principal :: scripts}"></th:block>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -945,68 +966,137 @@
         };
     }
 
-    function agruparPendentesPorData(pendentesFiltrados) {
+    function hojeIsoLocal() {
+        const hoje = new Date();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        return hoje.getFullYear() + '-' + mes + '-' + dia;
+    }
+
+    function inicioSemanaIso(isoData) {
+        if (!isoData) {
+            return '';
+        }
+        const partes = isoData.split('-');
+        const data = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]), 12, 0, 0);
+        const diaSemana = data.getDay();
+        const diff = diaSemana === 0 ? -6 : 1 - diaSemana;
+        data.setDate(data.getDate() + diff);
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        return data.getFullYear() + '-' + mes + '-' + dia;
+    }
+
+    function fimSemanaIso(inicioIso) {
+        if (!inicioIso) {
+            return '';
+        }
+        const partes = inicioIso.split('-');
+        const data = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]), 12, 0, 0);
+        data.setDate(data.getDate() + 6);
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        return data.getFullYear() + '-' + mes + '-' + dia;
+    }
+
+    function formatarDiaMes(isoData) {
+        if (!isoData) {
+            return '—';
+        }
+        const partes = isoData.split('-');
+        return partes[2] + '/' + partes[1];
+    }
+
+    function rotuloSemanaConsulta(inicioIso, fimIso) {
+        const ini = formatarDiaMes(inicioIso);
+        const fim = formatarDiaMes(fimIso);
+        if (ini.split('/')[1] === fim.split('/')[1]) {
+            return ini.split('/')[0] + '–' + fim;
+        }
+        return ini + ' – ' + fim;
+    }
+
+    function agruparPendentesPorSemana(pendentesFiltrados) {
         const mapa = {};
         pendentesFiltrados.forEach(function (linha) {
             const data = resolverDataConsulta(linha);
-            const chave = data.iso || 'sem-data';
-            if (!mapa[chave]) {
-                mapa[chave] = {
-                    dataConsulta: data.iso,
-                    dataConsultaRotulo: data.rotulo,
+            const inicioSemana = data.iso ? inicioSemanaIso(data.iso) : 'sem-data';
+            if (!mapa[inicioSemana]) {
+                const fimSemana = inicioSemana !== 'sem-data' ? fimSemanaIso(inicioSemana) : '';
+                mapa[inicioSemana] = {
+                    chave: inicioSemana,
+                    inicioIso: inicioSemana !== 'sem-data' ? inicioSemana : '',
+                    fimIso: fimSemana,
+                    rotulo: inicioSemana !== 'sem-data'
+                        ? 'Sem. ' + rotuloSemanaConsulta(inicioSemana, fimSemana)
+                        : 'Sem data',
                     valor: 0,
                     quantidade: 0
                 };
             }
-            mapa[chave].valor += linha.valor;
-            mapa[chave].quantidade += 1;
+            mapa[inicioSemana].valor += linha.valor;
+            mapa[inicioSemana].quantidade += 1;
         });
         return Object.values(mapa).sort(function (a, b) {
-            if (!a.dataConsulta) {
+            if (!a.inicioIso) {
                 return 1;
             }
-            if (!b.dataConsulta) {
+            if (!b.inicioIso) {
                 return -1;
             }
-            return a.dataConsulta.localeCompare(b.dataConsulta);
+            return a.inicioIso.localeCompare(b.inicioIso);
         });
     }
 
-    function atualizarCronogramaRecebimento(pendentesFiltrados) {
-        const lista = document.getElementById('cronogramaRecebimentoLista');
-        const vazio = document.getElementById('cronogramaRecebimentoVazio');
-        const rodape = document.getElementById('cronogramaRecebimentoRodape');
-        if (!lista || !vazio || !rodape) {
+    function separarPendentesAtrasoPrevisao(pendentesFiltrados) {
+        const hoje = hojeIsoLocal();
+        const atraso = [];
+        const previsao = [];
+        const semData = [];
+
+        pendentesFiltrados.forEach(function (linha) {
+            const data = resolverDataConsulta(linha);
+            if (!data.iso) {
+                semData.push(linha);
+                return;
+            }
+            if (data.iso < hoje) {
+                atraso.push(linha);
+                return;
+            }
+            previsao.push(linha);
+        });
+
+        return { atraso: atraso, previsao: previsao.concat(semData) };
+    }
+
+    function montarResumoGrupos(grupos) {
+        return grupos.reduce(function (acc, grupo) {
+            acc.quantidade += grupo.quantidade;
+            acc.valor += grupo.valor;
+            return acc;
+        }, { quantidade: 0, valor: 0 });
+    }
+
+    function renderizarGruposCronograma(lista, grupos, tipo) {
+        if (!lista) {
             return;
         }
-
-        const grupos = agruparPendentesPorData(pendentesFiltrados);
         lista.innerHTML = '';
-
-        if (grupos.length === 0) {
-            lista.hidden = true;
-            rodape.hidden = true;
-            vazio.hidden = false;
-            vazio.textContent = filtros.profissional || filtros.sala
-                ? 'Nenhuma reserva pendente neste filtro.'
-                : 'Nenhuma reserva pendente neste mês.';
-            return;
-        }
-
         const valorMaximo = grupos.reduce(function (acc, grupo) {
             return Math.max(acc, grupo.valor);
         }, 0);
 
         grupos.forEach(function (grupo) {
             const item = document.createElement('li');
-            item.className = 'fin-cronograma-item';
+            item.className = 'fin-cronograma-item' + (tipo === 'atraso' ? ' fin-cronograma-item--atraso' : '');
 
             const larguraBarra = valorMaximo > 0
                 ? Math.max(8, Math.round((grupo.valor / valorMaximo) * 100))
                 : 0;
 
             item.innerHTML =
-                '<span class="fin-cronograma-item__data">' + grupo.dataConsultaRotulo + '</span>' +
+                '<span class="fin-cronograma-item__data">' + grupo.rotulo + '</span>' +
                 '<span class="fin-cronograma-item__barra" aria-hidden="true">' +
                     '<span class="fin-cronograma-item__barra-fill" style="width:' + larguraBarra + '%"></span>' +
                 '</span>' +
@@ -1017,18 +1107,74 @@
 
             lista.appendChild(item);
         });
+    }
 
-        const ultimoGrupo = grupos.filter(function (grupo) { return grupo.dataConsulta; }).pop();
-        const totalReservas = grupos.reduce(function (acc, grupo) { return acc + grupo.quantidade; }, 0);
-        const totalValor = grupos.reduce(function (acc, grupo) { return acc + grupo.valor; }, 0);
+    function atualizarCronogramaRecebimento(pendentesFiltrados) {
+        const vazio = document.getElementById('cronogramaRecebimentoVazio');
+        const conteudo = document.getElementById('cronogramaRecebimentoConteudo');
+        const blocoAtraso = document.getElementById('cronogramaAtrasoBloco');
+        const blocoPrevisao = document.getElementById('cronogramaPrevisaoBloco');
+        const listaAtraso = document.getElementById('cronogramaAtrasoLista');
+        const listaPrevisao = document.getElementById('cronogramaPrevisaoLista');
+        const resumoAtraso = document.getElementById('cronogramaAtrasoResumo');
+        const resumoPrevisao = document.getElementById('cronogramaPrevisaoResumo');
+        const rodape = document.getElementById('cronogramaRecebimentoRodape');
+
+        if (!vazio || !conteudo || !rodape) {
+            return;
+        }
+
+        const partes = separarPendentesAtrasoPrevisao(pendentesFiltrados);
+        const gruposAtraso = agruparPendentesPorSemana(partes.atraso);
+        const gruposPrevisao = agruparPendentesPorSemana(partes.previsao);
+        const totalGeral = montarResumoGrupos(gruposAtraso.concat(gruposPrevisao));
+
+        if (totalGeral.quantidade === 0) {
+            conteudo.hidden = true;
+            if (blocoAtraso) {
+                blocoAtraso.hidden = true;
+            }
+            if (blocoPrevisao) {
+                blocoPrevisao.hidden = true;
+            }
+            vazio.hidden = false;
+            vazio.textContent = filtros.profissional || filtros.sala
+                ? 'Nenhuma reserva pendente neste filtro.'
+                : 'Nenhuma reserva pendente neste mês.';
+            return;
+        }
 
         vazio.hidden = true;
-        lista.hidden = false;
-        rodape.hidden = false;
-        rodape.innerHTML = ultimoGrupo
-            ? 'Programado até <strong>' + ultimoGrupo.dataConsultaRotulo + '</strong> · ' +
-                totalReservas + ' reserva(s) · <strong>' + formatarMoeda(totalValor) + '</strong>'
-            : totalReservas + ' reserva(s) · <strong>' + formatarMoeda(totalValor) + '</strong>';
+        conteudo.hidden = false;
+
+        if (blocoAtraso && listaAtraso && resumoAtraso) {
+            const resumo = montarResumoGrupos(gruposAtraso);
+            if (gruposAtraso.length === 0) {
+                blocoAtraso.hidden = true;
+            } else {
+                blocoAtraso.hidden = false;
+                resumoAtraso.textContent = resumo.quantidade + ' reserva(s) · ' + formatarMoeda(resumo.valor);
+                renderizarGruposCronograma(listaAtraso, gruposAtraso, 'atraso');
+            }
+        }
+
+        if (blocoPrevisao && listaPrevisao && resumoPrevisao) {
+            const resumo = montarResumoGrupos(gruposPrevisao);
+            if (gruposPrevisao.length === 0) {
+                blocoPrevisao.hidden = true;
+            } else {
+                blocoPrevisao.hidden = false;
+                resumoPrevisao.textContent = resumo.quantidade + ' reserva(s) · ' + formatarMoeda(resumo.valor);
+                renderizarGruposCronograma(listaPrevisao, gruposPrevisao, 'previsao');
+            }
+        }
+
+        const ultimaPrevisao = gruposPrevisao.filter(function (grupo) { return grupo.fimIso; }).pop();
+        rodape.innerHTML =
+            totalGeral.quantidade + ' reserva(s) no mês · <strong>' + formatarMoeda(totalGeral.valor) + '</strong>' +
+            (ultimaPrevisao
+                ? ' · previsão até <strong>Sem. ' + rotuloSemanaConsulta(ultimaPrevisao.inicioIso, ultimaPrevisao.fimIso) + '</strong>'
+                : (gruposAtraso.length > 0 ? ' · somente consultas em atraso' : ''));
     }
 
     function renderizarPainel() {

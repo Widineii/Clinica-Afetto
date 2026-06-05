@@ -259,6 +259,7 @@ public class AgendamentoController {
             return "redirect:/login";
         }
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        service.renovarSeriesRecorrentesAtivasSeNecessario();
 
         if (viaNotificacaoNovoAgendamento && authService.podeAcessarCentralProfissionais(usuarioLogado)) {
             novoAgendamentoNotificacaoService.marcarComoVisto(session);
@@ -644,7 +645,9 @@ public class AgendamentoController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
-        model.addAttribute("profissionais", usuarioService.listarProfissionaisDaEquipe());
+        List<Usuario> profissionais = usuarioService.listarProfissionaisDaEquipe();
+        model.addAttribute("profissionais", profissionais);
+        model.addAttribute("fotosPerfilEquipe", usuarioService.mapaFotosPerfil(profissionais));
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         boolean podeVerRelatorioUsoSite = authService.podeVerRelatorioUsoSite(usuarioLogado);
@@ -908,6 +911,24 @@ public class AgendamentoController {
         model.addAttribute("manualVideoAtivo", manualProperties.temVideoConfigurado());
         model.addAttribute("manualVideoModo", manualProperties.resolverModoVideo());
         return "manual";
+    }
+
+    @GetMapping("/meus-pacientes")
+    public String abrirMeusPacientes(Model model) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarMeusPacientes(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+
+        List<com.clinica.sistema.dto.PacienteAgendamentoCardView> cards =
+                service.listarCardsPacientesAgendamento(usuarioLogado, usuarioLogado);
+        model.addAttribute("agendamentoService", service);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
+        model.addAttribute("salas", service.listarSalas());
+        model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
+        model.addAttribute("cardsPacientes", cards);
+        model.addAttribute("totalClientes", cards.size());
+        return "meus-pacientes";
     }
 
     @GetMapping("/meus-pagamentos")
