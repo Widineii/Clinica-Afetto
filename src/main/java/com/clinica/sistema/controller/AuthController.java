@@ -6,6 +6,7 @@ import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.security.AcessoSalvoCookies;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,10 +28,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AuthController {
     private final AuthService authService;
     private final UsuarioService usuarioService;
+    private final PagamentoConsultaService pagamentoConsultaService;
 
-    public AuthController(AuthService authService, UsuarioService usuarioService) {
+    public AuthController(
+            AuthService authService,
+            UsuarioService usuarioService,
+            PagamentoConsultaService pagamentoConsultaService
+    ) {
         this.authService = authService;
         this.usuarioService = usuarioService;
+        this.pagamentoConsultaService = pagamentoConsultaService;
     }
 
     @ModelAttribute
@@ -162,6 +169,13 @@ public class AuthController {
     public String pularCadastroTelefoneWhatsapp(HttpSession session) {
         authService.buscarUsuarioLogadoObrigatorio();
         usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/conta/pendencias-pagamento/pular")
+    public String pularLembretePendenciasPagamento(HttpSession session) {
+        authService.buscarUsuarioLogadoObrigatorio();
+        pagamentoConsultaService.dispensarLembretePendenciasPagamento(session);
         return "redirect:/agendamentos/dashboard";
     }
 

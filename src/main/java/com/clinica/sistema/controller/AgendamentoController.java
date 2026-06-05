@@ -172,7 +172,7 @@ public class AgendamentoController {
     }
 
     @ModelAttribute
-    public void prepararResumoPendenciasPagamentoAgenda(Model model) {
+    public void prepararResumoPendenciasPagamentoAgenda(Model model, HttpSession session) {
         if (model.containsAttribute("resumoPendenciasPagamento")
                 && model.getAttribute("resumoPendenciasPagamento") instanceof ResumoPendenciasPagamentoView resumo
                 && resumo.quantidade() > 0) {
@@ -180,7 +180,7 @@ public class AgendamentoController {
         }
         authService.buscarUsuarioLogado().ifPresent(usuario -> {
             if (!authService.isAdmin(usuario) && !authService.isDonaClinica(usuario)) {
-                pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuario);
+                pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuario, session);
                 Object resumoAttr = model.getAttribute("resumoPendenciasPagamento");
                 int total = resumoAttr instanceof ResumoPendenciasPagamentoView r ? r.quantidade() : 0;
                 model.addAttribute("totalMeusPagamentosPendentes", total);
@@ -485,7 +485,7 @@ public class AgendamentoController {
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         popularControlePeriodicidadePropria(model, usuarioLogado);
         var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
-        pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado);
+        pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado, session);
         if (Boolean.TRUE.equals(model.getAttribute("exibirModalTelefoneWhatsapp"))) {
             model.addAttribute("exibirModalPendenciasPagamento", false);
         }
@@ -907,7 +907,7 @@ public class AgendamentoController {
     }
 
     @GetMapping("/meus-pagamentos")
-    public String abrirMeusPagamentos(Model model) {
+    public String abrirMeusPagamentos(Model model, HttpSession session) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
             return "redirect:/agendamentos/dashboard";
@@ -928,7 +928,7 @@ public class AgendamentoController {
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         popularControlePeriodicidadePropria(model, usuarioLogado);
         model.addAttribute("pagamentoService", pagamentoConsultaService);
-        pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado);
+        pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado, session);
         model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
         model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
         model.addAttribute("rotuloProximoDiaPendentes", pagamentoConsultaService.rotuloProximoDiaPagamentoPendente());

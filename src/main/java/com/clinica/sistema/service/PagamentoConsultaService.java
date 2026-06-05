@@ -14,9 +14,12 @@ import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
+
+import jakarta.servlet.http.HttpSession;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -1052,17 +1055,47 @@ public class PagamentoConsultaService {
         model.addAttribute("exibirBolinhaNotificacaoPagamento", exibirBolinha);
     }
 
-    public void adicionarResumoPendenciasPagamentoAoModel(Model model, Usuario usuarioLogado) {
+    public void adicionarResumoPendenciasPagamentoAoModel(Model model, Usuario usuarioLogado, HttpSession session) {
         try {
             ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(usuarioLogado);
             model.addAttribute("resumoPendenciasPagamento", resumo);
-            boolean exibirModal = resumo.quantidade() > 0 && !temQrPagamentoAtivo(usuarioLogado);
+            boolean exibirModal = resumo.quantidade() > 0
+                    && !temQrPagamentoAtivo(usuarioLogado)
+                    && exibirModalPendenciasPagamentoEntrada(session);
             model.addAttribute("exibirModalPendenciasPagamento", exibirModal);
         } catch (RuntimeException ex) {
             org.slf4j.LoggerFactory.getLogger(PagamentoConsultaService.class)
                     .warn("Nao foi possivel montar resumo de pendencias: {}", ex.getMessage());
             model.addAttribute("resumoPendenciasPagamento", ResumoPendenciasPagamentoView.vazio());
             model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
+    }
+
+    public void marcarLembretePendenciasPagamentoNoLogin(HttpSession session, Usuario usuarioLogado) {
+        if (session == null || usuarioLogado == null) {
+            return;
+        }
+        ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(usuarioLogado);
+        if (resumo.quantidade() > 0 && !temQrPagamentoAtivo(usuarioLogado)) {
+            session.setAttribute(
+                    ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO,
+                    Boolean.TRUE
+            );
+        }
+    }
+
+    public boolean exibirModalPendenciasPagamentoEntrada(HttpSession session) {
+        if (session == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(session.getAttribute(
+                ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO
+        ));
+    }
+
+    public void dispensarLembretePendenciasPagamento(HttpSession session) {
+        if (session != null) {
+            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO);
         }
     }
 

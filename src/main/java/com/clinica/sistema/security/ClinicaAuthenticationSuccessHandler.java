@@ -7,6 +7,7 @@ import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.model.Usuario;
 
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +36,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     public static final String SESSION_LOGIN_COM_TROCA_SENHA = "loginComTrocaSenhaPendente";
     public static final String SESSION_LOGIN_COM_WHATSAPP_PENDENTE = "loginComWhatsappPendente";
+    public static final String SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO = "loginComPendenciasPagamentoPendente";
 
 
 
@@ -44,6 +46,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     private final UsuarioService usuarioService;
 
+    private final PagamentoConsultaService pagamentoConsultaService;
+
 
 
     public ClinicaAuthenticationSuccessHandler(
@@ -52,7 +56,9 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
             SegurancaProperties segurancaProperties,
 
-            UsuarioService usuarioService
+            UsuarioService usuarioService,
+
+            PagamentoConsultaService pagamentoConsultaService
 
     ) {
 
@@ -61,6 +67,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         this.segurancaProperties = segurancaProperties;
 
         this.usuarioService = usuarioService;
+
+        this.pagamentoConsultaService = pagamentoConsultaService;
 
     }
 
@@ -80,6 +88,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
         marcarTrocaSenhaPendenteNoLogin(request, authentication);
         marcarWhatsappPendenteNoLogin(request, authentication);
+        marcarPendenciasPagamentoNoLogin(request, authentication);
 
         salvarAcessoNoNavegador(request, response, authentication);
 
@@ -210,6 +219,34 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         }
 
         usuarioService.marcarCadastroTelefoneWhatsappPendenteNoLogin(session, usuario);
+
+    }
+
+    private void marcarPendenciasPagamentoNoLogin(HttpServletRequest request, Authentication authentication) {
+
+        if (!(authentication.getPrincipal() instanceof ClinicaUserPrincipal principal)) {
+
+            return;
+
+        }
+
+        Usuario usuario = principal.getUsuario();
+
+        if (usuario == null) {
+
+            return;
+
+        }
+
+        HttpSession session = request.getSession(false);
+
+        if (session == null) {
+
+            return;
+
+        }
+
+        pagamentoConsultaService.marcarLembretePendenciasPagamentoNoLogin(session, usuario);
 
     }
 

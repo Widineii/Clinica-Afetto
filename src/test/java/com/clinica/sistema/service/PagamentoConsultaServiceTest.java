@@ -2,6 +2,7 @@ package com.clinica.sistema.service;
 
 import com.clinica.sistema.config.InfinitePayProperties;
 import com.clinica.sistema.config.PagamentoProperties;
+import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
 import com.clinica.sistema.exception.PagamentoWebhookNaoAutorizadoException;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
@@ -33,9 +34,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
+import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
+import jakarta.servlet.http.HttpSession;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -1816,6 +1819,25 @@ class PagamentoConsultaServiceTest {
             dataHoraMock.when(LocalDateTime::now).thenReturn(agora);
             teste.run();
         }
+    }
+
+    @Test
+    void lembretePendenciasSoExibeModalQuandoFlagDeLoginEstaAtiva() {
+        HttpSession session = mock(HttpSession.class);
+        when(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO))
+                .thenReturn(Boolean.TRUE);
+
+        assertTrue(pagamentoConsultaService.exibirModalPendenciasPagamentoEntrada(session));
+
+        pagamentoConsultaService.dispensarLembretePendenciasPagamento(session);
+        verify(session).removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO);
+    }
+
+    @Test
+    void lembretePendenciasNaoExibeModalSemFlagDeLogin() {
+        assertFalse(pagamentoConsultaService.exibirModalPendenciasPagamentoEntrada(null));
+        HttpSession session = mock(HttpSession.class);
+        assertFalse(pagamentoConsultaService.exibirModalPendenciasPagamentoEntrada(session));
     }
 
     private LocalDate proximoDiaAdiantavelNaSemanaAtual() {

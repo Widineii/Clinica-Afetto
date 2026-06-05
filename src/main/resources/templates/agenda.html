@@ -3249,12 +3249,14 @@
                    id="pendenciasPagamentoModalIrPagar">
                     Ir para Meus pagamentos
                 </a>
-                <button type="button"
-                        class="btn btn-outline-secondary w-100"
-                        data-bs-dismiss="modal"
-                        id="pendenciasPagamentoModalVerDepois">
-                    Ver depois (continuar na agenda)
-                </button>
+                <form th:action="@{/conta/pendencias-pagamento/pular}" method="post" class="d-grid">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit"
+                            class="btn btn-outline-secondary w-100"
+                            id="pendenciasPagamentoModalVerDepois">
+                        Ver depois (continuar na agenda)
+                    </button>
+                </form>
             </div>
         </div>
     </div>
