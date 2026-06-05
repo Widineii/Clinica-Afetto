@@ -1,6 +1,7 @@
 package com.clinica.sistema.controller;
 
 import com.clinica.sistema.dto.LoginForm;
+import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.security.AcessoSalvoCookies;
@@ -136,6 +137,32 @@ public class AuthController {
             redirectAttributes.addFlashAttribute("reabrirModalTrocarSenha", true);
             return "redirect:/agendamentos/dashboard";
         }
+    }
+
+    @PostMapping("/conta/telefone-whatsapp")
+    public String cadastrarTelefoneWhatsapp(
+            @ModelAttribute AtualizarTelefoneWhatsappForm atualizarTelefoneWhatsappForm,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.atualizarTelefoneWhatsapp(atualizarTelefoneWhatsappForm, usuarioLogado);
+            usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+            redirectAttributes.addFlashAttribute("sucesso", "WhatsApp cadastrado com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erroWhatsapp", e.getMessage());
+            redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", atualizarTelefoneWhatsappForm);
+            redirectAttributes.addFlashAttribute("reabrirModalTelefoneWhatsapp", true);
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/conta/telefone-whatsapp/pular")
+    public String pularCadastroTelefoneWhatsapp(HttpSession session) {
+        authService.buscarUsuarioLogadoObrigatorio();
+        usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+        return "redirect:/agendamentos/dashboard";
     }
 
     private void encerrarSessaoDoUsuario(HttpServletRequest request, HttpServletResponse response) {

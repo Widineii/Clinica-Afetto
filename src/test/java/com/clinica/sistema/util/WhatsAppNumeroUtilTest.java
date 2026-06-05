@@ -23,4 +23,10 @@ class WhatsAppNumeroUtilTest {
         assertTrue(WhatsAppNumeroUtil.normalizarDestinatario("123").isEmpty());
         assertTrue(WhatsAppNumeroUtil.normalizarDestinatario(null).isEmpty());
     }
+
+    @Test
+    void paraCampoFormularioRemoveDdi() {
+        assertEquals("37998550994", WhatsAppNumeroUtil.paraCampoFormulario("5537998550994"));
+        assertEquals("", WhatsAppNumeroUtil.paraCampoFormulario(null));
+    }
 }

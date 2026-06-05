@@ -6,8 +6,10 @@ import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.GraficoJsonUtil;
 import com.clinica.sistema.dto.AtualizarPercentualIndicacaoProfissionalForm;
 import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
+import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.dto.EditarProfissionalForm;
 import com.clinica.sistema.dto.ProfissionalValoresConsultaLinhaView;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
@@ -17,6 +19,7 @@ import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
+import com.clinica.sistema.util.WhatsAppNumeroUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpSession;
@@ -422,6 +425,58 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
+    @Transactional
+    public Usuario atualizarProfissionalEquipe(EditarProfissionalForm form, Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+
+        if (form == null || form.getUsuarioId() == null) {
+            throw new RuntimeException("Selecione o profissional para editar.");
+        }
+
+        Usuario alvo = usuarioRepository.findById(form.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Profissional nao encontrado."));
+
+        if (authService.isAdmin(alvo)) {
+            throw new RuntimeException("O usuario administrador nao pode ser editado por aqui.");
+        }
+        if (!"ROLE_PROFISSIONAL".equals(alvo.getCargo())) {
+            throw new RuntimeException("Somente profissionais podem ser editados por aqui.");
+        }
+
+        String nome = form.getNome() != null ? form.getNome().trim() : "";
+        String login = form.getLogin() != null ? form.getLogin().trim().toLowerCase() : "";
+
+        if (nome.isBlank()) {
+            throw new RuntimeException("Informe o nome do profissional.");
+        }
+        if (login.isBlank()) {
+            throw new RuntimeException("Informe o login do profissional.");
+        }
+
+        if (!login.equals(alvo.getLogin()) && usuarioRepository.findByLogin(login).isPresent()) {
+            throw new RuntimeException("Ja existe um usuario com esse login.");
+        }
+
+        alvo.setNome(nome);
+        alvo.setLogin(login);
+
+        if (Boolean.TRUE.equals(form.getRemoverWhatsapp())) {
+            alvo.setTelefoneWhatsapp(null);
+        } else {
+            String telefoneBruto = form.getTelefoneWhatsapp() != null ? form.getTelefoneWhatsapp().trim() : "";
+            if (!telefoneBruto.isBlank()) {
+                alvo.setTelefoneWhatsapp(
+                        WhatsAppNumeroUtil.normalizarDestinatario(telefoneBruto)
+                                .orElseThrow(() -> new RuntimeException(
+                                        "WhatsApp invalido. Use DDD + numero, somente digitos (ex.: 11987654321)."
+                                ))
+                );
+            }
+        }
+
+        return usuarioRepository.save(alvo);
+    }
+
     public boolean usuarioLogadoDeveTrocarSenha() {
         if (!segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
             return false;
@@ -455,6 +510,41 @@ public class UsuarioService {
     public void confirmarExibicaoModalTrocaSenha(HttpSession session) {
         if (session != null) {
             session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_TROCA_SENHA);
+        }
+    }
+
+    public boolean precisaCadastrarTelefoneWhatsapp(Usuario usuario) {
+        if (!authService.podeCadastrarProprioTelefoneWhatsapp(usuario)) {
+            return false;
+        }
+        Usuario atualizado = usuarioRepository.findById(usuario.getId()).orElse(usuario);
+        String telefone = atualizado.getTelefoneWhatsapp();
+        return telefone == null || telefone.isBlank();
+    }
+
+    public boolean exibirModalTelefoneWhatsappEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
+        if (!precisaCadastrarTelefoneWhatsapp(usuario)) {
+            return false;
+        }
+        if (reabrirAposErro) {
+            return true;
+        }
+        if (session == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE));
+    }
+
+    public void marcarCadastroTelefoneWhatsappPendenteNoLogin(HttpSession session, Usuario usuario) {
+        if (session == null || !precisaCadastrarTelefoneWhatsapp(usuario)) {
+            return;
+        }
+        session.setAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE, Boolean.TRUE);
+    }
+
+    public void dispensarCadastroTelefoneWhatsapp(HttpSession session) {
+        if (session != null) {
+            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE);
         }
     }
 
@@ -586,6 +676,24 @@ public class UsuarioService {
         }
         aplicarNovaSenha(usuario, novaSenha, confirmarSenha, true, senhaAtual);
         usuario.setDeveTrocarSenha(false);
+        usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public void atualizarTelefoneWhatsapp(AtualizarTelefoneWhatsappForm form, Usuario usuarioLogado) {
+        if (!authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado)) {
+            throw new RuntimeException("Cadastro de WhatsApp nao disponivel para este usuario.");
+        }
+        if (form == null || form.getTelefoneWhatsapp() == null || form.getTelefoneWhatsapp().isBlank()) {
+            throw new RuntimeException("Informe seu WhatsApp com DDD (ex.: 11987654321).");
+        }
+        String normalizado = WhatsAppNumeroUtil.normalizarDestinatario(form.getTelefoneWhatsapp())
+                .orElseThrow(() -> new RuntimeException(
+                        "WhatsApp invalido. Use DDD + numero, somente digitos (ex.: 11987654321)."
+                ));
+        Usuario usuario = usuarioRepository.findById(usuarioLogado.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
+        usuario.setTelefoneWhatsapp(normalizado);
         usuarioRepository.save(usuario);
     }
 

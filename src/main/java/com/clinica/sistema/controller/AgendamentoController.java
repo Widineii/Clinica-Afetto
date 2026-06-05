@@ -7,9 +7,11 @@ import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.NovidadeSiteView;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
+import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
 import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.dto.EditarProfissionalForm;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.PagamentoStatus;
@@ -155,6 +157,35 @@ public class AgendamentoController {
         if (!model.containsAttribute("relatorioUsoSite")) {
             model.addAttribute("relatorioUsoSite", null);
         }
+        if (!model.containsAttribute("resumoPendenciasPagamento")) {
+            model.addAttribute("resumoPendenciasPagamento", ResumoPendenciasPagamentoView.vazio());
+        }
+        if (!model.containsAttribute("exibirModalPendenciasPagamento")) {
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
+        if (!model.containsAttribute("exibirModalTelefoneWhatsapp")) {
+            model.addAttribute("exibirModalTelefoneWhatsapp", false);
+        }
+        if (!model.containsAttribute("podeCadastrarTelefoneWhatsapp")) {
+            model.addAttribute("podeCadastrarTelefoneWhatsapp", false);
+        }
+    }
+
+    @ModelAttribute
+    public void prepararResumoPendenciasPagamentoAgenda(Model model) {
+        if (model.containsAttribute("resumoPendenciasPagamento")
+                && model.getAttribute("resumoPendenciasPagamento") instanceof ResumoPendenciasPagamentoView resumo
+                && resumo.quantidade() > 0) {
+            return;
+        }
+        authService.buscarUsuarioLogado().ifPresent(usuario -> {
+            if (!authService.isAdmin(usuario) && !authService.isDonaClinica(usuario)) {
+                pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuario);
+                Object resumoAttr = model.getAttribute("resumoPendenciasPagamento");
+                int total = resumoAttr instanceof ResumoPendenciasPagamentoView r ? r.quantidade() : 0;
+                model.addAttribute("totalMeusPagamentosPendentes", total);
+            }
+        });
     }
 
     @ModelAttribute
@@ -293,6 +324,22 @@ public class AgendamentoController {
         }
         model.addAttribute("exibirModalTrocarSenhaObrigatoria", exibirModalTrocarSenhaObrigatoria);
         model.addAttribute("trocaSenhaAindaPendente", trocaSenhaAindaPendente);
+        boolean podeCadastrarTelefoneWhatsapp = authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado);
+        boolean reabrirModalTelefoneWhatsapp = model.containsAttribute("reabrirModalTelefoneWhatsapp");
+        boolean exibirModalTelefoneWhatsapp = !exibirModalTrocarSenhaObrigatoria
+                && usuarioService.exibirModalTelefoneWhatsappEntrada(
+                session,
+                reabrirModalTelefoneWhatsapp,
+                usuarioLogado
+        );
+        if (exibirModalTelefoneWhatsapp) {
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
+        model.addAttribute("podeCadastrarTelefoneWhatsapp", podeCadastrarTelefoneWhatsapp);
+        model.addAttribute("exibirModalTelefoneWhatsapp", exibirModalTelefoneWhatsapp);
+        if (podeCadastrarTelefoneWhatsapp && !model.containsAttribute("atualizarTelefoneWhatsappForm")) {
+            model.addAttribute("atualizarTelefoneWhatsappForm", new com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm());
+        }
         model.addAttribute("isDonaClinica", isDonaClinica);
         model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuarioLogado));
         model.addAttribute("podeTrocarPropriaSenha", podeTrocarPropriaSenha);
@@ -438,7 +485,10 @@ public class AgendamentoController {
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         popularControlePeriodicidadePropria(model, usuarioLogado);
         var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
-        var pagamentosPendentesProximoDia = pagamentoConsultaService.listarPagamentosPendentesProximoDia(usuarioLogado);
+        pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado);
+        if (Boolean.TRUE.equals(model.getAttribute("exibirModalTelefoneWhatsapp"))) {
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
         model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
         model.addAttribute(
                 "pagamentoBloqueioAgendamentoId",
@@ -448,7 +498,11 @@ public class AgendamentoController {
                 "pagamentoBloqueioMensagem",
                 pagamentoConsultaService.mensagemBloqueioPagamento(usuarioLogado)
         );
-        model.addAttribute("totalMeusPagamentosPendentes", pagamentosPendentesProximoDia.size());
+        Object resumoAttr = model.getAttribute("resumoPendenciasPagamento");
+        int totalPendentes = resumoAttr instanceof com.clinica.sistema.dto.ResumoPendenciasPagamentoView resumo
+                ? resumo.quantidade()
+                : 0;
+        model.addAttribute("totalMeusPagamentosPendentes", totalPendentes);
         model.addAttribute(
                 "pagamentosAguardandoQr",
                 pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)
@@ -459,7 +513,10 @@ public class AgendamentoController {
         Long pagamentoSelecionadoId = pagamentoId != null ? pagamentoId : extrairIdPagamento(pagamentoFlashId);
         if (pagamentoSelecionadoId != null) {
             service.buscarPorId(pagamentoSelecionadoId)
-                    .ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
+                    .ifPresent(ag -> {
+                        model.addAttribute("pagamentoAgendamento", ag);
+                        model.addAttribute("exibirModalPendenciasPagamento", false);
+                    });
         }
         aplicarModalPixConfirmadoSeNecessario(model);
         popularNovidades(model, usuarioLogado, session);
@@ -577,6 +634,9 @@ public class AgendamentoController {
         }
         if (!model.containsAttribute("trocarSenhaAdminForm")) {
             model.addAttribute("trocarSenhaAdminForm", new TrocarSenhaAdminForm());
+        }
+        if (!model.containsAttribute("editarProfissionalForm")) {
+            model.addAttribute("editarProfissionalForm", new EditarProfissionalForm());
         }
 
         model.addAttribute("usuarioLogado", usuarioLogado);
@@ -854,7 +914,7 @@ public class AgendamentoController {
         }
 
         List<com.clinica.sistema.model.Agendamento> meusPagamentosPendentes =
-                pagamentoConsultaService.listarPagamentosPendentesProximoDia(usuarioLogado);
+                pagamentoConsultaService.listarPagamentosPendentesExibicaoMeusPagamentos(usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> consultasSemana =
                 pagamentoConsultaService.listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> consultasMes =
@@ -868,6 +928,7 @@ public class AgendamentoController {
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         popularControlePeriodicidadePropria(model, usuarioLogado);
         model.addAttribute("pagamentoService", pagamentoConsultaService);
+        pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado);
         model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
         model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
         model.addAttribute("rotuloProximoDiaPendentes", pagamentoConsultaService.rotuloProximoDiaPagamentoPendente());
@@ -915,6 +976,23 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("trocarSenhaAdminForm", trocarSenhaAdminForm);
             redirectAttributes.addFlashAttribute("abrirModalTrocarSenha", true);
+        }
+        return "redirect:/agendamentos/central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/editar")
+    public String editarProfissionalCentral(
+            @ModelAttribute EditarProfissionalForm editarProfissionalForm,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            Usuario atualizado = usuarioService.atualizarProfissionalEquipe(editarProfissionalForm, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Dados atualizados: " + atualizado.getNome() + ".");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("editarProfissionalForm", editarProfissionalForm);
+            redirectAttributes.addFlashAttribute("abrirModalEditar", true);
         }
         return "redirect:/agendamentos/central-profissionais";
     }

@@ -131,6 +131,14 @@ public class AuthService {
         return false;
     }
 
+    /** Profissional comum cadastra o proprio WhatsApp na agenda quando ainda nao tem numero salvo. */
+    public boolean podeCadastrarProprioTelefoneWhatsapp(Usuario usuario) {
+        return usuario != null
+                && !isAdmin(usuario)
+                && !isDonaClinica(usuario)
+                && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
+    }
+
     /** Lista da aba Valores: profissionais comuns, sem admin, Polyana nem perfil de teste. */
     public boolean elegivelParaGestaoValoresConsulta(Usuario profissional) {
         if (profissional == null || isAdmin(profissional)) {

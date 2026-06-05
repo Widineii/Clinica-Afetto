@@ -490,6 +490,19 @@
             width: calc((100% - 56px) / 6);
         }
 
+        .agenda-grid thead th.grade-dia-feriado {
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+        .grade-feriado-cabecalho {
+            margin-top: 0.15rem;
+            font-size: 0.62rem;
+            font-weight: 700;
+            line-height: 1.2;
+            text-transform: none;
+        }
+
         .agenda-grid .time-col {
             background: #0f172a;
             color: #fff;
@@ -1440,6 +1453,234 @@
             scroll-margin-top: 1.25rem;
         }
 
+        .pendencias-alerta-principal {
+            position: relative;
+            border: 3px solid #dc2626;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #fff5f5 0%, #fff 42%, #fffbeb 100%);
+            box-shadow:
+                0 0 0 1px rgba(220, 38, 38, 0.12),
+                0 16px 40px rgba(220, 38, 38, 0.22);
+            padding: 1.35rem 1.5rem 1.5rem;
+            overflow: hidden;
+        }
+
+        .pendencias-alerta-principal__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #dc2626;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 0.4rem 0.85rem;
+            border-radius: 999px;
+            margin-bottom: 1rem;
+        }
+
+        .pendencias-alerta-principal__pulse {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #fff;
+            animation: pendencias-pulse-dot 1.4s ease-in-out infinite;
+        }
+
+        @keyframes pendencias-pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(0.75); }
+        }
+
+        .pendencias-alerta-principal__grid {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .pendencias-alerta-principal__grid {
+                grid-template-columns: 1fr auto;
+                grid-template-rows: auto auto;
+                align-items: center;
+            }
+
+            .pendencias-alerta-principal__texto {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            .pendencias-alerta-principal__metricas {
+                grid-column: 2;
+                grid-row: 1 / span 2;
+            }
+
+            .pendencias-alerta-principal__rodape {
+                grid-column: 1;
+                grid-row: 2;
+            }
+        }
+
+        .pendencias-alerta-principal__titulo {
+            font-size: clamp(1.35rem, 3vw, 1.75rem);
+            font-weight: 800;
+            color: #991b1b;
+            line-height: 1.2;
+        }
+
+        .pendencias-alerta-principal__subtitulo {
+            font-size: 0.95rem;
+            color: #7f1d1d;
+            max-width: 42rem;
+        }
+
+        .pendencias-alerta-principal__metricas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .pendencias-alerta-principal__metrica {
+            text-align: center;
+            min-width: 8.5rem;
+            padding: 0.85rem 1rem;
+            background: #fff;
+            border: 2px solid #fecaca;
+            border-radius: 16px;
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.1);
+        }
+
+        .pendencias-alerta-principal__metrica--valor {
+            border-color: #f87171;
+            background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
+        }
+
+        .pendencias-alerta-principal__metrica-label {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #64748b;
+            margin-bottom: 0.35rem;
+        }
+
+        .pendencias-alerta-principal__numero {
+            display: block;
+            font-weight: 900;
+            line-height: 1;
+            color: #dc2626;
+        }
+
+        .pendencias-alerta-principal__numero--qtd {
+            font-size: clamp(2.5rem, 6vw, 3.25rem);
+        }
+
+        .pendencias-alerta-principal__numero--valor {
+            font-size: clamp(2rem, 5vw, 2.75rem);
+            animation: pendencias-valor-glow 2.2s ease-in-out infinite;
+        }
+
+        @keyframes pendencias-valor-glow {
+            0%, 100% { color: #dc2626; text-shadow: none; }
+            50% { color: #b91c1c; text-shadow: 0 0 18px rgba(220, 38, 38, 0.35); }
+        }
+
+        .pendencias-alerta-principal__periodo {
+            font-size: 0.9rem;
+            color: #7f1d1d;
+        }
+
+        .pendencias-alerta-principal__rodape {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .pendencias-alerta-principal__cta {
+            min-width: min(100%, 280px);
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.35);
+        }
+
+        .hero-actions .btn-meus-pagamentos-destaque,
+        .hero-actions .btn-pendencias-header {
+            animation: pulso-pagamento 2s ease-in-out infinite;
+            background: #dc2626 !important;
+            border-color: #dc2626 !important;
+            color: #fff !important;
+        }
+
+        #pendenciasPagamentoModal .modal-dialog {
+            max-width: min(640px, calc(100% - 1.5rem));
+        }
+
+        @keyframes pulso-pagamento {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+            50% { box-shadow: 0 0 0 12px rgba(220, 38, 38, 0); }
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal {
+            border: 3px solid #dc2626;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(220, 38, 38, 0.28);
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__kicker {
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #dc2626;
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__convite {
+            color: #334155;
+            font-size: 1rem;
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat {
+            background: #fff;
+            border: 2px solid #fecaca;
+            border-radius: 16px;
+            padding: 1rem 0.75rem;
+            height: 100%;
+            text-align: center;
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat--valor {
+            border-color: #f87171;
+            background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 0.35rem;
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero {
+            display: block;
+            font-weight: 900;
+            line-height: 1;
+            color: #dc2626;
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero--qtd {
+            font-size: 2.75rem;
+        }
+
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero--valor {
+            font-size: 2.35rem;
+        }
+
         .agenda-quick-nav {
             display: flex;
             flex-wrap: wrap;
@@ -1764,6 +2005,16 @@
                 <a th:href="@{/agendamentos/manual}"
                    class="btn btn-light"
                    title="Manual de uso e regras da clínica">Manual</a>
+                <button th:if="${!isAdmin and !isDonaClinica and resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}"
+                        type="button"
+                        class="btn btn-pendencias-header position-relative fw-semibold"
+                        data-bs-toggle="modal"
+                        data-bs-target="#pendenciasPagamentoModal"
+                        title="Você tem pagamentos em aberto">
+                    Pendências
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-light text-danger border border-danger"
+                          th:text="${resumoPendenciasPagamento.quantidade}">1</span>
+                </button>
                 <button th:if="${totalNovidadesVisiveis != null and totalNovidadesVisiveis > 0}"
                         type="button"
                         class="btn btn-light position-relative"
@@ -1783,7 +2034,8 @@
                 <a th:if="${!isAdmin and !isDonaClinica}"
                         th:href="@{/agendamentos/meus-pagamentos}"
                         class="btn btn-warning"
-                        th:text="${'Meus pagamentos (' + totalMeusPagamentosPendentes + ')'}">Meus pagamentos (0)</a>
+                        th:classappend="${totalMeusPagamentosPendentes > 0} ? ' btn-meus-pagamentos-destaque' : ''"
+                        th:text="${totalMeusPagamentosPendentes > 0 ? 'Meus pagamentos (' + totalMeusPagamentosPendentes + ' pendentes)' : 'Meus pagamentos'}">Meus pagamentos</a>
                 <a th:if="${podeVerRelatorioProprio}"
                    th:href="@{/agendamentos/meu-relatorio}"
                    class="btn btn-warning">Meu relatório</a>
@@ -1795,6 +2047,48 @@
             </div>
         </div>
     </div>
+
+    <section th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}"
+             class="pendencias-alerta-principal shell-card mb-4"
+             id="pendencias-pagamento-destaque"
+             role="region"
+             aria-label="Pendências de pagamento">
+        <div class="pendencias-alerta-principal__badge">
+            <span class="pendencias-alerta-principal__pulse" aria-hidden="true"></span>
+            Pendência ativa
+        </div>
+        <div class="pendencias-alerta-principal__grid">
+            <div class="pendencias-alerta-principal__texto">
+                <h2 class="pendencias-alerta-principal__titulo mb-2">Você tem pagamentos em aberto</h2>
+                <p class="pendencias-alerta-principal__subtitulo mb-0"
+                   th:text="${resumoPendenciasPagamento.mensagemConvite}">
+                    Resolva com antecedência para manter a agenda liberada.
+                </p>
+            </div>
+            <div class="pendencias-alerta-principal__metricas">
+                <div class="pendencias-alerta-principal__metrica">
+                    <span class="pendencias-alerta-principal__metrica-label">Itens pendentes</span>
+                    <span class="pendencias-alerta-principal__numero pendencias-alerta-principal__numero--qtd"
+                          th:text="${resumoPendenciasPagamento.quantidade}">0</span>
+                </div>
+                <div class="pendencias-alerta-principal__metrica pendencias-alerta-principal__metrica--valor">
+                    <span class="pendencias-alerta-principal__metrica-label">Total em aberto</span>
+                    <span class="pendencias-alerta-principal__numero pendencias-alerta-principal__numero--valor"
+                          th:text="${resumoPendenciasPagamento.valorTotalFormatado}">R$ 0,00</span>
+                </div>
+            </div>
+            <div class="pendencias-alerta-principal__rodape">
+                <p class="pendencias-alerta-principal__periodo mb-3 mb-md-0"
+                   th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
+                    Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
+                </p>
+                <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
+                   class="btn btn-danger btn-lg fw-bold pendencias-alerta-principal__cta">
+                    Resolver pendências agora
+                </a>
+            </div>
+        </div>
+    </section>
 
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
     <div th:if="${trocaSenhaAindaPendente}" class="alert alert-warning shell-card d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -1808,7 +2102,8 @@
     </th:block>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${erro != null and erroContexto == 'uso-site'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
-    <div th:if="${pagamentoBloqueioAtivo}" class="alert alert-warning shell-card">
+    <div th:if="${pagamentoBloqueioAtivo and (resumoPendenciasPagamento == null or resumoPendenciasPagamento.quantidade == 0)}"
+         class="alert alert-warning shell-card">
         <strong>Você tem pagamento pendente.</strong>
         <span th:text="${pagamentoBloqueioMensagem}">Sem quitar, não pode usar sala nem fazer novo agendamento.</span>
         <form th:if="${pagamentoBloqueioAgendamentoId != null}"
@@ -1821,6 +2116,9 @@
     </div>
 
     <nav class="agenda-quick-nav mb-4" aria-label="Atalhos da agenda">
+        <a th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}"
+           href="#pendencias-pagamento-destaque"
+           class="btn btn-sm btn-danger fw-semibold">Pendências</a>
         <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
         <a href="#novo-agendamento" class="btn btn-sm btn-outline-secondary">Novo agendamento</a>
         <a th:if="${isAdmin}" href="#agendamentos-profissionais" class="btn btn-sm btn-outline-secondary">Agendamentos por profissional</a>
@@ -2098,12 +2396,7 @@
                                                id="valorClinicaCobra"
                                                th:readonly="${!clinicaCobraEditavelNaAgenda}"
                                                th:classappend="${!clinicaCobraEditavelNaAgenda} ? ' valor-clinica-bloqueado' : ''"
-                                               th:title="${!clinicaCobraEditavelNaAgenda} ? 'Taxa definida pela clínica; alteração na Central (Polyana).' : null"
                                                required>
-                                        <p class="form-text small text-muted mb-0"
-                                           th:if="${!clinicaCobraEditavelNaAgenda}">
-                                            Taxa fixa cadastrada pela clínica. A Polyana altera em Central → taxas de sala.
-                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -2297,16 +2590,21 @@
                             <thead>
                             <tr>
                                 <th class="time-col">Horário</th>
-                                <th th:each="dia : ${agendaSala.diasSemana}">
+                                <th th:each="dia : ${agendaSala.diasSemana}"
+                                    th:with="diaEspecialHeader=${agendaSala.buscarDiaEspecial(dia)}"
+                                    th:classappend="${diaEspecialHeader != null ? ' grade-dia-feriado' : ''}">
                                     <div class="fw-bold text-uppercase small" th:text="${#temporals.format(dia, 'EEE')}">SEG</div>
                                     <div th:text="${#temporals.format(dia, 'dd/MM')}">20/04</div>
+                                    <div th:if="${diaEspecialHeader != null}"
+                                         class="grade-feriado-cabecalho"
+                                         th:text="${diaEspecialHeader.rotuloCabecalho()}">Feriado · Corpus Christi</div>
                                 </th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:each="linha : ${agendaSala.linhas}">
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
-                                <td th:each="celula : ${linha.celulas}"
+                                <td th:each="celula, statCel : ${linha.celulas}"
                                     th:with="item=${celula != null and celula.ocupada ? celula.agendamento : null},
                                              exibirCompleto=${celula != null and celula.exibirDetalhesCompletos},
                                              tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null},
@@ -2830,6 +3128,7 @@
 </div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pos-agendamento(agendamento=${pagamentoAgendamento})}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
+<div th:replace="~{fragments/cadastro-telefone-whatsapp-profissional :: modal}"></div>
 
 <div th:if="${podeTrocarPropriaSenha}" class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -2898,6 +3197,69 @@
     isDonaClinica=${isDonaClinica}
 )}"></div>
 
+<div th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}"
+     class="modal fade"
+     id="pendenciasPagamentoModal"
+     tabindex="-1"
+     aria-labelledby="pendenciasPagamentoModalTitulo"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg modal-dialog-centered">
+        <div class="modal-content pendencias-pagamento-modal">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="pendencias-pagamento-modal__kicker mb-1">Lembrete ao entrar na agenda</p>
+                    <h2 class="modal-title h4 mb-0" id="pendenciasPagamentoModalTitulo">
+                        Você tem pagamentos em aberto
+                    </h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body pt-2 text-center text-md-start">
+                <p class="mb-3 pendencias-pagamento-modal__convite"
+                   th:text="${resumoPendenciasPagamento.mensagemConvite}">
+                    Resumo das suas pendências de taxa de sala.
+                </p>
+                <div class="row g-3 justify-content-center mb-3">
+                    <div class="col-6 col-md-5">
+                        <div class="pendencias-pagamento-modal__stat">
+                            <span class="pendencias-pagamento-modal__stat-label">Itens pendentes</span>
+                            <span class="pendencias-pagamento-modal__stat-numero pendencias-pagamento-modal__stat-numero--qtd"
+                                  th:text="${resumoPendenciasPagamento.quantidade}">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-5">
+                        <div class="pendencias-pagamento-modal__stat pendencias-pagamento-modal__stat--valor">
+                            <span class="pendencias-pagamento-modal__stat-label">Total em aberto</span>
+                            <span class="pendencias-pagamento-modal__stat-numero pendencias-pagamento-modal__stat-numero--valor"
+                                  th:text="${resumoPendenciasPagamento.valorTotalFormatado}">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="small text-muted mb-0 text-center"
+                   th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
+                    Referente a: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
+                </p>
+            </div>
+            <div class="modal-footer flex-column align-items-stretch gap-2 border-0 pt-0">
+                <p class="small text-muted mb-0 text-start">
+                    Não é cobrança automática — é só um lembrete. Quanto antes você resolver, mais tranquilo fica sua agenda.
+                </p>
+                <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
+                   class="btn btn-danger btn-lg fw-bold w-100"
+                   id="pendenciasPagamentoModalIrPagar">
+                    Ir para Meus pagamentos
+                </a>
+                <button type="button"
+                        class="btn btn-outline-secondary w-100"
+                        data-bs-dismiss="modal"
+                        id="pendenciasPagamentoModalVerDepois">
+                    Ver depois (continuar na agenda)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script type="application/json"
         id="valores-consulta-padrao-json"
@@ -2905,12 +3267,126 @@
         th:utext="${valoresConsultaPorProfissionalJson}">{}</script>
 <script th:inline="javascript">
     var exibirModalNovidades = /*[[${exibirModalNovidades}]]*/ false;
+    var exibirModalPendenciasPagamento = /*[[${exibirModalPendenciasPagamento}]]*/ false;
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
-    document.addEventListener('DOMContentLoaded', function () {
+    var exibirModalTelefoneWhatsapp = /*[[${exibirModalTelefoneWhatsapp}]]*/ false;
+
+    function rolarParaPendenciasDestaque() {
+        var destaque = document.getElementById('pendencias-pagamento-destaque');
+        if (destaque) {
+            destaque.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function abrirModalNovidadesEntrada() {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalTelefoneWhatsapp || !exibirModalNovidades) {
+            return;
+        }
         var novidadesModalEl = document.getElementById('novidadesModal');
-        if (novidadesModalEl && exibirModalNovidades && !exibirModalTrocarSenhaObrigatoria) {
+        if (novidadesModalEl) {
             bootstrap.Modal.getOrCreateInstance(novidadesModalEl).show();
         }
+    }
+
+    function fecharModalPendenciasSeAberto() {
+        var pendenciasModalEl = document.getElementById('pendenciasPagamentoModal');
+        if (!pendenciasModalEl) {
+            return;
+        }
+        var instancia = bootstrap.Modal.getInstance(pendenciasModalEl);
+        if (instancia) {
+            instancia.hide();
+        }
+    }
+
+    function abrirModalPendenciasPagamentoEntrada(abrirNovidadesDepois) {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalTelefoneWhatsapp || !exibirModalPendenciasPagamento) {
+            if (abrirNovidadesDepois) {
+                abrirModalNovidadesEntrada();
+            }
+            return;
+        }
+        var pendenciasModalEl = document.getElementById('pendenciasPagamentoModal');
+        if (!pendenciasModalEl) {
+            rolarParaPendenciasDestaque();
+            if (abrirNovidadesDepois) {
+                abrirModalNovidadesEntrada();
+            }
+            return;
+        }
+        var modalPendencias = bootstrap.Modal.getOrCreateInstance(pendenciasModalEl);
+        pendenciasModalEl.addEventListener('hidden.bs.modal', function () {
+            rolarParaPendenciasDestaque();
+            if (abrirNovidadesDepois) {
+                abrirModalNovidadesEntrada();
+            }
+        }, { once: true });
+        modalPendencias.show();
+    }
+
+    function rolarParaGradeSemanal() {
+        var grade = document.getElementById('grade-semanal');
+        if (grade) {
+            grade.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function abrirModalTelefoneWhatsappEntrada(tentativas) {
+        if (!exibirModalTelefoneWhatsapp) {
+            return;
+        }
+        if (typeof bootstrap === 'undefined') {
+            if ((tentativas || 0) < 20) {
+                window.setTimeout(function () {
+                    abrirModalTelefoneWhatsappEntrada((tentativas || 0) + 1);
+                }, 50);
+            }
+            return;
+        }
+        var modalWhatsappEl = document.getElementById('telefoneWhatsappModal');
+        if (!modalWhatsappEl) {
+            return;
+        }
+        fecharModalPendenciasSeAberto();
+        bootstrap.Modal.getOrCreateInstance(modalWhatsappEl, {
+            backdrop: 'static',
+            keyboard: false
+        }).show();
+        var inputWhatsapp = document.getElementById('telefoneWhatsappProfissional');
+        if (inputWhatsapp) {
+            window.setTimeout(function () { inputWhatsapp.focus(); }, 250);
+        }
+    }
+
+    function inicializarModaisEntradaAgenda() {
+        if (exibirModalTrocarSenhaObrigatoria) {
+            return;
+        }
+        if (exibirModalTelefoneWhatsapp) {
+            abrirModalTelefoneWhatsappEntrada();
+            return;
+        }
+        var pagamentoModalEl = document.getElementById('pagamentoPosAgendamentoModal');
+        var pixConfirmadoModalEl = document.getElementById('pixConfirmadoModal');
+        if (pagamentoModalEl || pixConfirmadoModalEl) {
+            fecharModalPendenciasSeAberto();
+            if (pagamentoModalEl) {
+                bootstrap.Modal.getOrCreateInstance(pagamentoModalEl).show();
+            } else if (pixConfirmadoModalEl) {
+                bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
+            }
+            return;
+        }
+        var temNovidades = exibirModalNovidades && document.getElementById('novidadesModal');
+        var temPendencias = exibirModalPendenciasPagamento && document.getElementById('pendenciasPagamentoModal');
+        if (!temPendencias && !temNovidades && !(window.location.hash || '').replace('#', '')) {
+            window.setTimeout(rolarParaGradeSemanal, 400);
+        }
+        abrirModalPendenciasPagamentoEntrada(!!temNovidades);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        inicializarModaisEntradaAgenda();
     });
     var mensagemErroAgendamento = /*[[${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio' or erroContexto == 'uso-banco') ? erro : null}]]*/ null;
     var contextoErroAgendamento = /*[[${erroContexto}]]*/ null;
@@ -2919,6 +3395,7 @@
     var secaoMensal = /*[[${secaoMensal}]]*/ false;
     var erroSenhaModal = /*[[${erroSenha != null ? erroSenha : (erro != null and erroContexto == 'senha' ? erro : null)}]]*/ null;
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
+    var exibirModalTelefoneWhatsapp = /*[[${exibirModalTelefoneWhatsapp}]]*/ false;
     var podeEscolherProfissionalAgendamento = /*[[${isAdmin or isDonaClinica}]]*/ false;
     var idsProfissionaisSemValores = /*[[${idsProfissionaisSemValores}]]*/ [];
     var valoresConsultaPorProfissional = {};
@@ -4235,11 +4712,13 @@
 
         var pagamentoModalEl = document.getElementById('pagamentoPosAgendamentoModal');
         if (pagamentoModalEl && !exibirModalTrocarSenhaObrigatoria) {
+            fecharModalPendenciasSeAberto();
             bootstrap.Modal.getOrCreateInstance(pagamentoModalEl).show();
         }
 
         var pixConfirmadoModalEl = document.getElementById('pixConfirmadoModal');
         if (pixConfirmadoModalEl && !exibirModalTrocarSenhaObrigatoria) {
+            fecharModalPendenciasSeAberto();
             bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
         }
 

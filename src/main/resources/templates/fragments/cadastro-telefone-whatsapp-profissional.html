@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal"
+     th:if="${exibirModalTelefoneWhatsapp}"
+     class="modal fade admin-modal"
+     id="telefoneWhatsappModal"
+     tabindex="-1"
+     aria-labelledby="telefoneWhatsappModalTitulo"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="telefoneWhatsappModalTitulo">Cadastre seu número do WhatsApp</h2>
+                    <p class="text-muted small mb-0">
+                        A clínica usa esse número para avisos importantes, como pagamentos pendentes.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <div th:if="${erroWhatsapp != null}" class="alert alert-danger mb-3" th:text="${erroWhatsapp}"></div>
+                <form th:action="@{/conta/telefone-whatsapp}"
+                      th:object="${atualizarTelefoneWhatsappForm}"
+                      method="post"
+                      class="row g-3"
+                      id="formTelefoneWhatsappProfissional">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <div class="col-12">
+                        <label class="form-label" for="telefoneWhatsappProfissional">WhatsApp</label>
+                        <input th:field="*{telefoneWhatsapp}"
+                               type="text"
+                               class="form-control"
+                               id="telefoneWhatsappProfissional"
+                               maxlength="20"
+                               inputmode="numeric"
+                               pattern="[0-9]+"
+                               autocomplete="tel"
+                               required>
+                        <div class="form-text">Exemplo: 11987654321 (DDD + número, somente dígitos).</div>
+                    </div>
+                    <div class="col-12 d-grid pt-1">
+                        <button type="submit" class="btn btn-teal">Salvar WhatsApp</button>
+                    </div>
+                </form>
+                <form th:action="@{/conta/telefone-whatsapp/pular}" method="post" class="d-grid mt-2">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit" class="btn btn-outline-secondary">Sair sem cadastrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:if="${exibirModalTelefoneWhatsapp}">
+    (function () {
+        var input = document.getElementById('telefoneWhatsappProfissional');
+        if (!input) {
+            return;
+        }
+        function manterSomenteDigitos() {
+            input.value = input.value.replace(/\D/g, '');
+        }
+        input.addEventListener('input', manterSomenteDigitos);
+        input.addEventListener('paste', function (evento) {
+            evento.preventDefault();
+            var texto = (evento.clipboardData || window.clipboardData).getData('text') || '';
+            input.value = texto.replace(/\D/g, '').slice(0, input.maxLength);
+        });
+    })();
+</script>
+</body>
+</html>

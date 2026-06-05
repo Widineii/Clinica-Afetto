@@ -185,6 +185,25 @@ class AuthServiceTest {
     }
 
     @Test
+    void profissionalComumPodeCadastrarProprioTelefoneWhatsapp() {
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+
+        assertTrue(authService.podeCadastrarProprioTelefoneWhatsapp(julia));
+        assertFalse(authService.podeCadastrarProprioTelefoneWhatsapp(polyana));
+        assertFalse(authService.podeCadastrarProprioTelefoneWhatsapp(admin));
+    }
+
+    @Test
     void somenteAdminPolyanaETesteVePagamentoDeTodos() throws Exception {
         var campoLoginTeste = AuthService.class.getDeclaredField("testUserLogin");
         campoLoginTeste.setAccessible(true);

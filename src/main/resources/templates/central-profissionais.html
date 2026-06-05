@@ -891,7 +891,7 @@
                 <div>
                     <h2 class="central-panel__title">Equipe cadastrada</h2>
                     <p class="central-panel__hint">
-                        Selecione um profissional na lista para trocar senha ou excluir. Defina como cada um paga: diário, semanal ou mensal.
+                        Selecione um profissional na lista para editar, trocar senha ou excluir. Defina como cada um paga: diário, semanal ou mensal.
                     </p>
                 </div>
                 <div class="central-stat" th:if="${!#lists.isEmpty(profissionais)}">
@@ -921,7 +921,7 @@
                     <tbody>
                     <tr th:each="prof : ${profissionais}"
                         class="prof-row"
-                        th:attr="data-id=${prof.id},data-iniciais=${#strings.substring(prof.nome, 0, 1)}">
+                        th:attr="data-id=${prof.id},data-nome=${prof.nome},data-login=${prof.login},data-whatsapp=${prof.telefoneWhatsappFormulario},data-iniciais=${#strings.substring(prof.nome, 0, 1)}">
                         <td>
                             <input type="radio"
                                    name="usuarioSelecionado"
@@ -988,6 +988,9 @@
                 <div class="actions-toolbar__buttons">
                     <button type="button" class="btn btn-teal" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
                         Cadastrar profissional
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-pill-outline" id="btnAbrirEditar" disabled>
+                        Editar
                     </button>
                     <button type="button" class="btn btn-outline-secondary btn-pill-outline" id="btnAbrirTrocarSenha" disabled>
                         Trocar senha
@@ -1174,6 +1177,60 @@
     </div>
 </div>
 
+<div class="modal fade admin-modal" id="editarProfissionalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1">Editar profissional</h2>
+                    <p class="text-muted small mb-0">Nome, login e WhatsApp para avisos da clínica.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <form th:action="@{/agendamentos/central-profissionais/editar}"
+                      th:object="${editarProfissionalForm}"
+                      method="post"
+                      class="row g-3"
+                      id="formEditarProfissional">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <input type="hidden" th:field="*{usuarioId}" id="editarUsuarioId">
+                    <div class="col-12">
+                        <label class="form-label" for="editarNome">Nome completo</label>
+                        <input th:field="*{nome}" type="text" class="form-control" id="editarNome" maxlength="120" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="editarLogin">Login</label>
+                        <input th:field="*{login}" type="text" class="form-control" id="editarLogin" maxlength="60" required autocomplete="username">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="editarWhatsapp">WhatsApp</label>
+                        <input type="text"
+                               name="telefoneWhatsapp"
+                               class="form-control"
+                               id="editarWhatsapp"
+                               maxlength="20"
+                               inputmode="numeric"
+                               autocomplete="tel">
+                        <div class="form-text">Opcional. Preencha só para cadastrar ou trocar. Exemplo: 11987654321 (DDD + número, somente dígitos).</div>
+                        <div class="form-check mt-2">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   name="removerWhatsapp"
+                                   value="true"
+                                   id="editarRemoverWhatsapp">
+                            <label class="form-check-label" for="editarRemoverWhatsapp">Remover WhatsApp cadastrado</label>
+                        </div>
+                    </div>
+                    <div class="col-12 d-grid pt-1">
+                        <button type="submit" class="btn btn-teal">Salvar alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -1221,10 +1278,16 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var radios = document.querySelectorAll('.usuario-radio');
+        var btnEditar = document.getElementById('btnAbrirEditar');
         var btnTrocar = document.getElementById('btnAbrirTrocarSenha');
         var btnExcluir = document.getElementById('btnExcluir');
         var excluirInput = document.getElementById('excluirUsuarioId');
         var trocarInput = document.getElementById('trocarSenhaUsuarioId');
+        var editarInput = document.getElementById('editarUsuarioId');
+        var editarNome = document.getElementById('editarNome');
+        var editarLogin = document.getElementById('editarLogin');
+        var editarWhatsapp = document.getElementById('editarWhatsapp');
+        var editarRemoverWhatsapp = document.getElementById('editarRemoverWhatsapp');
         var selectSenha = document.getElementById('selectUsuarioSenha');
         var selecaoHint = document.getElementById('selecaoHint');
         var rows = document.querySelectorAll('.prof-row');
@@ -1241,9 +1304,25 @@
             return selecionado ? selecionado.value : null;
         }
 
+        function rowSelecionada() {
+            var id = usuarioSelecionado();
+            if (!id) return null;
+            return document.querySelector('.prof-row[data-id="' + id + '"]');
+        }
+
+        function preencherFormularioEditar(row) {
+            if (!row) return;
+            if (editarInput) editarInput.value = row.getAttribute('data-id') || '';
+            if (editarNome) editarNome.value = row.getAttribute('data-nome') || '';
+            if (editarLogin) editarLogin.value = row.getAttribute('data-login') || '';
+            if (editarWhatsapp) editarWhatsapp.value = row.getAttribute('data-whatsapp') || '';
+            if (editarRemoverWhatsapp) editarRemoverWhatsapp.checked = false;
+        }
+
         function atualizarBotoes() {
             var id = usuarioSelecionado();
             var ativo = !!id;
+            if (btnEditar) btnEditar.disabled = !ativo;
             if (btnTrocar) btnTrocar.disabled = !ativo;
             if (btnExcluir) btnExcluir.disabled = !ativo;
             if (excluirInput) excluirInput.value = id || '';
@@ -1275,6 +1354,15 @@
                 }
             });
         });
+
+        if (btnEditar) {
+            btnEditar.addEventListener('click', function () {
+                var row = rowSelecionada();
+                if (!row) return;
+                preencherFormularioEditar(row);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('editarProfissionalModal')).show();
+            });
+        }
 
         if (btnTrocar) {
             btnTrocar.addEventListener('click', function () {
@@ -1352,6 +1440,11 @@
 <script th:if="${abrirModalCadastro != null and abrirModalCadastro}">
     document.addEventListener('DOMContentLoaded', function () {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('cadastroProfissionalModal')).show();
+    });
+</script>
+<script th:if="${abrirModalEditar != null and abrirModalEditar}">
+    document.addEventListener('DOMContentLoaded', function () {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editarProfissionalModal')).show();
     });
 </script>
 <script th:if="${abrirModalTrocarSenha != null and abrirModalTrocarSenha}">

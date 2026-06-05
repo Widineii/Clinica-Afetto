@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<section th:fragment="banner"
+         class="pendencias-alerta-principal mb-4"
+         id="pendencias-pagamento-destaque"
+         role="region"
+         aria-label="Pendências de pagamento"
+         th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}">
+    <div class="pendencias-alerta-principal__badge">
+        <span class="pendencias-alerta-principal__pulse" aria-hidden="true"></span>
+        Pendência ativa
+    </div>
+    <div class="pendencias-alerta-principal__grid">
+        <div class="pendencias-alerta-principal__texto">
+            <h2 class="pendencias-alerta-principal__titulo mb-2">
+                Você tem pagamentos em aberto
+            </h2>
+            <p class="pendencias-alerta-principal__subtitulo mb-0"
+               th:text="${resumoPendenciasPagamento.mensagemConvite}">
+                Resolva com antecedência para manter a agenda liberada.
+            </p>
+        </div>
+        <div class="pendencias-alerta-principal__metricas">
+            <div class="pendencias-alerta-principal__metrica">
+                <span class="pendencias-alerta-principal__metrica-label">Itens pendentes</span>
+                <span class="pendencias-alerta-principal__numero pendencias-alerta-principal__numero--qtd"
+                      th:text="${resumoPendenciasPagamento.quantidade}">0</span>
+            </div>
+            <div class="pendencias-alerta-principal__metrica pendencias-alerta-principal__metrica--valor">
+                <span class="pendencias-alerta-principal__metrica-label">Total em aberto</span>
+                <span class="pendencias-alerta-principal__numero pendencias-alerta-principal__numero--valor"
+                      th:text="${resumoPendenciasPagamento.valorTotalFormatado}">R$ 0,00</span>
+            </div>
+        </div>
+        <div class="pendencias-alerta-principal__rodape">
+            <p class="pendencias-alerta-principal__periodo mb-3 mb-md-0"
+               th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
+                Período: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
+            </p>
+            <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
+               class="btn btn-danger btn-lg fw-bold pendencias-alerta-principal__cta">
+                Resolver pendências agora
+            </a>
+        </div>
+    </div>
+</section>
+
+<div th:fragment="modal"
+     class="modal fade"
+     id="pendenciasPagamentoModal"
+     tabindex="-1"
+     aria-labelledby="pendenciasPagamentoModalTitulo"
+     aria-hidden="true"
+     th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content pendencias-pagamento-modal">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="pendencias-pagamento-modal__kicker mb-1">Antes de usar a agenda</p>
+                    <h2 class="modal-title h4 mb-0" id="pendenciasPagamentoModalTitulo">
+                        Você tem pendências de pagamento
+                    </h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body pt-2 text-center text-md-start">
+                <p class="mb-4 pendencias-pagamento-modal__convite">
+                    Não é cobrança automática — é só um lembrete para você quitar quando puder.
+                    Quanto antes resolver, mais tranquilo fica seu uso da clínica.
+                </p>
+                <div class="row g-3 justify-content-center mb-3">
+                    <div class="col-6 col-md-5">
+                        <div class="pendencias-pagamento-modal__stat">
+                            <span class="pendencias-pagamento-modal__stat-label">Itens pendentes</span>
+                            <span class="pendencias-pagamento-modal__stat-numero pendencias-pagamento-modal__stat-numero--qtd"
+                                  th:text="${resumoPendenciasPagamento.quantidade}">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-5">
+                        <div class="pendencias-pagamento-modal__stat pendencias-pagamento-modal__stat--valor">
+                            <span class="pendencias-pagamento-modal__stat-label">Total em aberto</span>
+                            <span class="pendencias-pagamento-modal__stat-numero pendencias-pagamento-modal__stat-numero--valor"
+                                  th:text="${resumoPendenciasPagamento.valorTotalFormatado}">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="small text-muted mb-0 text-center"
+                   th:if="${resumoPendenciasPagamento.rotuloPeriodo != null and !#strings.isEmpty(resumoPendenciasPagamento.rotuloPeriodo)}">
+                    Referente a: <strong th:text="${resumoPendenciasPagamento.rotuloPeriodo}">—</strong>
+                </p>
+            </div>
+            <div class="modal-footer flex-column flex-sm-row gap-2 border-0 pt-0">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                        id="pendenciasPagamentoModalVerDepois">
+                    Ver depois
+                </button>
+                <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}"
+                   class="btn btn-danger btn-lg fw-bold flex-grow-1"
+                   id="pendenciasPagamentoModalIrPagar">
+                    Ir para Meus pagamentos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

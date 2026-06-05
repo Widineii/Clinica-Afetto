@@ -7,6 +7,7 @@ import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.model.Usuario;
 
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -33,6 +34,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
 
     public static final String SESSION_LOGIN_COM_TROCA_SENHA = "loginComTrocaSenhaPendente";
+    public static final String SESSION_LOGIN_COM_WHATSAPP_PENDENTE = "loginComWhatsappPendente";
 
 
 
@@ -40,19 +42,25 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     private final SegurancaProperties segurancaProperties;
 
+    private final UsuarioService usuarioService;
+
 
 
     public ClinicaAuthenticationSuccessHandler(
 
             UsuarioRepository usuarioRepository,
 
-            SegurancaProperties segurancaProperties
+            SegurancaProperties segurancaProperties,
+
+            UsuarioService usuarioService
 
     ) {
 
         this.usuarioRepository = usuarioRepository;
 
         this.segurancaProperties = segurancaProperties;
+
+        this.usuarioService = usuarioService;
 
     }
 
@@ -71,6 +79,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     ) throws IOException {
 
         marcarTrocaSenhaPendenteNoLogin(request, authentication);
+        marcarWhatsappPendenteNoLogin(request, authentication);
 
         salvarAcessoNoNavegador(request, response, authentication);
 
@@ -173,6 +182,34 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         HttpSession session = request.getSession(true);
 
         session.setAttribute(SESSION_LOGIN_COM_TROCA_SENHA, Boolean.TRUE);
+
+    }
+
+    private void marcarWhatsappPendenteNoLogin(HttpServletRequest request, Authentication authentication) {
+
+        if (!(authentication.getPrincipal() instanceof ClinicaUserPrincipal principal)) {
+
+            return;
+
+        }
+
+        Usuario usuario = principal.getUsuario();
+
+        if (usuario == null) {
+
+            return;
+
+        }
+
+        HttpSession session = request.getSession(false);
+
+        if (session == null) {
+
+            return;
+
+        }
+
+        usuarioService.marcarCadastroTelefoneWhatsappPendenteNoLogin(session, usuario);
 
     }
 

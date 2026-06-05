@@ -5,6 +5,7 @@ import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.dto.LinkPagamentoGerado;
 import com.clinica.sistema.dto.PagamentoProfissionalNotificacaoView;
 import com.clinica.sistema.dto.ProfissionalBloqueioPagamentoView;
+import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
 import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
 import com.clinica.sistema.exception.PagamentoWebhookNaoAutorizadoException;
 import com.clinica.sistema.model.Agendamento;
@@ -26,7 +27,10 @@ import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1048,6 +1052,131 @@ public class PagamentoConsultaService {
         model.addAttribute("exibirBolinhaNotificacaoPagamento", exibirBolinha);
     }
 
+    public void adicionarResumoPendenciasPagamentoAoModel(Model model, Usuario usuarioLogado) {
+        try {
+            ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(usuarioLogado);
+            model.addAttribute("resumoPendenciasPagamento", resumo);
+            boolean exibirModal = resumo.quantidade() > 0 && !temQrPagamentoAtivo(usuarioLogado);
+            model.addAttribute("exibirModalPendenciasPagamento", exibirModal);
+        } catch (RuntimeException ex) {
+            org.slf4j.LoggerFactory.getLogger(PagamentoConsultaService.class)
+                    .warn("Nao foi possivel montar resumo de pendencias: {}", ex.getMessage());
+            model.addAttribute("resumoPendenciasPagamento", ResumoPendenciasPagamentoView.vazio());
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public ResumoPendenciasPagamentoView montarResumoPendenciasPagamento(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)) {
+            return ResumoPendenciasPagamentoView.vazio();
+        }
+        List<Agendamento> consultas = listarConsultasPagamentoPendenteParaLembrete(usuarioLogado);
+        if (consultas.isEmpty()) {
+            return ResumoPendenciasPagamentoView.vazio();
+        }
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        int quantidade = consultas.size();
+        String total = formatarTotalTaxaPix(consultas);
+        String rotulo = rotuloPeriodoPendencias(periodicidade);
+        String url = urlMeusPagamentosPorPeriodicidade(periodicidade);
+        String mensagem = montarMensagemConvitePendencias(
+                usuarioLogado,
+                periodicidade,
+                quantidade,
+                total,
+                rotulo
+        );
+        return new ResumoPendenciasPagamentoView(
+                quantidade,
+                total,
+                "Pendências de pagamento",
+                mensagem,
+                rotulo,
+                url
+        );
+    }
+
+    /**
+     * Lista exibida na aba Pagamentos pendentes (diario): inclui PIX aguardando confirmacao,
+     * alinhada ao contador do resumo de pendencias.
+     */
+    @Transactional(readOnly = true)
+    public List<Agendamento> listarPagamentosPendentesExibicaoMeusPagamentos(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)
+                || resolverPeriodicidade(usuarioLogado) != PeriodicidadePagamento.DIARIO) {
+            return Collections.emptyList();
+        }
+        return listarConsultasPagamentoPendenteParaLembrete(usuarioLogado);
+    }
+
+    private List<Agendamento> listarConsultasPagamentoPendenteParaLembrete(Usuario usuarioLogado) {
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        List<Agendamento> abertas = new ArrayList<>(switch (periodicidade) {
+            case DIARIO -> listarPagamentosPendentesProximoDia(usuarioLogado);
+            case SEMANAL -> listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
+            case MENSAL -> listarConsultasPagamentoMensal(usuarioLogado);
+        });
+        LinkedHashMap<Long, Agendamento> porId = new LinkedHashMap<>();
+        for (Agendamento agendamento : abertas) {
+            if (agendamento.getId() != null) {
+                porId.put(agendamento.getId(), agendamento);
+            }
+        }
+        for (Agendamento agendamento : listarPendenciasObrigatoriasParaBloqueio(usuarioLogado)) {
+            if (agendamento.getId() != null) {
+                porId.putIfAbsent(agendamento.getId(), agendamento);
+            }
+        }
+        return porId.values().stream()
+                .sorted(Comparator.comparing(
+                        Agendamento::getDataHoraInicio,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ))
+                .toList();
+    }
+
+    private String rotuloPeriodoPendencias(PeriodicidadePagamento periodicidade) {
+        return switch (periodicidade) {
+            case DIARIO -> rotuloProximoDiaPagamentoPendente();
+            case SEMANAL -> rotuloPeriodoSemanaAtual();
+            case MENSAL -> rotuloMesPagamentoPendente();
+        };
+    }
+
+    private String montarMensagemConvitePendencias(
+            Usuario usuarioLogado,
+            PeriodicidadePagamento periodicidade,
+            int quantidade,
+            String totalFormatado,
+            String rotuloPeriodo
+    ) {
+        if (temQrPagamentoAtivo(usuarioLogado)) {
+            return "Você tem um PIX aguardando confirmação. Total em aberto: "
+                    + totalFormatado
+                    + ". Confirme o pagamento para liberar a agenda.";
+        }
+        String consultas = quantidade == 1 ? "1 item pendente" : quantidade + " itens pendentes";
+        String intro = switch (periodicidade) {
+            case DIARIO -> "Você tem " + consultas + " de taxa de sala (próximo dia: " + rotuloPeriodo + ").";
+            case SEMANAL -> "Você tem " + consultas + " da semana " + rotuloPeriodo + " ainda em aberto.";
+            case MENSAL -> "Você tem " + consultas + " do mês vigente (" + rotuloPeriodo + ") ainda em aberto.";
+        };
+        StringBuilder mensagem = new StringBuilder(intro);
+        mensagem.append(" Total: ").append(totalFormatado).append('.');
+        mensagem.append(" Não é obrigatório pagar agora, mas quanto antes você resolver, mais tranquilo fica sua agenda.");
+        if (profissionalBloqueadoPorPendenciaPagamento(usuarioLogado)) {
+            mensagem.append(" No momento, novos agendamentos estão bloqueados até quitar.");
+        }
+        return mensagem.toString();
+    }
+
     private Optional<PagamentoProfissionalNotificacaoView> montarNotificacaoPagamentoDiario(Usuario usuarioLogado) {
         List<Agendamento> pendentes = listarPagamentosPendentesProximoDia(usuarioLogado);
         if (pendentes.isEmpty()) {
@@ -1203,6 +1332,9 @@ public class PagamentoConsultaService {
             return false;
         }
         PagamentoStatus status = agendamento.getStatusPagamento();
+        if (status == PagamentoStatus.ESPERANDO_CONFIRMACAO && !agendamento.possuiQrPagamentoAtivo()) {
+            return agendamento.getDataHoraInicio().isAfter(LocalDateTime.now());
+        }
         return status == null
                 || status == PagamentoStatus.PAGAMENTO_FUTURO
                 || status == PagamentoStatus.AGUARDANDO_PAGAMENTO;

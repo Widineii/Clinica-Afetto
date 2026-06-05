@@ -1,5 +1,6 @@
 package com.clinica.sistema.model;
 
+import com.clinica.sistema.util.WhatsAppNumeroUtil;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -51,4 +52,13 @@ public class Usuario {
     /** Percentual da taxa de indicação da clínica (ex.: 30 = 30%). Vazio usa o padrão do sistema. */
     @Column(name = "percentual_taxa_indicacao", precision = 5, scale = 2)
     private BigDecimal percentualTaxaIndicacao;
+
+    /** WhatsApp do profissional (DDI 55 + DDD + numero) para avisos da clinica, ex.: pagamento pendente. */
+    @Column(name = "telefone_whatsapp", length = 20)
+    private String telefoneWhatsapp;
+
+    @Transient
+    public String getTelefoneWhatsappFormulario() {
+        return WhatsAppNumeroUtil.paraCampoFormulario(telefoneWhatsapp);
+    }
 }

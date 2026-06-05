@@ -28,4 +28,11 @@ public final class WhatsAppNumeroUtil {
         }
         return Optional.empty();
     }
+
+    /** Valor para campo de formulario (sem DDI 55). */
+    public static String paraCampoFormulario(String numeroArmazenado) {
+        return normalizarDestinatario(numeroArmazenado)
+                .map(digitos -> digitos.length() > 2 ? digitos.substring(2) : digitos)
+                .orElse("");
+    }
 }

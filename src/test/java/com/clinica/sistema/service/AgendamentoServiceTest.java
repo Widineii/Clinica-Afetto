@@ -86,6 +86,9 @@ class AgendamentoServiceTest {
     @Spy
     private ValorConsultaService valorConsultaService = new ValorConsultaService();
 
+    @Spy
+    private FeriadoBeloHorizonteService feriadoBeloHorizonteService = new FeriadoBeloHorizonteService();
+
     @InjectMocks
     private AgendamentoService agendamentoService;
 

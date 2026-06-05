@@ -131,7 +131,7 @@
                                         name="sala"
                                         value=""
                                         class="fin-chip"
-                                        th:classappend="${relatorio.salaFiltro == null or relatorio.salaFiltro.isBlank()} ? ' is-active' : ''">
+                                        th:classappend="${relatorio.salaFiltro == null or #strings.isEmpty(relatorio.salaFiltro)} ? ' is-active' : ''">
                                     Todas
                                 </button>
                                 <button type="submit"

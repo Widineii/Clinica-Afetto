@@ -236,6 +236,23 @@
                                           class="badge text-bg-warning">Pagar hoje</span>
                                 </td>
                                 <td>
+                                    <div th:if="${pendencia.possuiQrPagamentoAtivo()}"
+                                         class="d-flex flex-wrap gap-1">
+                                        <a th:if="${pendencia.id != null}"
+                                           th:href="@{/pagamentos/{id}(id=${pendencia.id})}"
+                                           class="btn btn-sm btn-primary">
+                                            Continuar pagamento
+                                        </a>
+                                        <form th:if="${pagamentoService.modoTestePagamento() and pendencia.id != null}"
+                                              th:action="@{/pagamentos/{id}/simular(id=${pendencia.id})}"
+                                              method="post"
+                                              class="d-inline">
+                                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                Simular pagamento
+                                            </button>
+                                        </form>
+                                    </div>
                                     <form th:if="${!pendencia.possuiQrPagamentoAtivo() and pagamentoService.podePagarAgora(pendencia)}"
                                           th:action="@{/pagamentos/{id}/gerar-link(id=${pendencia.id})}"
                                           method="post"

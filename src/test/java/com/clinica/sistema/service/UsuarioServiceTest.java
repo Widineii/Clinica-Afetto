@@ -2,7 +2,9 @@ package com.clinica.sistema.service;
 
 import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
+import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.dto.EditarProfissionalForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
@@ -276,5 +278,104 @@ class UsuarioServiceTest {
         when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
 
         assertNull(usuarioService.mensagemBloqueioPeriodicidade(profissional));
+    }
+
+    @Test
+    void profissionalPodeSalvarTelefoneWhatsapp() {
+        AtualizarTelefoneWhatsappForm form = new AtualizarTelefoneWhatsappForm();
+        form.setTelefoneWhatsapp("(37) 99855-0994");
+
+        when(authService.podeCadastrarProprioTelefoneWhatsapp(profissional)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(usuarioRepository.save(profissional)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        usuarioService.atualizarTelefoneWhatsapp(form, profissional);
+
+        assertEquals("5537998550994", profissional.getTelefoneWhatsapp());
+    }
+
+    @Test
+    void adminNaoPodeSalvarTelefoneWhatsapp() {
+        AtualizarTelefoneWhatsappForm form = new AtualizarTelefoneWhatsappForm();
+        form.setTelefoneWhatsapp("37998550994");
+
+        when(authService.podeCadastrarProprioTelefoneWhatsapp(admin)).thenReturn(false);
+
+        assertThrows(RuntimeException.class, () -> usuarioService.atualizarTelefoneWhatsapp(form, admin));
+    }
+
+    @Test
+    void profissionalPrecisaCadastrarWhatsappQuandoCampoVazio() {
+        when(authService.podeCadastrarProprioTelefoneWhatsapp(profissional)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+
+        assertTrue(usuarioService.precisaCadastrarTelefoneWhatsapp(profissional));
+
+        profissional.setTelefoneWhatsapp("5537998550994");
+        assertFalse(usuarioService.precisaCadastrarTelefoneWhatsapp(profissional));
+    }
+
+    @Test
+    void gestorPodeEditarProfissionalComWhatsapp() {
+        EditarProfissionalForm form = new EditarProfissionalForm();
+        form.setUsuarioId(2L);
+        form.setNome("Profissional Atualizado");
+        form.setLogin("profissional");
+        form.setTelefoneWhatsapp("37998550994");
+
+        Usuario gestor = new Usuario();
+        gestor.setId(10L);
+
+        when(authService.podeAcessarCentralProfissionais(gestor)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.save(profissional)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Usuario result = usuarioService.atualizarProfissionalEquipe(form, gestor);
+
+        assertEquals("Profissional Atualizado", result.getNome());
+        assertEquals("5537998550994", result.getTelefoneWhatsapp());
+    }
+
+    @Test
+    void gestorPodeLimparWhatsappDoProfissional() {
+        profissional.setTelefoneWhatsapp("5537998550994");
+
+        EditarProfissionalForm form = new EditarProfissionalForm();
+        form.setUsuarioId(2L);
+        form.setNome("Profissional");
+        form.setLogin("profissional");
+        form.setTelefoneWhatsapp("");
+        form.setRemoverWhatsapp(true);
+
+        Usuario gestor = new Usuario();
+        gestor.setId(10L);
+
+        when(authService.podeAcessarCentralProfissionais(gestor)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.save(profissional)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Usuario result = usuarioService.atualizarProfissionalEquipe(form, gestor);
+
+        assertNull(result.getTelefoneWhatsapp());
+    }
+
+    @Test
+    void editarProfissionalRejeitaWhatsappInvalido() {
+        EditarProfissionalForm form = new EditarProfissionalForm();
+        form.setUsuarioId(2L);
+        form.setNome("Profissional");
+        form.setLogin("profissional");
+        form.setTelefoneWhatsapp("123");
+
+        Usuario gestor = new Usuario();
+        gestor.setId(10L);
+
+        when(authService.podeAcessarCentralProfissionais(gestor)).thenReturn(true);
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
+        when(authService.isAdmin(profissional)).thenReturn(false);
+
+        assertThrows(RuntimeException.class, () -> usuarioService.atualizarProfissionalEquipe(form, gestor));
     }
 }

@@ -78,6 +78,7 @@ public class AgendamentoService {
     private final PagamentoConsultaService pagamentoConsultaService;
     private final EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository;
     private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
+    private final FeriadoBeloHorizonteService feriadoBeloHorizonteService;
     private final int mesesHistoricoAgenda;
 
     public AgendamentoService(
@@ -89,6 +90,7 @@ public class AgendamentoService {
             PagamentoConsultaService pagamentoConsultaService,
             EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository,
             NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService,
+            FeriadoBeloHorizonteService feriadoBeloHorizonteService,
             @Value("${app.agenda.meses-historico:4}") int mesesHistoricoAgenda
     ) {
         this.repository = repository;
@@ -99,6 +101,7 @@ public class AgendamentoService {
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.encerramentoSerieRegistroRepository = encerramentoSerieRegistroRepository;
         this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
+        this.feriadoBeloHorizonteService = feriadoBeloHorizonteService;
         this.mesesHistoricoAgenda = Math.max(1, Math.min(mesesHistoricoAgenda, MESES_HISTORICO_AGENDA_PADRAO));
     }
 
@@ -648,6 +651,7 @@ public class AgendamentoService {
         view.setSala(sala);
         view.setInicioSemana(inicioSemana);
         view.setDiasSemana(diasSemana);
+        view.setDiasEspeciaisPorDia(feriadoBeloHorizonteService.resolverDiasEspeciaisDaSemana(diasSemana));
         view.setLinhas(linhas);
         return view;
     }

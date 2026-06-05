@@ -78,6 +78,21 @@
                 color: #b45309;
                 margin: 0.65rem 0 0;
             }
+
+            .periodicidade-resumo-card__pendencia {
+                font-size: 0.9rem;
+                line-height: 1.45;
+                padding: 0.65rem 0.85rem;
+                border-radius: 12px;
+                background: #fef2f2;
+                border: 1px solid #fecaca;
+            }
+
+            .periodicidade-resumo-card__pendencia-valor {
+                font-size: 1.15rem;
+                font-weight: 800;
+                color: #dc2626;
+            }
         </style>
 
         <div class="periodicidade-resumo-card__titulo">Forma de pagamento</div>
@@ -110,6 +125,17 @@
         <p class="periodicidade-resumo-card__descricao mb-0" th:text="${periodicidadeAtual.descricao}">
             Paga na véspera de cada consulta (D-1)
         </p>
+
+        <div class="periodicidade-resumo-card__pendencia mt-3"
+             th:if="${resumoPendenciasPagamento != null and resumoPendenciasPagamento.quantidade > 0}">
+            <strong class="text-danger">Pagamentos em aberto:</strong>
+            <span th:text="${resumoPendenciasPagamento.quantidade}">0</span>
+            <span th:text="${resumoPendenciasPagamento.quantidade == 1 ? ' item' : ' itens'}"> itens</span>
+            — total
+            <span class="periodicidade-resumo-card__pendencia-valor"
+                  th:text="${resumoPendenciasPagamento.valorTotalFormatado}">R$ 0,00</span>.
+            <a th:href="${resumoPendenciasPagamento.urlMeusPagamentos}" class="fw-bold ms-1">Resolver agora</a>
+        </div>
     </div>
 </div>
 </body>
