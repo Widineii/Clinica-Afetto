@@ -1,0 +1,48 @@
+# VPS KingHost — app Java + PostgreSQL no mesmo servidor.
+# Uso: cp .env.kinghost.example .env && nano .env && docker compose -f docker-compose.kinghost.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinica-postgres
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-clinica_agenda}
+      POSTGRES_USER: ${PGUSER:-clinica}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?defina PGPASSWORD no .env}
+    volumes:
+      - clinica_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-clinica} -d ${PGDATABASE:-clinica_agenda}"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  app:
+    build: .
+    container_name: clinica-agenda
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      PORT: "8080"
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${PGDATABASE:-clinica_agenda}
+      PGUSER: ${PGUSER:-clinica}
+      PGPASSWORD: ${PGPASSWORD}
+      PGSSLMODE: disable
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1536m}
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?defina ADMIN_PASSWORD no .env}
+      ADMIN_NAME: ${ADMIN_NAME:-Administracao}
+      APP_INFINITEPAY_BASE_URL: ${APP_INFINITEPAY_BASE_URL:-http://SEU_IP:8080}
+      APP_INFINITEPAY_HANDLE: ${APP_INFINITEPAY_HANDLE:-afettopsicologia}
+      PAGAMENTO_WEBHOOK_SECRET: ${PAGAMENTO_WEBHOOK_SECRET:-}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  clinica_pgdata:
