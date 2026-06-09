@@ -88,12 +88,33 @@ class AuthServiceTest {
     }
 
     @Test
-    void adminNaoPodeTrocarPropriaSenhaNaAgenda() {
+    void adminPodeTrocarPropriaSenhaEGerenciarConta() {
         Usuario admin = new Usuario();
         admin.setLogin("admin");
         admin.setCargo("ROLE_ADMIN");
 
-        assertFalse(authService.podeTrocarPropriaSenha(admin));
+        assertTrue(authService.podeTrocarPropriaSenha(admin));
+        assertTrue(authService.podeGerenciarContaAdmin(admin));
+    }
+
+    @Test
+    void qualquerUsuarioLogadoPodeEscolherTema() {
+        Usuario julia = new Usuario();
+        julia.setLogin("julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Usuario polyana = new Usuario();
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+
+        assertTrue(authService.podeEscolherTema(julia));
+        assertTrue(authService.podeEscolherTema(polyana));
+        assertTrue(authService.podeEscolherTema(admin));
+        assertFalse(authService.podeEscolherTema(null));
     }
 
     @Test

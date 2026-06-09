@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="modal"
+     th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha and (podeGerenciarContaAdmin != null and podeGerenciarContaAdmin)}"
+     class="modal fade admin-modal"
+     id="trocarSenhaContaModal"
+     tabindex="-1"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1">Alterar senha</h2>
+                    <p class="text-muted small mb-0">Altera somente a senha do seu usuário administrador.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div th:if="${erroSenha != null}" class="alert alert-danger mb-3" th:text="${erroSenha}"></div>
+                <form th:action="@{/conta/trocar-senha}"
+                      th:object="${trocarSenhaForm}"
+                      method="post"
+                      class="row g-3">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <div class="col-12">
+                        <label class="form-label">Senha atual</label>
+                        <input th:field="*{senhaAtual}" type="password" class="form-control" maxlength="60" required autocomplete="current-password">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nova senha</label>
+                        <input th:field="*{novaSenha}" type="password" class="form-control" maxlength="60" required autocomplete="new-password">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Confirmar nova senha</label>
+                        <input th:field="*{confirmarSenha}" type="password" class="form-control" maxlength="60" required autocomplete="new-password">
+                    </div>
+                    <div class="col-12 d-grid pt-2">
+                        <button type="submit" class="btn btn-dark">Salvar nova senha</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

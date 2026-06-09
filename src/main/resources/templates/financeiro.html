@@ -6,6 +6,7 @@
     <title>Receita PIX - Clinica Afetto</title>
     <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
     <th:block th:replace="~{fragments/site-menu-principal :: estilos}"></th:block>
+    <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
 </head>
 <body class="financeiro-page">
 <div class="financeiro-wrap">
@@ -19,7 +20,7 @@
     <div th:if="${perfilLocal}" class="financeiro-card mb-3">
         <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div>
-                <strong>Modo demonstracao local</strong>
+                <strong>Modo demonstração local</strong>
                 <p class="financeiro-hint mb-0">Gera 1 PIX de exemplo por profissional (so para testar os graficos).</p>
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -40,7 +41,7 @@
             <form th:action="@{/agendamentos/financeiro}" method="get" id="filtroMesForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-5">
-                        <label class="form-label fw-semibold" for="mesAno">Mes de referencia</label>
+                        <label class="form-label fw-semibold" for="mesAno">Mês de referência</label>
                         <input type="month"
                                class="form-control"
                                id="mesAno"
@@ -167,7 +168,7 @@
                             <span class="fin-prof-metrica__meta" id="painelMesAtualMeta">0 atendimentos</span>
                         </div>
                         <div class="fin-prof-metrica">
-                            <span class="fin-prof-metrica__rotulo">Melhor mes</span>
+                            <span class="fin-prof-metrica__rotulo">Melhor mês (taxas PIX)</span>
                             <strong class="fin-prof-metrica__valor" id="painelMelhorMesValor">R$ 0,00</strong>
                             <span class="fin-prof-metrica__meta" id="painelMelhorMesMeta">— · 0 atendimentos</span>
                         </div>
@@ -313,6 +314,26 @@
         ['#2563eb', '#93c5fd']
     ];
 
+    function temaEscuroAtivo() {
+        return document.documentElement.dataset.afettoTheme === 'dark';
+    }
+
+    function corTextoGrafico() {
+        return temaEscuroAtivo() ? '#d8ebe9' : '#252423';
+    }
+
+    function corTextoGraficoSecundario() {
+        return temaEscuroAtivo() ? '#99f6e4' : '#64748b';
+    }
+
+    function corTextoGraficoTitulo() {
+        return temaEscuroAtivo() ? '#5eead4' : '#605e5c';
+    }
+
+    function corGridGrafico() {
+        return temaEscuroAtivo() ? 'rgba(94, 234, 212, 0.15)' : 'rgba(148, 163, 184, 0.22)';
+    }
+
     if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
         Chart.register(ChartDataLabels);
     }
@@ -424,6 +445,7 @@
                 text: label + ' (' + pct + '%)',
                 fillStyle: dataset.backgroundColor[indice],
                 strokeStyle: dataset.backgroundColor[indice],
+                fontColor: corTextoGrafico(),
                 hidden: false,
                 index: indice
             };
@@ -661,7 +683,7 @@
                     title: {
                         display: !estreita,
                         text: legendaTitulo,
-                        color: '#605e5c',
+                        color: corTextoGraficoTitulo(),
                         font: { size: 11, weight: '600' },
                         padding: { bottom: 8 }
                     },
@@ -669,7 +691,7 @@
                         boxWidth: 10,
                         boxHeight: 10,
                         font: { size: estreita ? 10 : 11 },
-                        color: '#252423',
+                        color: corTextoGrafico(),
                         padding: estreita ? 10 : 8,
                         generateLabels: legendaComPercentual
                     }
@@ -685,7 +707,7 @@
                 },
                 datalabels: {
                     display: function () { return !estreita; },
-                    color: '#252423',
+                    color: corTextoGrafico(),
                     font: { size: 10, weight: '600' },
                     anchor: 'end',
                     align: 'end',
@@ -793,11 +815,11 @@
                     beginAtZero: true,
                     border: { display: false },
                     grid: {
-                        color: 'rgba(148, 163, 184, 0.22)',
+                        color: corGridGrafico(),
                         drawTicks: false
                     },
                     ticks: {
-                        color: '#64748b',
+                        color: corTextoGraficoSecundario(),
                         font: { size: 10, weight: '500' },
                         padding: 6,
                         callback: function (value) {
@@ -811,7 +833,7 @@
                     ticks: {
                         autoSkip: false,
                         includeBounds: true,
-                        color: '#334155',
+                        color: corTextoGrafico(),
                         font: { size: 12, weight: '600' },
                         padding: 16
                     },

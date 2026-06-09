@@ -502,6 +502,12 @@
             font-size: 0.8rem;
             color: #64748b;
             font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 10rem;
+            display: inline-block;
+            vertical-align: middle;
         }
 
         .prof-whatsapp {
@@ -826,6 +832,7 @@
             }
         }
     </style>
+    <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
 </head>
 <body>
 <div class="app-shell afetto-page-shell central-page-shell" data-central-layout="compact-v2">
@@ -915,7 +922,7 @@
                     <colgroup>
                         <col style="width: 2.75rem;">
                         <col>
-                        <col class="d-none d-md-table-column" style="width: 8.5rem;">
+                        <col class="d-none d-md-table-column" style="width: 10.5rem;">
                         <col class="d-none d-lg-table-column" style="width: 9.5rem;">
                         <col style="width: 7.25rem;">
                         <col style="width: 11.5rem;">

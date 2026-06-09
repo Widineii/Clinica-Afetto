@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!-- Carregar por ultimo no &lt;head&gt;, depois dos estilos inline da pagina -->
+    <th:block th:fragment="css">
+        <link th:href="@{/css/afetto-theme.css(v=${versaoSite})}" rel="stylesheet">
+    </th:block>
+    <!-- Carregar no fim do body — sobrescreve &lt;style&gt; inline dentro de fragments -->
+    <th:block th:fragment="css-final">
+        <link th:href="@{/css/afetto-theme.css(v=${versaoSite})}" rel="stylesheet">
+    </th:block>
+    <!-- Script cedo no head para evitar flash de tema errado -->
+    <th:block th:fragment="script-inicial">
+        <script>
+            (function () {
+                var STORAGE_KEY = 'afetto-tema';
+
+                function sistemaPrefereEscuro() {
+                    if (!window.matchMedia) {
+                        return false;
+                    }
+                    if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+                        return false;
+                    }
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+
+                function resolverEfetivo(preferencia) {
+                    if (preferencia === 'dark') {
+                        return 'dark';
+                    }
+                    if (preferencia === 'system') {
+                        return sistemaPrefereEscuro() ? 'dark' : 'light';
+                    }
+                    return 'light';
+                }
+
+                function aplicarNoDocumento(preferencia, efetivo) {
+                    document.documentElement.dataset.afettoTemaPref = preferencia;
+                    document.documentElement.dataset.afettoTheme = efetivo === 'dark' ? 'dark' : 'light';
+                }
+
+                try {
+                    var preferencia = localStorage.getItem(STORAGE_KEY);
+                    if (preferencia === 'dark' || preferencia === 'light' || preferencia === 'system') {
+                        aplicarNoDocumento(preferencia, resolverEfetivo(preferencia));
+                    }
+                } catch (e) { /* ignore */ }
+            })();
+        </script>
+    </th:block>
+</head>
+<body>
+<div th:fragment="seletor" class="afetto-tema-opcoes" role="group" aria-label="Escolher tema claro, escuro ou igual ao sistema">
+    <button type="button"
+            class="afetto-tema-opcao"
+            data-afetto-tema="light"
+            aria-pressed="false">
+        <span class="afetto-tema-opcao__icone" aria-hidden="true">☀</span>
+        <span class="afetto-tema-opcao__rotulo">Claro</span>
+    </button>
+    <button type="button"
+            class="afetto-tema-opcao"
+            data-afetto-tema="dark"
+            aria-pressed="false">
+        <span class="afetto-tema-opcao__icone" aria-hidden="true">🌙</span>
+        <span class="afetto-tema-opcao__rotulo">Escuro</span>
+    </button>
+    <button type="button"
+            class="afetto-tema-opcao"
+            data-afetto-tema="system"
+            aria-pressed="false">
+        <span class="afetto-tema-opcao__icone" aria-hidden="true">💻</span>
+        <span class="afetto-tema-opcao__rotulo">Sistema</span>
+    </button>
+</div>
+
+<th:block th:fragment="script-troca-tema">
+<script>
+(function () {
+    if (window.AfettoTema && window.AfettoTema.inicializado) {
+        window.AfettoTema.atualizarBotoes();
+        return;
+    }
+
+    var STORAGE_KEY = 'afetto-tema';
+    var preferenciaAtual = 'light';
+    var mediaEscuro = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    var mediaClaro = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+
+    function sistemaPrefereEscuro() {
+        if (!window.matchMedia) {
+            return false;
+        }
+        if (mediaClaro && mediaClaro.matches) {
+            return false;
+        }
+        return mediaEscuro && mediaEscuro.matches;
+    }
+
+    function resolverEfetivo(preferencia) {
+        if (preferencia === 'dark') {
+            return 'dark';
+        }
+        if (preferencia === 'system') {
+            return sistemaPrefereEscuro() ? 'dark' : 'light';
+        }
+        return 'light';
+    }
+
+    function aplicarNoDocumento(preferencia, efetivo) {
+        document.documentElement.dataset.afettoTemaPref = preferencia;
+        document.documentElement.dataset.afettoTheme = efetivo === 'dark' ? 'dark' : 'light';
+    }
+
+    function lerPreferenciaSalva() {
+        try {
+            var salvo = localStorage.getItem(STORAGE_KEY);
+            if (salvo === 'dark' || salvo === 'light' || salvo === 'system') {
+                return salvo;
+            }
+        } catch (e) { /* ignore */ }
+        return 'light';
+    }
+
+    function atualizarBotoes() {
+        document.querySelectorAll('[data-afetto-tema]').forEach(function (btn) {
+            var ativo = btn.getAttribute('data-afetto-tema') === preferenciaAtual;
+            btn.classList.toggle('is-active', ativo);
+            btn.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+        });
+    }
+
+    function aplicarPreferencia(preferencia, persistir) {
+        if (preferencia !== 'dark' && preferencia !== 'light' && preferencia !== 'system') {
+            preferencia = 'light';
+        }
+        preferenciaAtual = preferencia;
+        if (persistir !== false) {
+            try {
+                localStorage.setItem(STORAGE_KEY, preferenciaAtual);
+            } catch (e) { /* ignore */ }
+        }
+        aplicarNoDocumento(preferenciaAtual, resolverEfetivo(preferenciaAtual));
+        atualizarBotoes();
+    }
+
+    function aoMudarPreferenciaSistema() {
+        if (preferenciaAtual === 'system') {
+            aplicarNoDocumento('system', resolverEfetivo('system'));
+        }
+    }
+
+    aplicarPreferencia(lerPreferenciaSalva(), false);
+
+    if (mediaEscuro) {
+        if (typeof mediaEscuro.addEventListener === 'function') {
+            mediaEscuro.addEventListener('change', aoMudarPreferenciaSistema);
+        } else if (typeof mediaEscuro.addListener === 'function') {
+            mediaEscuro.addListener(aoMudarPreferenciaSistema);
+        }
+    }
+    if (mediaClaro) {
+        if (typeof mediaClaro.addEventListener === 'function') {
+            mediaClaro.addEventListener('change', aoMudarPreferenciaSistema);
+        } else if (typeof mediaClaro.addListener === 'function') {
+            mediaClaro.addListener(aoMudarPreferenciaSistema);
+        }
+    }
+
+    document.addEventListener('click', function (evento) {
+        var botao = evento.target.closest('[data-afetto-tema]');
+        if (!botao) {
+            return;
+        }
+        evento.preventDefault();
+        aplicarPreferencia(botao.getAttribute('data-afetto-tema'));
+    });
+
+    window.AfettoTema = {
+        inicializado: true,
+        aplicarPreferencia: aplicarPreferencia,
+        atualizarBotoes: atualizarBotoes,
+        sistemaPrefereEscuro: sistemaPrefereEscuro
+    };
+})();
+</script>
+</th:block>
+</body>
+</html>

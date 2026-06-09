@@ -30,6 +30,46 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.813-tema-claro-escuro-sistema",
+                        "2.813",
+                        "Tema Claro, Escuro e Sistema",
+                        "Todos os usuários podem escolher o tema no menu do perfil e na tela de login. "
+                                + "A opção Sistema segue o tom do aparelho (claro ou escuro).",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        813,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.813-login-escuro-legivel",
+                        "2.813",
+                        "Login no tema escuro",
+                        "No modo escuro, a tela de login mantém o mesmo fundo e painel do claro, "
+                                + "com letras mais escuras e campos legíveis.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        812,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.813-menu-ajuda-whatsapp",
+                        "2.813",
+                        "Menu Ajuda atualizado",
+                        "No menu do perfil: Regras da clínica, WhatsApp da recepção (31) 8283-5857 "
+                                + "e Falar com suporte técnico.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        811,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.813-contraste-escuro",
+                        "2.813",
+                        "Contraste no tema escuro",
+                        "Melhor leitura em Central, Financeiro, Agenda, tabelas, cards de agendamento, "
+                                + "modal Editar perfil e badges coloridos.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        810,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.757-taxas-sala-central",
                         "2.757",
                         "Taxas de sala na Central",

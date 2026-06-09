@@ -2,8 +2,10 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:fragment="css">
+        <th:block th:replace="~{fragments/afetto-tema :: script-inicial}"></th:block>
         <link th:href="@{/css/afetto-brand.css}" rel="stylesheet">
         <link th:href="@{/css/afetto-responsive.css}" rel="stylesheet">
+        <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
     </th:block>
 </head>
 <body></body>

@@ -3,7 +3,8 @@
 <head>
     <th:block th:fragment="estilos">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <link th:href="@{/css/afetto-site-menu.css(v=15)}" rel="stylesheet">
+        <link th:href="@{/css/afetto-site-menu.css(v=16)}" rel="stylesheet">
+        <th:block th:replace="~{fragments/afetto-tema :: script-inicial}"></th:block>
         <style>
             .afetto-site-nav__perfil-btn {
                 min-height: 68px !important;
@@ -363,9 +364,47 @@
                         </ul>
                     </div>
 
+                    <div class="afetto-perfil-panel__secao"
+                         th:if="${podeGerenciarContaAdmin != null and podeGerenciarContaAdmin}">
+                        <p class="afetto-perfil-panel__secao-titulo">Minha conta</p>
+                        <ul class="list-unstyled mb-0">
+                            <li>
+                                <button type="button"
+                                        class="dropdown-item afetto-perfil-panel__item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#contaAdminModal">
+                                    <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+                                    Editar conta
+                                </button>
+                            </li>
+                            <li th:if="${podeTrocarPropriaSenha != null and podeTrocarPropriaSenha}">
+                                <button type="button"
+                                        class="dropdown-item afetto-perfil-panel__item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#trocarSenhaContaModal">
+                                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                    Alterar senha
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__secao">
+                        <p class="afetto-perfil-panel__secao-titulo">Preferências</p>
+                        <p class="afetto-perfil-panel__sub px-3 mb-2">Claro, escuro ou igual ao seu aparelho</p>
+                        <th:block th:replace="~{fragments/afetto-tema :: seletor}"></th:block>
+                    </div>
+
                     <div class="afetto-perfil-panel__secao" th:if="${isAdmin}">
                         <p class="afetto-perfil-panel__secao-titulo">Administração</p>
                         <ul class="list-unstyled mb-0">
+                            <li>
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/dashboard}">
+                                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                                    Agenda geral
+                                </a>
+                            </li>
                             <li th:if="${podeAcessarCentralProfissionais != null and podeAcessarCentralProfissionais}">
                                 <a class="dropdown-item afetto-perfil-panel__item"
                                    th:href="@{/agendamentos/central-profissionais}">
@@ -385,6 +424,13 @@
                                    th:href="@{/agendamentos/central-profissionais(aba='uso-site')}">
                                     <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
                                     Uso do site
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/manual}">
+                                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                                    Manual do sistema
                                 </a>
                             </li>
                         </ul>
@@ -437,18 +483,23 @@
                                     Regras da clínica
                                 </a>
                             </li>
+                            <li th:if="${manualWhatsappClinicaAtivo}">
+                                <a class="dropdown-item afetto-perfil-panel__item afetto-perfil-panel__item--whatsapp"
+                                   th:href="${manualWhatsappClinicaUrl}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   th:attr="aria-label=${'Falar com a clinica no WhatsApp ' + manualWhatsappClinicaRotulo}">
+                                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                                    <span th:text="${manualWhatsappClinicaRotulo}">(31) 8283-5857</span>
+                                </a>
+                            </li>
                             <li th:if="${manualWhatsappAtivo}">
                                 <a class="dropdown-item afetto-perfil-panel__item afetto-perfil-panel__item--whatsapp"
                                    th:href="${manualWhatsappUrl}"
                                    target="_blank"
                                    rel="noopener noreferrer">
                                     <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                                    <span>
-                                        Falar com a clínica
-                                        <small class="afetto-perfil-panel__whatsapp-numero d-block"
-                                               th:if="${manualWhatsappRotulo != null and !#strings.isEmpty(manualWhatsappRotulo)}"
-                                               th:text="${manualWhatsappRotulo}">(31) 8283-5857</small>
-                                    </span>
+                                    Falar com suporte
                                 </a>
                             </li>
                         </ul>
@@ -474,9 +525,13 @@
 
 <th:block th:fragment="modais-conta">
     <div th:replace="~{fragments/editar-perfil-profissional :: modal}"></div>
+    <div th:replace="~{fragments/conta-admin :: modal}"></div>
+    <div th:replace="~{fragments/trocar-senha-conta :: modal}"></div>
+    <th:block th:replace="~{fragments/afetto-tema :: css-final}"></th:block>
 </th:block>
 
 <th:block th:fragment="scripts">
+<th:block th:replace="~{fragments/afetto-tema :: css-final}"></th:block>
 <script>
 (function () {
     var nav = document.getElementById('afettoSiteNav');
@@ -579,6 +634,7 @@
     });
 })();
 </script>
+<th:block th:replace="~{fragments/afetto-tema :: script-troca-tema}"></th:block>
 </th:block>
 </body>
 </html>

@@ -14,14 +14,14 @@
 </div>
 
 <div th:fragment="status-badge (agendamento)">
-    <span th:if="${agendamento != null and agendamento.statusPagamento != null and pagamentoService.podeVerPagamento(agendamento, usuarioLogado)}"
+    <span th:if="${agendamento != null and agendamento.statusPagamento != null and pagamentoService.podeVerStatusPagamentoReserva(usuarioLogado)}"
           class="badge rounded-pill ms-1 pagamento-status-badge"
           th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.esperandoConfirmacaoPagamento ? ' text-bg-warning' : (agendamento.pagamentoPendente ? ' text-bg-secondary' : ' text-bg-light text-dark'))}"
           th:title="${pagamentoService.rotuloStatusPagamento(agendamento, usuarioLogado)}"
           th:text="${pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado)}">Esperando confirmação</span>
-    <span th:if="${agendamento != null and !pagamentoService.podeVerPagamento(agendamento, usuarioLogado) and !#strings.isEmpty(pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado))}"
+    <span th:if="${agendamento != null and !pagamentoService.podeVerStatusPagamentoReserva(usuarioLogado) and !#strings.isEmpty(pagamentoService.rotuloStatusPagamentoResumidoNaGrade(agendamento, usuarioLogado))}"
           class="badge rounded-pill ms-1 pagamento-status-badge text-bg-secondary"
-          th:text="${pagamentoService.rotuloStatusPagamentoResumido(agendamento, usuarioLogado)}">Sala confirmada</span>
+          th:text="${pagamentoService.rotuloStatusPagamentoResumidoNaGrade(agendamento, usuarioLogado)}">Sala confirmada</span>
 </div>
 
 <div th:fragment="instrucao-checkout-infinitepay"

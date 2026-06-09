@@ -124,10 +124,17 @@
                     </div>
                     <p class="login-panel__versao mb-0" th:text="|v${versaoSite}|">v2.6</p>
                 </form>
+
+                <div class="login-tema-bar">
+                    <p class="login-tema-bar__label">Tema do sistema</p>
+                    <th:block th:replace="~{fragments/afetto-tema :: seletor}"></th:block>
+                </div>
             </div>
         </section>
     </div>
 </div>
+<th:block th:replace="~{fragments/afetto-tema :: css-final}"></th:block>
+<th:block th:replace="~{fragments/afetto-tema :: script-troca-tema}"></th:block>
 <script th:inline="javascript">
 (function () {
     var STORAGE_LOGIN = 'afetto_login_local';

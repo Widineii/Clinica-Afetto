@@ -2,6 +2,7 @@ package com.clinica.sistema.config;
 
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
+import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.service.AuthService;
@@ -51,7 +52,9 @@ public class SiteMenuModelAdvice {
     public void prepararContextoMenuSite(Model model, HttpSession session, HttpServletRequest request) {
         model.addAttribute("manualWhatsappAtivo", manualProperties.temWhatsappSuporte());
         model.addAttribute("manualWhatsappUrl", manualProperties.resolverLinkWhatsapp());
-        model.addAttribute("manualWhatsappRotulo", manualProperties.resolverRotuloWhatsappExibicao());
+        model.addAttribute("manualWhatsappClinicaAtivo", manualProperties.temWhatsappClinica());
+        model.addAttribute("manualWhatsappClinicaUrl", manualProperties.resolverLinkWhatsappClinica());
+        model.addAttribute("manualWhatsappClinicaRotulo", manualProperties.resolverRotuloWhatsappClinicaExibicao());
         model.addAttribute("retornoPerfilUrl", resolverRetornoPerfil(request));
         if (!model.containsAttribute("reabrirModalEditarPerfil")) {
             model.addAttribute("reabrirModalEditarPerfil", false);
@@ -107,6 +110,15 @@ public class SiteMenuModelAdvice {
         }
         if (!model.containsAttribute("podeTrocarPropriaSenha")) {
             model.addAttribute("podeTrocarPropriaSenha", authService.podeTrocarPropriaSenha(usuario));
+        }
+        if (!model.containsAttribute("podeGerenciarContaAdmin")) {
+            model.addAttribute("podeGerenciarContaAdmin", authService.podeGerenciarContaAdmin(usuario));
+        }
+        if (!model.containsAttribute("podeEscolherTema")) {
+            model.addAttribute("podeEscolherTema", authService.podeEscolherTema(usuario));
+        }
+        if (authService.podeTrocarPropriaSenha(usuario) && !model.containsAttribute("trocarSenhaForm")) {
+            model.addAttribute("trocarSenhaForm", new TrocarSenhaForm());
         }
         if (!model.containsAttribute("podeEscolherFormaPagamento")) {
             model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuario));

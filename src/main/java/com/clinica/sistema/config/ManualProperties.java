@@ -31,6 +31,12 @@ public class ManualProperties {
     private String whatsappMensagemPadrao =
             "Ola! Preciso de suporte com a Agenda Afetto.";
 
+    /** WhatsApp da clinica (recepcao) — separado do suporte tecnico. */
+    private String whatsappNumeroClinica = "";
+
+    private String whatsappMensagemClinica =
+            "Ola! Gostaria de falar com a clinica Afetto.";
+
     private static final Pattern YOUTUBE_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]{11}$");
 
     public String getVideoUrl() {
@@ -142,16 +148,53 @@ public class ManualProperties {
         this.whatsappMensagemPadrao = whatsappMensagemPadrao;
     }
 
+    public String getWhatsappNumeroClinica() {
+        return whatsappNumeroClinica;
+    }
+
+    public void setWhatsappNumeroClinica(String whatsappNumeroClinica) {
+        this.whatsappNumeroClinica = whatsappNumeroClinica;
+    }
+
+    public String getWhatsappMensagemClinica() {
+        return whatsappMensagemClinica;
+    }
+
+    public void setWhatsappMensagemClinica(String whatsappMensagemClinica) {
+        this.whatsappMensagemClinica = whatsappMensagemClinica;
+    }
+
     public boolean temWhatsappSuporte() {
         return normalizarNumeroWhatsapp(whatsappNumero) != null;
     }
 
     public String resolverLinkWhatsapp() {
-        String numero = normalizarNumeroWhatsapp(whatsappNumero);
+        return resolverLinkWhatsapp(whatsappNumero, whatsappMensagemPadrao);
+    }
+
+    public boolean temWhatsappClinica() {
+        return normalizarNumeroWhatsapp(whatsappNumeroClinica) != null;
+    }
+
+    public String resolverLinkWhatsappClinica() {
+        return resolverLinkWhatsapp(whatsappNumeroClinica, whatsappMensagemClinica);
+    }
+
+    /** Ex.: 553182835857 → (31) 8283-5857 */
+    public String resolverRotuloWhatsappExibicao() {
+        return formatarRotuloWhatsappExibicao(whatsappNumero);
+    }
+
+    public String resolverRotuloWhatsappClinicaExibicao() {
+        return formatarRotuloWhatsappExibicao(whatsappNumeroClinica);
+    }
+
+    private String resolverLinkWhatsapp(String numeroBruto, String mensagemPadrao) {
+        String numero = normalizarNumeroWhatsapp(numeroBruto);
         if (numero == null) {
             return "";
         }
-        String mensagem = whatsappMensagemPadrao != null ? whatsappMensagemPadrao.trim() : "";
+        String mensagem = mensagemPadrao != null ? mensagemPadrao.trim() : "";
         if (mensagem.isBlank()) {
             return "https://wa.me/" + numero;
         }
@@ -159,9 +202,8 @@ public class ManualProperties {
                 + UriUtils.encode(mensagem, StandardCharsets.UTF_8);
     }
 
-    /** Ex.: 553182835857 → (31) 8283-5857 */
-    public String resolverRotuloWhatsappExibicao() {
-        String numero = normalizarNumeroWhatsapp(whatsappNumero);
+    private String formatarRotuloWhatsappExibicao(String numeroBruto) {
+        String numero = normalizarNumeroWhatsapp(numeroBruto);
         if (numero == null) {
             return "";
         }

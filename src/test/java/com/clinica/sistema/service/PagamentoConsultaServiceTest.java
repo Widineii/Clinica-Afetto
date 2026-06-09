@@ -390,7 +390,7 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void juliaSoVeNaoPagoDoProprioAgendamento() {
+    void juliaNaoVeNaoPagoNaGrade() {
         Usuario julia = new Usuario();
         julia.setId(1L);
         julia.setLogin("julia");
@@ -411,16 +411,20 @@ class PagamentoConsultaServiceTest {
 
         when(authService.podeVerPagamentoDeTodos(julia)).thenReturn(false);
 
-        assertTrue(pagamentoConsultaService.exibirNaoPagoNaGrade(deJulia, julia));
+        assertFalse(pagamentoConsultaService.exibirNaoPagoNaGrade(deJulia, julia));
         assertFalse(pagamentoConsultaService.exibirNaoPagoNaGrade(deCaroline, julia));
         assertEquals(
                 "Aguardando confirmações",
-                pagamentoConsultaService.rotuloStatusPagamento(deCaroline, julia)
+                pagamentoConsultaService.rotuloStatusPagamentoResumidoNaGrade(deCaroline, julia)
+        );
+        assertEquals(
+                "Aguardando confirmações",
+                pagamentoConsultaService.rotuloStatusPagamentoResumidoNaGrade(deJulia, julia)
         );
     }
 
     @Test
-    void juliaNaoVeIndicadoresFinanceirosNaGradeDoColega() {
+    void juliaNaoVeIndicadoresFinanceirosNaGrade() {
         Usuario julia = new Usuario();
         julia.setId(1L);
         julia.setLogin("julia");
@@ -440,9 +444,9 @@ class PagamentoConsultaServiceTest {
 
         when(authService.podeVerPagamentoDeTodos(julia)).thenReturn(false);
 
-        assertTrue(pagamentoConsultaService.exibirIndicadoresPagamentoNaGrade(deJulia, julia));
+        assertFalse(pagamentoConsultaService.exibirIndicadoresPagamentoNaGrade(deJulia, julia));
         assertFalse(pagamentoConsultaService.exibirIndicadoresPagamentoNaGrade(deCaroline, julia));
-        assertTrue(pagamentoConsultaService.exibirEstiloAguardandoPagamentoNaGrade(deJulia, julia));
+        assertFalse(pagamentoConsultaService.exibirEstiloAguardandoPagamentoNaGrade(deJulia, julia));
         assertFalse(pagamentoConsultaService.exibirEstiloAguardandoPagamentoNaGrade(deCaroline, julia));
     }
 

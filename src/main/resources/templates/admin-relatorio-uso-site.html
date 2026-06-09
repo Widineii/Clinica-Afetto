@@ -81,6 +81,7 @@
             line-height: 1.55;
         }
     </style>
+    <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
 </head>
 <body>
 <div class="container-fluid app-shell">
@@ -173,5 +174,6 @@
         </div>
     </div>
 </div>
+<div th:replace="~{fragments/afetto-tema :: css-final}"></div>
 </body>
 </html>

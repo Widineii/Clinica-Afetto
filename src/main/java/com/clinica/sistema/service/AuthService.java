@@ -66,11 +66,22 @@ public class AuthService {
         return login != null && LOGIN_DONA_CLINICA.equalsIgnoreCase(login.trim());
     }
 
-    /** Profissionais comuns trocam a propria senha na agenda; admin e dona da clinica nao. */
+    /** Profissionais e administracao trocam a propria senha; dona da clinica nao. */
     public boolean podeTrocarPropriaSenha(Usuario usuario) {
-        return usuario != null
-                && !isAdmin(usuario)
-                && !isDonaClinica(usuario);
+        if (usuario == null || isDonaClinica(usuario)) {
+            return false;
+        }
+        return isAdmin(usuario) || "ROLE_PROFISSIONAL".equals(usuario.getCargo());
+    }
+
+    /** Painel Minha conta no menu do administrador. */
+    public boolean podeGerenciarContaAdmin(Usuario usuario) {
+        return isAdmin(usuario);
+    }
+
+    /** Tema claro/escuro — disponível para qualquer usuário autenticado. */
+    public boolean podeEscolherTema(Usuario usuario) {
+        return usuario != null;
     }
 
     public boolean profissionalIgnoraValoresEPagamento(Usuario profissional) {
@@ -97,8 +108,8 @@ public class AuthService {
     }
 
     /**
-     * Ve status de pagamento (pago / nao pago) de todos os profissionais na grade.
-     * Demais usuarios veem apenas os proprios agendamentos.
+     * Ve status de pagamento (pago / aguardando pagamento) de todos os profissionais na grade.
+     * Profissionais comuns nao veem esse status — apenas ADM, dona da clinica e usuario de teste.
      */
     public boolean podeVerPagamentoDeTodos(Usuario usuario) {
         if (usuario == null) {

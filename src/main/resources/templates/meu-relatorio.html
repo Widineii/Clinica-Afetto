@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Meu relatorio - Clinica Afetto</title>
+    <title>Meu relatório - Clínica Afetto</title>
     <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
     <th:block th:replace="~{fragments/site-menu-principal :: estilos}"></th:block>
     <style>
@@ -66,6 +66,7 @@
             }
         }
     </style>
+    <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
 </head>
 <body class="financeiro-page">
 <div class="financeiro-wrap">
@@ -78,9 +79,9 @@
     <div th:if="${perfilLocal}" class="financeiro-card mb-3">
         <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div>
-                <strong>Modo demonstracao local</strong>
+                <strong>Modo demonstração local</strong>
                 <p class="financeiro-hint mb-0">
-                    Gera atendimentos de exemplo no mes atual (Salas 1, 2 e 3) so para o seu relatorio.
+                    Gera atendimentos de exemplo no mês atual (Salas 1, 2 e 3) só para o seu relatório.
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -105,7 +106,7 @@
             <form th:action="@{/agendamentos/meu-relatorio}" method="get" id="filtroMesForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold" for="mesAno">Mes de referencia</label>
+                        <label class="form-label fw-semibold" for="mesAno">Mês de referência</label>
                         <input type="month"
                                class="form-control"
                                id="mesAno"
@@ -170,7 +171,7 @@
             </p>
         </div>
         <div th:if="${exibirTaxasRelatorio}" class="financeiro-resumo-card">
-            <div class="financeiro-resumo-label">Melhor mes</div>
+            <div class="financeiro-resumo-label">Melhor mês (taxas PIX)</div>
             <div class="financeiro-resumo-valor" th:text="${relatorio.valorMelhorMesFormatado}">R$ 0,00</div>
             <p class="financeiro-hint mb-0 mt-1">
                 <span th:text="${relatorio.melhorMesLabel}">—</span>
@@ -184,14 +185,14 @@
             <div class="fin-grafico-card__titulo">Atendimentos por sala</div>
             <div class="fin-grafico-wrap">
                 <canvas id="graficoSala"></canvas>
-                <div class="fin-grafico-vazio" id="vazioSala">Nenhum atendimento neste mes.</div>
+                <div class="fin-grafico-vazio" id="vazioSala">Nenhum atendimento neste mês.</div>
             </div>
         </div>
         <div class="fin-grafico-card">
             <div class="fin-grafico-card__titulo">Atendimentos por tipo</div>
             <div class="fin-grafico-wrap">
                 <canvas id="graficoTipo"></canvas>
-                <div class="fin-grafico-vazio" id="vazioTipo">Nenhum atendimento neste mes.</div>
+                <div class="fin-grafico-vazio" id="vazioTipo">Nenhum atendimento neste mês.</div>
             </div>
         </div>
     </div>
@@ -200,7 +201,7 @@
         <div class="fin-grafico-card__titulo">Atendimentos por sala</div>
         <div class="fin-grafico-wrap fin-grafico-wrap--bar" id="wrapGraficoSalaBarra">
             <canvas id="graficoSalaBarra"></canvas>
-            <div class="fin-grafico-vazio" id="vazioSalaBarra">Nenhum atendimento neste mes.</div>
+            <div class="fin-grafico-vazio" id="vazioSalaBarra">Nenhum atendimento neste mês.</div>
         </div>
     </div>
 
@@ -209,9 +210,9 @@
 
     <div class="financeiro-card mb-4">
         <div class="card-body">
-            <h2 class="h5 mb-3">Seus atendimentos no mes</h2>
+            <h2 class="h5 mb-3">Seus atendimentos no mês</h2>
             <div th:if="${#lists.isEmpty(relatorio.atendimentos)}" class="financeiro-empty">
-                Nenhum atendimento registrado neste mes.
+                Nenhum atendimento registrado neste mês.
             </div>
             <div th:unless="${#lists.isEmpty(relatorio.atendimentos)}" class="table-responsive meu-relatorio-tabela-scroll fin-tabela-scroll">
                 <table class="table financeiro-table align-middle">
@@ -242,9 +243,9 @@
 
     <div th:if="${exibirTaxasRelatorio}" class="financeiro-card">
         <div class="card-body">
-            <h2 class="h5 mb-3">PIX confirmados no mes</h2>
+            <h2 class="h5 mb-3">PIX confirmados no mês</h2>
             <div th:if="${#lists.isEmpty(relatorio.pagamentosPix)}" class="financeiro-empty">
-                Nenhum PIX confirmado neste mes.
+                Nenhum PIX confirmado neste mês.
             </div>
             <div th:unless="${#lists.isEmpty(relatorio.pagamentosPix)}" class="table-responsive meu-relatorio-tabela-scroll fin-tabela-scroll">
                 <table class="table financeiro-table align-middle">
@@ -312,6 +313,14 @@
 
     function telaEstreita() {
         return window.matchMedia('(max-width: 991px)').matches;
+    }
+
+    function corLegendaGrafico() {
+        return document.documentElement.dataset.afettoTheme === 'dark' ? '#d8ebe9' : '#334155';
+    }
+
+    function corEixoGrafico() {
+        return document.documentElement.dataset.afettoTheme === 'dark' ? '#99f6e4' : '#64748b';
     }
 
     var graficoSalaInst;
@@ -396,7 +405,8 @@
                         ticks: {
                             maxRotation: 0,
                             minRotation: 0,
-                            font: { size: estreita ? 11 : 12 }
+                            font: { size: estreita ? 11 : 12 },
+                            color: corEixoGrafico()
                         },
                         grid: { display: false }
                     },
@@ -404,11 +414,13 @@
                         beginAtZero: true,
                         ticks: {
                             stepSize: 1,
-                            precision: 0
+                            precision: 0,
+                            color: corEixoGrafico()
                         },
                         title: {
                             display: true,
-                            text: 'Atendimentos'
+                            text: 'Atendimentos',
+                            color: corEixoGrafico()
                         }
                     }
                 }
@@ -416,13 +428,15 @@
         });
     }
 
-    function montarGrafico(canvasId, vazioId, dados, cores, tipo) {
+    function montarGrafico(canvasId, vazioId, dados, cores, tipo, ordenarFn) {
         if (typeof Chart === 'undefined') {
             alternarVazio(vazioId, true);
             return null;
         }
         const canvas = document.getElementById(canvasId);
-        const filtrados = dados.filter(function (item) { return (item.valor || 0) > 0; });
+        const filtrados = ordenarFn
+            ? ordenarFn(dados)
+            : dados.filter(function (item) { return (item.valor || 0) > 0; });
         alternarVazio(vazioId, filtrados.length === 0);
         if (!canvas || filtrados.length === 0) {
             if (canvas) {
@@ -454,7 +468,26 @@
                             boxWidth: 12,
                             font: { size: estreita ? 11 : 12 },
                             padding: estreita ? 14 : 8,
-                            boxPadding: 4
+                            boxPadding: 4,
+                            color: corLegendaGrafico(),
+                            generateLabels: function (chart) {
+                                var data = chart.data;
+                                if (!data.labels.length || !data.datasets.length) {
+                                    return [];
+                                }
+                                var dataset = data.datasets[0];
+                                return data.labels.map(function (label, indice) {
+                                    return {
+                                        text: String(label),
+                                        fillStyle: dataset.backgroundColor[indice],
+                                        strokeStyle: dataset.backgroundColor[indice],
+                                        fontColor: corLegendaGrafico(),
+                                        lineWidth: 0,
+                                        hidden: false,
+                                        index: indice
+                                    };
+                                });
+                            }
                         }
                     }
                 },
@@ -473,8 +506,8 @@
         if (graficoSalaBarraInst) {
             graficoSalaBarraInst.destroy();
         }
-        graficoSalaInst = montarGrafico('graficoSala', 'vazioSala', lerJson('grafico-salas-json'), CORES_SALA, 'pie');
-        graficoTipoInst = montarGrafico('graficoTipo', 'vazioTipo', lerJson('grafico-tipos-json'), CORES_TIPO, 'doughnut');
+        graficoSalaInst = montarGrafico('graficoSala', 'vazioSala', lerJson('grafico-salas-json'), CORES_SALA, 'pie', ordenarDadosSalas);
+        graficoTipoInst = montarGrafico('graficoTipo', 'vazioTipo', lerJson('grafico-tipos-json'), CORES_TIPO, 'doughnut', null);
         graficoSalaBarraInst = montarGraficoSalasBarras(lerJson('grafico-salas-json'));
     }
 

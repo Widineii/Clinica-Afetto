@@ -1494,13 +1494,18 @@ public class PagamentoConsultaService {
                 && agendamento.getProfissional().getId().equals(usuarioLogado.getId());
     }
 
-    public boolean exibirNaoPagoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
-        return bloqueadoPorPagamento(agendamento) && podeVerPagamento(agendamento, usuarioLogado);
+    /** Status pago / aguardando pagamento na grade — somente ADM e dona da clinica. */
+    public boolean podeVerStatusPagamentoReserva(Usuario usuarioLogado) {
+        return authService.podeVerPagamentoDeTodos(usuarioLogado);
     }
 
-    /** Profissional comum: indicadores de pagamento (pago, nao pago, aguardando PIX) so nos proprios horarios. */
+    public boolean exibirNaoPagoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
+        return bloqueadoPorPagamento(agendamento) && podeVerStatusPagamentoReserva(usuarioLogado);
+    }
+
+    /** Indicadores de pagamento (pago, nao pago, aguardando PIX) na grade — somente ADM e dona. */
     public boolean exibirIndicadoresPagamentoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
-        return podeVerPagamento(agendamento, usuarioLogado);
+        return podeVerStatusPagamentoReserva(usuarioLogado);
     }
 
     public boolean modoTestePagamento() {
@@ -1647,7 +1652,7 @@ public class PagamentoConsultaService {
         if (agendamento == null || agendamento.isPagamentoPago()) {
             return false;
         }
-        if (podeVerPagamento(agendamento, usuarioLogado)) {
+        if (podeVerStatusPagamentoReserva(usuarioLogado)) {
             return false;
         }
         return reservaConfirmadaParaVisaoPublica(agendamento);
@@ -1657,7 +1662,7 @@ public class PagamentoConsultaService {
         if (agendamento == null) {
             return false;
         }
-        if (!podeVerPagamento(agendamento, usuarioLogado)) {
+        if (!podeVerStatusPagamentoReserva(usuarioLogado)) {
             return false;
         }
         if (PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO.equals(agendamento.getStatusPagamento())
@@ -1732,6 +1737,16 @@ public class PagamentoConsultaService {
             return "Vaga liberada";
         }
         return completo;
+    }
+
+    public String rotuloStatusPagamentoResumidoNaGrade(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null) {
+            return "";
+        }
+        if (podeVerStatusPagamentoReserva(usuarioLogado)) {
+            return rotuloStatusPagamentoResumido(agendamento, usuarioLogado);
+        }
+        return rotuloStatusPagamentoVisaoColega(agendamento);
     }
 
     public String rotuloStatusPagamentoResumido(Agendamento agendamento, Usuario usuarioLogado) {

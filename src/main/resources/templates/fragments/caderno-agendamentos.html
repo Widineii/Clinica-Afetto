@@ -41,7 +41,7 @@
                   th:classappend="|${ocorrencia.passado ? ' meus-agendamentos-data-badge--passado' : ''}${ocorrencia.statusPagamento != null and !ocorrencia.pagamentoPago and (ocorrencia.statusPagamento.name() == 'AGUARDANDO_PAGAMENTO' or ocorrencia.statusPagamento.name() == 'LIBERADO_FALTA_PAGAMENTO') ? ' meus-agendamentos-data-badge--vencido' : ''}|">
                 <span th:text="${ocorrencia.dataRotulo}">04/06</span>
                 <span th:if="${ocorrencia.passado}" class="ms-1 small opacity-75" title="Data já passou">↩</span>
-                <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.pagamentoPago and pagamentoService.podeVerStatusPagamentoReserva(usuarioLogado)}" class="ms-1 text-success" title="Pago">✓</span>
                 <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}"
                       class="ms-1 text-warning"
                       title="Pagar">$</span>
@@ -185,7 +185,7 @@
                        th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar ? 'true' : 'false'},data-pode-realocar=${ocorrencia.podeRealocar ? 'true' : 'false'},data-pode-cancelar=${ocorrencia.podeCancelar ? 'true' : 'false'},data-aguardando-qr=${ocorrencia.statusPagamento != null and ocorrencia.statusPagamento.name() == 'ESPERANDO_CONFIRMACAO' ? 'true' : 'false'},data-pago=${ocorrencia.pagamentoPago ? 'true' : 'false'}">
                 <span th:text="${ocorrencia.dataRotulo}">25/05</span>
                 <span th:if="${ocorrencia.passado}" class="ms-1 small opacity-75" title="Data já passou">↩</span>
-                <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.pagamentoPago and pagamentoService.podeVerStatusPagamentoReserva(usuarioLogado)}" class="ms-1 text-success" title="Pago">✓</span>
                 <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
             </label>
         </div>
