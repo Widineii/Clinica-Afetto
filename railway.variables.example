@@ -10,6 +10,9 @@ PGUSER=neondb_owner
 PGPASSWORD=<senha-definida-no-neon-sql-editor>
 PGSSLMODE=require
 
+# CRITICO: plano Hobby Railway (512MB-1GB). Nao use -Xmx1536m.
+JAVA_OPTS=-Xms384m -Xmx768m
+
 ADMIN_LOGIN=admin
 ADMIN_PASSWORD=<senha-forte-admin-clinica>
 ADMIN_NAME=Administracao
