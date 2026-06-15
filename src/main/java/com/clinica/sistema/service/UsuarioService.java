@@ -159,6 +159,7 @@ public class UsuarioService {
 
     private Map<String, BigDecimal> valoresConsultaDoProfissional(Usuario profissional) {
         Map<String, BigDecimal> valores = new LinkedHashMap<>();
+        valores.put("SALA_4", valorConsultaService.taxaClinicaSala4Atual());
         valores.put("AVULSO", valorConsultaExibicao(profissional, "AVULSO", null));
         valores.put("SEMANAL", valorConsultaExibicao(profissional, "SEMANAL", null));
         valores.put("QUINZENAL", valorConsultaExibicao(profissional, "QUINZENAL", null));

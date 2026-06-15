@@ -20,7 +20,8 @@ Write-Host "Conectando em $remote ..."
 ssh $remote @"
 set -euo pipefail
 cd /opt/clinica-afetto
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 chmod +x scripts/deploy-kinghost.sh
 ./scripts/deploy-kinghost.sh
 "@

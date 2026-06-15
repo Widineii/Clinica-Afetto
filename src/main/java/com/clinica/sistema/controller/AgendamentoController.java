@@ -139,6 +139,11 @@ public class AgendamentoController {
         return taxaSalaService.taxaClinicaSala4();
     }
 
+    @ModelAttribute("sala4Id")
+    public Long sala4Id() {
+        return taxaSalaService.idSala4();
+    }
+
     @ModelAttribute
     public void prepararTaxasSalaReferenciaLogado(Model model) {
         if (model.containsAttribute("taxasSalaReferenciaLogado")) {

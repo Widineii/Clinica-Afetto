@@ -2373,7 +2373,7 @@
                                 </p>
                                 <ul th:if="${taxasSalaReferenciaLogado != null}">
                                     <li><strong>Sala 4:</strong>
-                                        R$ <span th:text="${#numbers.formatDecimal(taxaSala4Valor, 1, 2, 'COMMA')}">25,00</span></li>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['SALA_4'], 1, 2, 'COMMA')}">25,00</span></li>
                                     <li><strong>Avulso:</strong>
                                         R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['AVULSO'], 1, 2, 'COMMA')}">35,00</span></li>
                                     <li><strong>Semanal:</strong>
@@ -3356,6 +3356,7 @@
     var podeAcompanharGanhosConsultaPropria = /*[[${podeAcompanharGanhosConsultaPropria}]]*/ false;
     var idProfissionalPolyana = /*[[${podeAcompanharGanhosConsultaPropria ? usuarioLogado.id : null}]]*/ null;
     var taxaSala4Atual = /*[[${taxaSala4Valor}]]*/ 25;
+    var sala4Id = /*[[${sala4Id}]]*/ null;
 
     document.addEventListener('DOMContentLoaded', function () {
         (function initFormularioAgendamentoValores() {
@@ -3444,8 +3445,11 @@
             }
 
             function isSala4() {
-                if (!salaSelect) {
+                if (!salaSelect || !salaSelect.value) {
                     return false;
+                }
+                if (sala4Id != null && String(salaSelect.value) === String(sala4Id)) {
+                    return true;
                 }
                 var option = salaSelect.options[salaSelect.selectedIndex];
                 if (!option) {
@@ -3712,7 +3716,7 @@
             }
 
             function formatMoneyHint(valor) {
-                var numero = Number(valor);
+                var numero = parseMoney(valor);
                 if (!Number.isFinite(numero) || numero <= 0) {
                     return '—';
                 }
@@ -3752,9 +3756,6 @@
             function atualizarHintValoresProfissional(forcarAtualizacao) {
                 var hint = document.getElementById('valoresConsultaHint');
                 if (!hint) {
-                    return;
-                }
-                if (!forcarAtualizacao && !isSala4() && hint.getAttribute('data-hint-servidor') === 'true') {
                     return;
                 }
                 var titulo = hint.querySelector('.titulo');
@@ -3890,8 +3891,10 @@
                 }
                 if (exibirCompleto) {
                     aplicarValorPadraoProfissional();
+                    atualizarClinicaAutomatica();
+                    atualizarHintValoresProfissional(true);
                 } else {
-                    atualizarHintValoresProfissional();
+                    atualizarHintValoresProfissional(true);
                 }
             }
 
@@ -3993,7 +3996,10 @@
 
             if (recorrenciaSelect) {
                 recorrenciaSelect.addEventListener('change', function () {
+                    clinicaManual = false;
                     aplicarValorPadraoProfissional(false);
+                    atualizarClinicaAutomatica();
+                    atualizarHintValoresProfissional(true);
                     atualizarHintRecorrenciaAgenda();
                     var contMensal = document.getElementById('continuacaoMensalAgenda');
                     if (contMensal) {

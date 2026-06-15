@@ -39,6 +39,10 @@ public class TaxaSalaService {
         return MoedaBrasilUtil.formatarDecimal(taxaClinicaSala4());
     }
 
+    public Long idSala4() {
+        return salaRepository.findByNomeIgnoreCase("Sala 4").map(Sala::getId).orElse(null);
+    }
+
     @Transactional
     public int atualizarTaxaSala4(BigDecimal novaTaxa) {
         if (novaTaxa == null || novaTaxa.signum() <= 0) {
