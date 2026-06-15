@@ -4,7 +4,9 @@ import com.clinica.sistema.config.InfinitePayProperties;
 import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.dto.LinkPagamentoGerado;
 import com.clinica.sistema.dto.PagamentoProfissionalNotificacaoView;
+import com.clinica.sistema.dto.PendenciasPagamentoWhatsappAgrupadasView;
 import com.clinica.sistema.dto.ProfissionalBloqueioPagamentoView;
+import com.clinica.sistema.dto.ProfissionalPendenciaPagamentoWhatsappView;
 import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
 import com.clinica.sistema.exception.HorarioJaReservadoPorOutroProfissionalException;
 import com.clinica.sistema.exception.PagamentoWebhookNaoAutorizadoException;
@@ -15,6 +17,7 @@ import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.security.ClinicaAuthenticationSuccessHandler;
+import com.clinica.sistema.util.WhatsAppNumeroUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -37,6 +40,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 @Service
@@ -1330,6 +1335,184 @@ public class PagamentoConsultaService {
                         listarPendenciasObrigatoriasParaBloqueio(profissional).size()
                 ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProfissionalPendenciaPagamentoWhatsappView> listarProfissionaisComPendenciaPagamentoWhatsapp() {
+        return usuarioRepository.findByCargoOrderByNomeAsc(CARGO_PROFISSIONAL).stream()
+                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
+                .map(this::montarLinhaPendenciaPagamentoWhatsapp)
+                .flatMap(Optional::stream)
+                .sorted(Comparator.comparing(
+                        ProfissionalPendenciaPagamentoWhatsappView::nome,
+                        String.CASE_INSENSITIVE_ORDER
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PendenciasPagamentoWhatsappAgrupadasView agruparProfissionaisComPendenciaPagamentoWhatsapp() {
+        return agruparProfissionaisMensagemWhatsappPorPeriodicidade();
+    }
+
+    @Transactional(readOnly = true)
+    public PendenciasPagamentoWhatsappAgrupadasView agruparProfissionaisMensagemWhatsappPorPeriodicidade() {
+        return new PendenciasPagamentoWhatsappAgrupadasView(
+                listarProfissionaisMensagemWhatsappPorPeriodicidade(PeriodicidadePagamento.DIARIO),
+                listarProfissionaisMensagemWhatsappPorPeriodicidade(PeriodicidadePagamento.SEMANAL),
+                listarProfissionaisMensagemWhatsappPorPeriodicidade(PeriodicidadePagamento.MENSAL)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProfissionalPendenciaPagamentoWhatsappView> listarProfissionaisMensagemWhatsappPorPeriodicidade(
+            PeriodicidadePagamento periodicidade
+    ) {
+        return usuarioRepository.findByCargoOrderByNomeAsc(CARGO_PROFISSIONAL).stream()
+                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
+                .filter(profissional -> resolverPeriodicidade(profissional) == periodicidade)
+                .map(this::montarLinhaProfissionalMensagemWhatsapp)
+                .sorted(Comparator.comparing(
+                        ProfissionalPendenciaPagamentoWhatsappView::nome,
+                        String.CASE_INSENSITIVE_ORDER
+                ))
+                .toList();
+    }
+
+    public int contarProfissionaisComPendencia(PendenciasPagamentoWhatsappAgrupadasView agrupadas) {
+        if (agrupadas == null) {
+            return 0;
+        }
+        return (int) (agrupadas.diario().stream().filter(l -> l.quantidadePendencias() > 0).count()
+                + agrupadas.semanal().stream().filter(l -> l.quantidadePendencias() > 0).count()
+                + agrupadas.mensal().stream().filter(l -> l.quantidadePendencias() > 0).count());
+    }
+
+    private List<ProfissionalPendenciaPagamentoWhatsappView> filtrarPendenciasPorPeriodicidade(
+            List<ProfissionalPendenciaPagamentoWhatsappView> lista,
+            PeriodicidadePagamento periodicidade
+    ) {
+        return lista.stream()
+                .filter(linha -> linha.periodicidade() == periodicidade)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Usuario buscarProfissionalParaAvisoWhatsapp(Long profissionalId) {
+        return usuarioRepository.findById(profissionalId)
+                .filter(profissional -> CARGO_PROFISSIONAL.equals(profissional.getCargo()))
+                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
+                .orElseThrow(() -> new RuntimeException("Profissional nao encontrado."));
+    }
+
+    @Transactional(readOnly = true)
+    public String montarTextoWhatsappPendenciaPagamento(Usuario profissional) {
+        ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(profissional);
+        if (!resumo.temPendencias()) {
+            throw new RuntimeException("Este profissional nao tem pendencias de pagamento no momento.");
+        }
+        return montarTextoWhatsappPendenciaPagamento(profissional, resumo);
+    }
+
+    public String montarTextoWhatsappPendenciaPagamentoTeste(
+            String nomeProfissional,
+            PeriodicidadePagamento periodicidade
+    ) {
+        return aplicarVariaveisFraseWhatsapp(
+                frasePadraoWhatsappPendencia(periodicidade),
+                nomeProfissional,
+                "R$ 50,00"
+        );
+    }
+
+    public String frasePadraoWhatsappGeral() {
+        return "Olá {nome}, você tem pendência(s) de taxa de sala na Agenda Afetto. "
+                + "Total: {total}. Acesse Meus pagamentos para regularizar.";
+    }
+
+    public String frasePadraoWhatsappPendencia(PeriodicidadePagamento periodicidade) {
+        PeriodicidadePagamento forma = periodicidade != null
+                ? periodicidade
+                : PeriodicidadePagamento.DIARIO;
+        String rotulo = rotuloPeriodoPendencias(forma);
+        return "Olá {nome}, "
+                + montarMensagemResumoPendencias(forma, 2, rotulo)
+                + " Total: {total}. Acesse Meus pagamentos na Agenda Afetto.";
+    }
+
+    public String aplicarVariaveisFraseWhatsapp(String template, String nome, String total) {
+        if (template == null || template.isBlank()) {
+            throw new RuntimeException("Informe o texto da mensagem.");
+        }
+        String nomeAplicado = nome == null || nome.isBlank() ? "Profissional" : nome.trim();
+        String totalAplicado = total == null || total.isBlank() ? "R$ 0,00" : total.trim();
+        return template
+                .replace("{nome}", nomeAplicado)
+                .replace("{total}", totalAplicado);
+    }
+
+    private Optional<ProfissionalPendenciaPagamentoWhatsappView> montarLinhaPendenciaPagamentoWhatsapp(
+            Usuario profissional
+    ) {
+        ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(profissional);
+        if (!resumo.temPendencias()) {
+            return Optional.empty();
+        }
+        return Optional.of(montarLinhaProfissionalMensagemWhatsapp(profissional));
+    }
+
+    private ProfissionalPendenciaPagamentoWhatsappView montarLinhaProfissionalMensagemWhatsapp(
+            Usuario profissional
+    ) {
+        ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(profissional);
+        String telefone = profissional.getTelefoneWhatsappFormulario();
+        boolean temWhatsapp = telefone != null && !telefone.isBlank();
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(profissional);
+        String mensagem = resumo.temPendencias()
+                ? montarTextoWhatsappPendenciaPagamento(profissional, resumo)
+                : aplicarVariaveisFraseWhatsapp(
+                        frasePadraoWhatsappGeral(),
+                        profissional.getNome(),
+                        "R$ 0,00"
+                );
+        String urlWhatsapp = WhatsAppNumeroUtil.normalizarDestinatario(telefone)
+                .map(numero -> "https://wa.me/"
+                        + numero
+                        + "?text="
+                        + URLEncoder.encode(mensagem, StandardCharsets.UTF_8))
+                .orElse(null);
+        return new ProfissionalPendenciaPagamentoWhatsappView(
+                profissional.getId(),
+                profissional.getNome(),
+                profissional.getLogin(),
+                telefone,
+                resumo.quantidade(),
+                resumo.temPendencias() ? resumo.valorTotalFormatado() : "Em dia",
+                mensagem,
+                urlWhatsapp,
+                periodicidade,
+                periodicidade.getRotulo(),
+                profissionalBloqueadoPorPendenciaPagamento(profissional),
+                temWhatsapp
+        );
+    }
+
+    private String montarTextoWhatsappPendenciaPagamento(
+            Usuario profissional,
+            ResumoPendenciasPagamentoView resumo
+    ) {
+        String detalhe = avaliarNotificacaoPagamentoProfissional(profissional)
+                .map(PagamentoProfissionalNotificacaoView::getMensagemPainel)
+                .filter(mensagem -> mensagem != null && !mensagem.isBlank())
+                .orElse(resumo.mensagemConvite());
+        if (detalhe == null || detalhe.isBlank()) {
+            detalhe = resumo.mensagemResumo();
+        }
+        return "Olá "
+                + profissional.getNome().trim()
+                + ", "
+                + detalhe
+                + " Acesse Meus pagamentos na Agenda Afetto.";
     }
 
     public boolean profissionalEstaBloqueadoPorPagamento(Long profissionalId) {

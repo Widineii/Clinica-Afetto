@@ -67,6 +67,48 @@ public class WhatsAppMetaApiClient {
         }
     }
 
+    public Map<String, Object> enviarTexto(String destinatarioE164, String texto) {
+        if (!properties.estaProntoParaEnvio()) {
+            throw new WhatsAppMetaException("WhatsApp Meta nao configurado (enabled, token ou phone-number-id).");
+        }
+        if (texto == null || texto.isBlank()) {
+            throw new WhatsAppMetaException("Texto da mensagem vazio.");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("messaging_product", "whatsapp");
+        body.put("to", destinatarioE164);
+        body.put("type", "text");
+        Map<String, Object> conteudo = new LinkedHashMap<>();
+        conteudo.put("preview_url", false);
+        conteudo.put("body", texto);
+        body.put("text", conteudo);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(properties.getAccessToken().trim());
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    properties.resolverUrlEnvioMensagens(),
+                    request,
+                    Map.class
+            );
+            @SuppressWarnings("unchecked")
+            Map<String, Object> corpo = response.getBody();
+            if (corpo == null) {
+                throw new WhatsAppMetaException("Resposta vazia da API Meta WhatsApp.");
+            }
+            log.info("WhatsApp Meta: texto enviado para {}", mascararNumero(destinatarioE164));
+            return corpo;
+        } catch (HttpStatusCodeException ex) {
+            String detalhe = ex.getResponseBodyAsString();
+            log.warn("WhatsApp Meta HTTP {}: {}", ex.getStatusCode().value(), detalhe);
+            throw new WhatsAppMetaException("Falha ao enviar mensagem WhatsApp: " + resumirErro(detalhe), ex);
+        } catch (RestClientException ex) {
+            throw new WhatsAppMetaException("Erro de rede ao chamar API Meta WhatsApp.", ex);
+        }
+    }
+
     private Map<String, Object> montarCorpoTemplate(
             String destinatarioE164,
             String nomeTemplate,

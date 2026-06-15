@@ -23,6 +23,8 @@ public class WhatsAppMetaProperties {
     private String numeroClinicaReferencia = "";
     /** Envia lembrete automatico na vespera (D-1), alinhado ao pagamento. */
     private boolean lembreteVesperaAtivo = true;
+    /** Aviso automatico de pagamento pendente para profissionais (diario/semanal/mensal). */
+    private boolean avisoPagamentoAtivo = false;
 
     public boolean isEnabled() {
         return enabled;
@@ -104,8 +106,20 @@ public class WhatsAppMetaProperties {
         this.lembreteVesperaAtivo = lembreteVesperaAtivo;
     }
 
+    public boolean isAvisoPagamentoAtivo() {
+        return avisoPagamentoAtivo;
+    }
+
+    public void setAvisoPagamentoAtivo(boolean avisoPagamentoAtivo) {
+        this.avisoPagamentoAtivo = avisoPagamentoAtivo;
+    }
+
     public boolean lembreteVesperaPronto() {
         return estaProntoParaEnvio() && lembreteVesperaAtivo;
+    }
+
+    public boolean avisoPagamentoPronto() {
+        return estaProntoParaEnvio() && avisoPagamentoAtivo;
     }
 
     public String resolverUrlEnvioMensagens() {

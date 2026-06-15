@@ -12,6 +12,7 @@ import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.EditarProfissionalForm;
+import com.clinica.sistema.dto.AvisoWhatsappPeriodicidadePainelView;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.PagamentoStatus;
@@ -30,12 +31,16 @@ import com.clinica.sistema.service.RelatorioUsoSitePdfService;
 import com.clinica.sistema.service.RelatorioUsoSiteService;
 import com.clinica.sistema.service.RelatorioUsoSiteSessaoService;
 import com.clinica.sistema.service.TaxaSalaService;
+import com.clinica.sistema.service.WhatsAppAvisoPagamentoService;
+import com.clinica.sistema.service.WhatsAppMensagemPagamentoService;
+import com.clinica.sistema.service.WhatsAppNotificacaoService;
 import com.clinica.sistema.service.UsuarioService;
 import com.clinica.sistema.util.MoedaBrasilUtil;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -53,6 +58,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
@@ -83,6 +89,9 @@ public class AgendamentoController {
     private final RelatorioUsoSiteSessaoService relatorioUsoSiteSessaoService;
     private final RelatorioUsoSitePdfService relatorioUsoSitePdfService;
     private final TaxaSalaService taxaSalaService;
+    private final WhatsAppNotificacaoService whatsAppNotificacaoService;
+    private final WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService;
+    private final WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -102,7 +111,10 @@ public class AgendamentoController {
             RelatorioUsoSiteService relatorioUsoSiteService,
             RelatorioUsoSiteSessaoService relatorioUsoSiteSessaoService,
             RelatorioUsoSitePdfService relatorioUsoSitePdfService,
-            TaxaSalaService taxaSalaService
+            TaxaSalaService taxaSalaService,
+            WhatsAppNotificacaoService whatsAppNotificacaoService,
+            WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService,
+            WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService
     ) {
         this.service = service;
         this.authService = authService;
@@ -122,6 +134,9 @@ public class AgendamentoController {
         this.relatorioUsoSiteSessaoService = relatorioUsoSiteSessaoService;
         this.relatorioUsoSitePdfService = relatorioUsoSitePdfService;
         this.taxaSalaService = taxaSalaService;
+        this.whatsAppNotificacaoService = whatsAppNotificacaoService;
+        this.whatsAppMensagemPagamentoService = whatsAppMensagemPagamentoService;
+        this.whatsAppAvisoPagamentoService = whatsAppAvisoPagamentoService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -677,6 +692,7 @@ public class AgendamentoController {
             case "configuracao" -> "configuracao";
             case "encerramentos" -> "encerramentos";
             case "indicacoes" -> "indicacoes";
+            case "mensagem" -> "mensagem";
             case "uso-site" -> "uso-site";
             case "valores" -> "valores";
             default -> "equipe";
@@ -687,6 +703,19 @@ public class AgendamentoController {
         model.addAttribute("abaAtiva", abaAtiva);
         model.addAttribute("podeVerRelatorioUsoSite", podeVerRelatorioUsoSite);
         model.addAttribute("podeGerenciarValoresConsulta", podeGerenciarValoresConsulta);
+        model.addAttribute("whatsappMetaAtivo", whatsAppNotificacaoService.ativo());
+        var secoesAvisoWhatsapp = whatsAppAvisoPagamentoService.montarPainelCentral();
+        model.addAttribute("secoesAvisoWhatsapp", secoesAvisoWhatsapp);
+        model.addAttribute("msgWhatsappGeral", whatsAppMensagemPagamentoService.resolverTextoGeral());
+        model.addAttribute("avisoPagamentoAutomaticoAtivo", whatsAppAvisoPagamentoService.avisoAutomaticoAtivo());
+        int totalProfissionaisWhatsapp = secoesAvisoWhatsapp.stream()
+                .mapToInt(secao -> secao.profissionais().size())
+                .sum();
+        int totalProfissionaisPendenciaWhatsapp = secoesAvisoWhatsapp.stream()
+                .mapToInt(AvisoWhatsappPeriodicidadePainelView::quantidadeComPendencia)
+                .sum();
+        model.addAttribute("totalProfissionaisWhatsappCentral", totalProfissionaisWhatsapp);
+        model.addAttribute("totalProfissionaisPendenciaWhatsapp", totalProfissionaisPendenciaWhatsapp);
         if (podeGerenciarValoresConsulta) {
             model.addAttribute(
                     "profissionaisValoresConsulta",
@@ -739,6 +768,154 @@ public class AgendamentoController {
             );
         }
         return "redirect:/agendamentos/central-profissionais?aba=uso-site";
+    }
+
+    @PostMapping("/central-profissionais/mensagem/salvar")
+    public ResponseEntity<Void> salvarMensagemWhatsappCentral(@RequestParam String texto) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
+            return ResponseEntity.status(403).build();
+        }
+        whatsAppMensagemPagamentoService.salvarTextoGeral(texto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/central-profissionais/mensagem/abrir-whatsapp")
+    public String abrirWhatsappMensagemCentral(
+            @RequestParam(required = false) Long profissionalId,
+            @RequestParam(required = false) String telefone,
+            @RequestParam(required = false) String nomeProfissional,
+            @RequestParam(required = false) PeriodicidadePagamento periodicidade,
+            @RequestParam(required = false) String textoMensagem,
+            @RequestParam(required = false) String valorTotal,
+            RedirectAttributes redirectAttributes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        redirectAttributes.addFlashAttribute("mensagemTesteTelefone", telefone);
+        redirectAttributes.addFlashAttribute("mensagemTesteNome", nomeProfissional);
+        if (periodicidade != null) {
+            redirectAttributes.addFlashAttribute("mensagemTestePeriodicidade", periodicidade.name());
+        }
+        if (textoMensagem != null && !textoMensagem.isBlank()) {
+            redirectAttributes.addFlashAttribute("mensagemTextoEditado", textoMensagem);
+            if (periodicidade != null) {
+                redirectAttributes.addFlashAttribute(
+                        "mensagemTexto" + periodicidade.name(),
+                        textoMensagem
+                );
+            }
+        }
+        try {
+            String url = montarUrlWhatsappMensagemCentral(
+                    profissionalId,
+                    telefone,
+                    nomeProfissional,
+                    periodicidade,
+                    textoMensagem,
+                    valorTotal
+            );
+            return "redirect:" + url;
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            return "redirect:/agendamentos/central-profissionais?aba=mensagem";
+        }
+    }
+
+    private String montarUrlWhatsappMensagemCentral(
+            Long profissionalId,
+            String telefone,
+            String nomeProfissional,
+            PeriodicidadePagamento periodicidade,
+            String textoMensagem,
+            String valorTotal
+    ) {
+        String preview;
+        String numeroDestino;
+        String nome = nomeProfissional;
+        String total = valorTotal;
+        if (profissionalId != null) {
+            Usuario profissional = pagamentoConsultaService.buscarProfissionalParaAvisoWhatsapp(profissionalId);
+            numeroDestino = profissional.getTelefoneWhatsappFormulario();
+            if (numeroDestino == null || numeroDestino.isBlank()) {
+                throw new RuntimeException(
+                        "Cadastre o WhatsApp do profissional na aba Equipe antes de enviar o aviso."
+                );
+            }
+            nome = profissional.getNome();
+            if (total == null || total.isBlank()) {
+                total = pagamentoConsultaService.montarResumoPendenciasPagamento(profissional).valorTotalFormatado();
+            }
+            if (textoMensagem != null && !textoMensagem.isBlank()) {
+                preview = pagamentoConsultaService.aplicarVariaveisFraseWhatsapp(textoMensagem, nome, total);
+            } else {
+                preview = pagamentoConsultaService.aplicarVariaveisFraseWhatsapp(
+                        whatsAppMensagemPagamentoService.resolverTextoGeral(),
+                        nome,
+                        total
+                );
+            }
+        } else {
+            if (telefone == null || telefone.isBlank()) {
+                throw new RuntimeException("Informe o WhatsApp do destinatario.");
+            }
+            numeroDestino = telefone;
+            String totalTeste = total != null && !total.isBlank() ? total : "R$ 50,00";
+            if (textoMensagem != null && !textoMensagem.isBlank()) {
+                preview = pagamentoConsultaService.aplicarVariaveisFraseWhatsapp(
+                        textoMensagem,
+                        nomeProfissional,
+                        totalTeste
+                );
+            } else {
+                preview = pagamentoConsultaService.aplicarVariaveisFraseWhatsapp(
+                        whatsAppMensagemPagamentoService.resolverTextoGeral(),
+                        nomeProfissional,
+                        totalTeste
+                );
+            }
+        }
+        return whatsAppNotificacaoService.urlWaMe(numeroDestino, preview)
+                .orElseThrow(() -> new RuntimeException(
+                        "WhatsApp invalido. Use DDD + numero (ex.: 31999887766)."
+                ));
+    }
+
+    @PostMapping("/central-profissionais/mensagem/enviar-teste")
+    public String enviarMensagemTesteCentral(
+            @RequestParam(required = false) Long profissionalId,
+            @RequestParam(required = false) String telefone,
+            @RequestParam(required = false) String nomeProfissional,
+            @RequestParam(required = false) PeriodicidadePagamento periodicidade,
+            @RequestParam(required = false) String textoMensagem,
+            @RequestParam(required = false) String valorTotal,
+            RedirectAttributes redirectAttributes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        redirectAttributes.addFlashAttribute("mensagemTesteTelefone", telefone);
+        redirectAttributes.addFlashAttribute("mensagemTesteNome", nomeProfissional);
+        if (periodicidade != null) {
+            redirectAttributes.addFlashAttribute("mensagemTestePeriodicidade", periodicidade.name());
+        }
+        try {
+            String url = montarUrlWhatsappMensagemCentral(
+                    profissionalId,
+                    telefone,
+                    nomeProfissional,
+                    periodicidade,
+                    textoMensagem,
+                    valorTotal
+            );
+            return "redirect:" + url;
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            return "redirect:/agendamentos/central-profissionais?aba=mensagem";
+        }
     }
 
     @PostMapping("/central-profissionais/valores/salvar")

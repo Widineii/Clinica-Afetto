@@ -362,6 +362,153 @@
             line-height: 1.5;
         }
 
+        .mensagem-pagamento-grupo {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px;
+            background: #fff;
+        }
+
+        .mensagem-pagamento-grupo__head {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .mensagem-pagamento-grupo__icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #e0f2f1;
+            color: var(--afetto-teal-dark);
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .mensagem-pagamento-grupo__title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 6px;
+        }
+
+        .mensagem-pagamento-grupo__hint {
+            font-size: 0.88rem;
+            color: #64748b;
+            line-height: 1.45;
+        }
+
+        .mensagem-pagamento-grupo--teste {
+            background: #fafbfc;
+            border-style: dashed;
+        }
+
+        .mensagem-pagamento-grupo--compacto {
+            padding: 14px 16px;
+        }
+
+        .mensagem-pagamento-grupo__head--compacto {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--afetto-teal-dark);
+        }
+
+        .mensagem-pagamento-grupo__head--compacto .mensagem-pagamento-grupo__title {
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .mensagem-secao-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            margin: 0 0 8px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .mensagem-secao-toggle .mensagem-pagamento-grupo__head--compacto {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .mensagem-secao-toggle__hint {
+            font-size: 0.78rem;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        .mensagem-secao-toggle__icon {
+            font-size: 0.75rem;
+            color: #64748b;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .mensagem-secao-toggle.is-open .mensagem-secao-toggle__icon {
+            transform: rotate(180deg);
+        }
+
+        .mensagem-secao-lista {
+            margin-top: 8px;
+        }
+
+        .mensagem-campo-wrap {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .mensagem-salva-indicador {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.72rem;
+            color: #059669;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .mensagem-lista-compacta {
+            margin-top: 4px;
+        }
+
+        .mensagem-frase-preview {
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: #f0fdfa;
+            border: 1px solid #99f6e4;
+        }
+
+        .mensagem-frase-preview__label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #0f766e;
+            margin-bottom: 4px;
+        }
+
+        .mensagem-frase-preview__texto {
+            font-size: 0.88rem;
+            color: #134e4a;
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+
         .central-stat {
             display: inline-flex;
             align-items: center;
@@ -897,6 +1044,14 @@
                     <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
                     Uso do site
                 </a>
+                <a th:href="@{/agendamentos/central-profissionais(aba='mensagem')}"
+                   th:class="${abaCentral == 'mensagem' ? 'central-tab active' : 'central-tab'}"
+                   id="tabMensagem"
+                   data-aba="mensagem"
+                   th:attr="aria-current=${abaCentral == 'mensagem' ? 'page' : null}">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    Mensagem
+                </a>
             </nav>
 
             <section class="central-pane"
@@ -1097,6 +1252,8 @@
 
             <div th:if="${podeGerenciarValoresConsulta == true}"
                  th:replace="~{fragments/central-valores-profissionais-painel :: painel(profissionais=${profissionaisValoresConsulta}, abaCentral=${abaCentral})}"></div>
+
+            <div th:replace="~{fragments/central-mensagem-painel :: painel(abaCentral=${abaCentral}, whatsappMetaAtivo=${whatsappMetaAtivo})}"></div>
 
             <section class="central-pane"
                      id="central-pane-uso-site"
@@ -1438,7 +1595,8 @@
             indicacoes: document.getElementById('central-pane-indicacoes'),
             encerramentos: document.getElementById('central-pane-encerramentos'),
             valores: document.getElementById('central-pane-valores'),
-            'uso-site': document.getElementById('central-pane-uso-site')
+            'uso-site': document.getElementById('central-pane-uso-site'),
+            mensagem: document.getElementById('central-pane-mensagem')
         };
 
         function ativarAbaCentral(aba) {
@@ -1461,11 +1619,14 @@
 
         centralTabs.forEach(function (tab) {
             tab.addEventListener('click', function (evento) {
-                evento.preventDefault();
                 var aba = tab.getAttribute('data-aba');
                 if (!aba) {
                     return;
                 }
+                if (aba === 'mensagem') {
+                    return;
+                }
+                evento.preventDefault();
                 ativarAbaCentral(aba);
                 var destino = tab.getAttribute('href');
                 if (destino && window.history && window.history.replaceState) {

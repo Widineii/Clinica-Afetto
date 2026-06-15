@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -62,9 +64,6 @@ public class WhatsAppNotificacaoService {
         );
     }
 
-    /**
-     * Envia lembrete se {@code telefoneDestino} estiver preenchido e a API estiver ativa.
-     */
     public boolean tentarEnviarLembreteAgendamento(Agendamento agendamento, String telefoneDestino) {
         if (!ativo() || agendamento == null || agendamento.getDataHoraInicio() == null) {
             return false;
@@ -83,6 +82,48 @@ public class WhatsAppNotificacaoService {
             return true;
         } catch (WhatsAppMetaException ex) {
             log.warn("WhatsApp: falha no lembrete do agendamento {}: {}", agendamento.getId(), ex.getMessage());
+            return false;
+        }
+    }
+
+    public String montarTextoLembretePreview(String nomeCliente, LocalDate dataConsulta, LocalTime horaConsulta) {
+        if (nomeCliente == null || nomeCliente.isBlank()) {
+            throw new WhatsAppMetaException("Informe o nome do cliente.");
+        }
+        if (dataConsulta == null || horaConsulta == null) {
+            throw new WhatsAppMetaException("Informe data e horario da consulta.");
+        }
+        return "Olá "
+                + nomeCliente.trim()
+                + ", lembrete da Clínica Afetto: sua consulta é em "
+                + dataConsulta.format(DATA_BR)
+                + " às "
+                + horaConsulta.format(HORA_BR)
+                + ".";
+    }
+
+    public Optional<String> urlWaMe(String telefoneDestino, String texto) {
+        if (texto == null || texto.isBlank()) {
+            return Optional.empty();
+        }
+        return WhatsAppNumeroUtil.normalizarDestinatario(telefoneDestino)
+                .map(numero -> "https://wa.me/"
+                        + numero
+                        + "?text="
+                        + URLEncoder.encode(texto, StandardCharsets.UTF_8));
+    }
+
+    public boolean tentarEnviarTexto(String telefoneDestino, String texto) {
+        if (!ativo() || telefoneDestino == null || telefoneDestino.isBlank() || texto == null || texto.isBlank()) {
+            return false;
+        }
+        try {
+            String destino = WhatsAppNumeroUtil.normalizarDestinatario(telefoneDestino)
+                    .orElseThrow(() -> new WhatsAppMetaException("Telefone do destinatario invalido."));
+            apiClient.enviarTexto(destino, texto);
+            return true;
+        } catch (WhatsAppMetaException ex) {
+            log.warn("WhatsApp: falha ao enviar texto: {}", ex.getMessage());
             return false;
         }
     }

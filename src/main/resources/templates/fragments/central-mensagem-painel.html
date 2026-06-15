@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="lista-profissionais (lista, periodicidadeNome)">
+    <p th:if="${lista == null or #lists.isEmpty(lista)}" class="text-muted small mb-0">
+        Nenhum profissional nesta forma de pagamento.
+    </p>
+    <div class="prof-table-wrap mensagem-lista-compacta" th:if="${lista != null and !#lists.isEmpty(lista)}">
+        <table class="table prof-table table-sm align-middle mb-0">
+            <thead>
+            <tr>
+                <th>Profissional</th>
+                <th class="d-none d-md-table-cell">WhatsApp</th>
+                <th>Situação</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="linha : ${lista}">
+                <td>
+                    <strong th:text="${linha.nome}">Nome</strong>
+                    <div class="text-muted small" th:text="${linha.login}">login</div>
+                </td>
+                <td class="d-none d-md-table-cell">
+                    <span th:if="${linha.temWhatsapp()}" th:text="${linha.telefoneWhatsapp}">31999</span>
+                    <span th:unless="${linha.temWhatsapp()}" class="text-muted">—</span>
+                </td>
+                <td>
+                    <span th:if="${linha.quantidadePendencias() > 0}"
+                          class="badge text-bg-warning"
+                          th:text="${linha.valorTotalFormatado}">R$ 0</span>
+                    <span th:if="${linha.bloqueado()}" class="badge text-bg-danger ms-1">Bloqueado</span>
+                    <span th:if="${linha.quantidadePendencias() == 0 and !linha.bloqueado()}"
+                          class="text-success small">Em dia</span>
+                </td>
+                <td class="text-end">
+                    <button th:if="${linha.temWhatsapp()}"
+                            type="button"
+                            class="btn btn-sm btn-success btn-whatsapp-abrir"
+                            data-acao="profissional"
+                            th:attr="data-telefone=${linha.telefoneWhatsapp},
+                                     data-nome=${linha.nome},
+                                     data-total=${linha.quantidadePendencias() > 0 ? linha.valorTotalFormatado : 'R$ 0,00'},
+                                     data-periodicidade=${periodicidadeNome}">
+                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                        Avisar
+                    </button>
+                    <span th:unless="${linha.temWhatsapp()}" class="text-muted small">Sem WhatsApp</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</th:block>
+
+<th:block th:fragment="secao (dadosSecao)">
+    <article class="mensagem-pagamento-grupo mensagem-pagamento-grupo--compacto mb-3">
+        <div class="mensagem-pagamento-grupo__head mensagem-pagamento-grupo__head--compacto">
+            <i th:class="${dadosSecao.icone}" aria-hidden="true"></i>
+            <h3 class="mensagem-pagamento-grupo__title mb-0">
+                <span th:text="${dadosSecao.titulo}">Diário</span>
+                <span class="badge rounded-pill text-bg-secondary ms-1"
+                      th:text="${#lists.size(dadosSecao.profissionais)}">0</span>
+                <span th:if="${dadosSecao.quantidadeComPendencia() > 0}"
+                      class="badge rounded-pill text-bg-warning ms-1"
+                      th:text="${dadosSecao.quantidadeComPendencia()} + ' pendente(s)'">0 pendente(s)</span>
+            </h3>
+        </div>
+        <p class="mensagem-pagamento-grupo__hint mb-1" th:text="${dadosSecao.horarioEnvio}">Horário</p>
+        <div class="mensagem-frase-preview mb-2">
+            <span class="mensagem-frase-preview__label">Mensagem que será enviada:</span>
+            <p class="mensagem-frase-preview__texto mb-0" th:text="${dadosSecao.fraseExemplo}">Frase</p>
+        </div>
+        <div th:replace="~{fragments/central-mensagem-painel :: lista-profissionais(
+            lista=${dadosSecao.profissionais},
+            periodicidadeNome=${dadosSecao.periodicidade.name()}
+        )}"></div>
+    </article>
+</th:block>
+
+<section th:fragment="painel (abaCentral, whatsappMetaAtivo)"
+         class="central-pane"
+         id="central-pane-mensagem"
+         role="tabpanel"
+         aria-labelledby="tabMensagem"
+         th:hidden="${abaCentral != 'mensagem'}"
+         th:attr="data-url-abrir-whatsapp=@{/agendamentos/central-profissionais/mensagem/abrir-whatsapp},
+                  data-url-salvar=@{/agendamentos/central-profissionais/mensagem/salvar}">
+    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+
+    <div class="central-panel__head mb-3">
+        <div>
+            <h2 class="central-panel__title">Aviso de pagamento pendente</h2>
+            <p class="central-panel__hint mb-0">
+                Uma mensagem para todos. O envio automático ocorre nos horários abaixo, só para quem tiver pendência.
+            </p>
+            <p class="central-panel__hint mb-0 mt-1" th:if="${avisoPagamentoAutomaticoAtivo}">
+                <span class="badge text-bg-success">Envio automático ativo</span>
+            </p>
+            <p class="central-panel__hint mb-0 mt-1" th:unless="${avisoPagamentoAutomaticoAtivo}">
+                <span class="badge text-bg-secondary">Envio automático inativo</span>
+                <span class="text-muted small ms-1">Configure WhatsApp Meta para ativar.</span>
+            </p>
+        </div>
+        <div class="central-stat">
+            <span class="central-stat__num" th:text="${totalProfissionaisWhatsappCentral != null ? totalProfissionaisWhatsappCentral : 0}">0</span>
+            <span>profissionais</span>
+            <span th:if="${totalProfissionaisPendenciaWhatsapp != null and totalProfissionaisPendenciaWhatsapp > 0}"
+                  class="text-muted small ms-1"
+                  th:text="'(' + ${totalProfissionaisPendenciaWhatsapp} + ' com pendência)'">(0 com pendência)</span>
+        </div>
+    </div>
+
+    <div class="mensagem-pagamento-grupo mensagem-pagamento-grupo--compacto mb-3">
+        <label class="form-label fw-semibold mb-1" for="mensagemWhatsappGeral">Mensagem para todos</label>
+        <div class="mensagem-campo-wrap mb-2">
+            <input type="text"
+                   class="form-control form-control-sm mensagem-whatsapp-campo"
+                   id="mensagemWhatsappGeral"
+                   th:value="${msgWhatsappGeral}"
+                   placeholder="Olá {nome}, você tem pendências...">
+            <span class="mensagem-salva-indicador" id="mensagemSalvaGeral" hidden>Salvo</span>
+        </div>
+        <div class="row g-2 align-items-center mensagem-teste-linha">
+            <div class="col-12 col-md-4">
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="mensagemWhatsappTelefoneTeste"
+                       inputmode="numeric"
+                       placeholder="WhatsApp teste"
+                       th:value="${mensagemTesteTelefone != null ? mensagemTesteTelefone : '37998550994'}">
+            </div>
+            <div class="col-12 col-md-3">
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="mensagemWhatsappNomeTeste"
+                       placeholder="Nome teste"
+                       th:value="${mensagemTesteNome != null ? mensagemTesteNome : 'Teste'}">
+            </div>
+            <div class="col-12 col-md-auto">
+                <button type="button"
+                        class="btn btn-success btn-sm btn-whatsapp-abrir"
+                        data-acao="teste">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    Testar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <article th:each="secaoAviso : ${secoesAvisoWhatsapp}"
+             class="mensagem-pagamento-grupo mensagem-pagamento-grupo--compacto mb-3">
+        <button type="button"
+                class="mensagem-secao-toggle"
+                th:attr="aria-expanded='false',
+                         aria-controls=${'mensagem-lista-' + secaoAviso.periodicidade.name()}">
+            <span class="mensagem-pagamento-grupo__head mensagem-pagamento-grupo__head--compacto">
+                <i th:class="${secaoAviso.icone}" aria-hidden="true"></i>
+                <span class="mensagem-pagamento-grupo__title mb-0">
+                    <span th:text="${secaoAviso.titulo}">Diário</span>
+                    <span class="badge rounded-pill text-bg-secondary ms-1"
+                          th:text="${#lists.size(secaoAviso.profissionais)}">0</span>
+                    <span th:if="${secaoAviso.quantidadeComPendencia() > 0}"
+                          class="badge rounded-pill text-bg-warning ms-1"
+                          th:text="${secaoAviso.quantidadeComPendencia()} + ' pendente(s)'">0 pendente(s)</span>
+                </span>
+            </span>
+            <span class="mensagem-secao-toggle__hint">Ver profissionais</span>
+            <i class="fa-solid fa-chevron-down mensagem-secao-toggle__icon" aria-hidden="true"></i>
+        </button>
+        <p class="mensagem-pagamento-grupo__hint mb-1" th:text="${secaoAviso.horarioEnvio}">Horário</p>
+        <div class="mensagem-frase-preview mb-2">
+            <span class="mensagem-frase-preview__label">Mensagem que será enviada:</span>
+            <p class="mensagem-frase-preview__texto mb-0" th:text="${secaoAviso.fraseExemplo}">Frase</p>
+        </div>
+        <div class="mensagem-secao-lista"
+             hidden
+             th:id="${'mensagem-lista-' + secaoAviso.periodicidade.name()}">
+            <p th:if="${#lists.isEmpty(secaoAviso.profissionais)}" class="text-muted small mb-0">
+                Nenhum profissional nesta forma de pagamento.
+            </p>
+            <div class="prof-table-wrap mensagem-lista-compacta" th:if="${!#lists.isEmpty(secaoAviso.profissionais)}">
+                <table class="table prof-table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Profissional</th>
+                        <th class="d-none d-md-table-cell">WhatsApp</th>
+                        <th>Situação</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="linha : ${secaoAviso.profissionais}">
+                        <td>
+                            <strong th:text="${linha.nome}">Nome</strong>
+                            <div class="text-muted small" th:text="${linha.login}">login</div>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <span th:if="${linha.temWhatsapp()}" th:text="${linha.telefoneWhatsapp}">31999</span>
+                            <span th:unless="${linha.temWhatsapp()}" class="text-muted">—</span>
+                        </td>
+                        <td>
+                            <span th:if="${linha.quantidadePendencias() > 0}"
+                                  class="badge text-bg-warning"
+                                  th:text="${linha.valorTotalFormatado}">R$ 0</span>
+                            <span th:if="${linha.bloqueado()}" class="badge text-bg-danger ms-1">Bloqueado</span>
+                            <span th:if="${linha.quantidadePendencias() == 0 and !linha.bloqueado()}"
+                                  class="text-success small">Em dia</span>
+                        </td>
+                        <td class="text-end">
+                            <button th:if="${linha.temWhatsapp()}"
+                                    type="button"
+                                    class="btn btn-sm btn-success btn-whatsapp-abrir"
+                                    data-acao="profissional"
+                                    th:attr="data-telefone=${linha.telefoneWhatsapp},
+                                             data-nome=${linha.nome},
+                                             data-total=${linha.quantidadePendencias() > 0 ? linha.valorTotalFormatado : 'R$ 0,00'},
+                                             data-periodicidade=${secaoAviso.periodicidade.name()}">
+                                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                                Avisar
+                            </button>
+                            <span th:unless="${linha.temWhatsapp()}" class="text-muted small">Sem WhatsApp</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </article>
+
+    <script th:inline="javascript">
+        (function () {
+            var pane = document.getElementById('central-pane-mensagem');
+            if (!pane) return;
+
+            var csrfInput = pane.querySelector('input[name="_csrf"]');
+            var csrfToken = csrfInput ? csrfInput.value : '';
+            var csrfParam = csrfInput ? csrfInput.name : '_csrf';
+            var urlSalvar = pane.getAttribute('data-url-salvar') || '';
+            var urlAbrir = pane.getAttribute('data-url-abrir-whatsapp') || '';
+            var campoGeral = document.getElementById('mensagemWhatsappGeral');
+            var timerSalvar;
+
+            function aplicarVariaveis(texto, nome, total) {
+                return (texto || '')
+                    .replace(/\{nome\}/gi, nome || '')
+                    .replace(/\{total\}/gi, total || '');
+            }
+
+            function atualizarFrasesPreview() {
+                if (!campoGeral) return;
+                var template = campoGeral.value;
+                pane.querySelectorAll('.mensagem-frase-preview__texto').forEach(function (el) {
+                    el.textContent = aplicarVariaveis(template, 'Maria', 'R$ 50,00');
+                });
+            }
+
+            function indicadorSalvo() {
+                var el = document.getElementById('mensagemSalvaGeral');
+                if (!el) return;
+                el.hidden = false;
+                setTimeout(function () { el.hidden = true; }, 1500);
+            }
+
+            function salvarMensagem() {
+                if (!urlSalvar || !campoGeral) return;
+                var body = new URLSearchParams();
+                body.set('texto', campoGeral.value);
+                body.set(csrfParam, csrfToken);
+                fetch(urlSalvar, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: body.toString(),
+                    credentials: 'same-origin'
+                }).then(function (resp) {
+                    if (resp.ok) indicadorSalvo();
+                });
+            }
+
+            if (campoGeral) {
+                campoGeral.addEventListener('input', function () {
+                    atualizarFrasesPreview();
+                    clearTimeout(timerSalvar);
+                    timerSalvar = setTimeout(salvarMensagem, 700);
+                });
+                campoGeral.addEventListener('blur', function () {
+                    clearTimeout(timerSalvar);
+                    salvarMensagem();
+                });
+            }
+
+            pane.addEventListener('click', function (event) {
+                var toggle = event.target.closest('.mensagem-secao-toggle');
+                if (toggle) {
+                    var listaId = toggle.getAttribute('aria-controls');
+                    var lista = listaId ? document.getElementById(listaId) : null;
+                    if (!lista) return;
+                    var aberto = toggle.getAttribute('aria-expanded') === 'true';
+                    var novoEstado = !aberto;
+                    toggle.setAttribute('aria-expanded', novoEstado ? 'true' : 'false');
+                    toggle.classList.toggle('is-open', novoEstado);
+                    lista.hidden = !novoEstado;
+                    var hint = toggle.querySelector('.mensagem-secao-toggle__hint');
+                    if (hint) {
+                        hint.textContent = novoEstado ? 'Ocultar profissionais' : 'Ver profissionais';
+                    }
+                    return;
+                }
+
+                var botao = event.target.closest('.btn-whatsapp-abrir');
+                if (!botao || !campoGeral) return;
+
+                var telefone = botao.getAttribute('data-telefone');
+                var nome = botao.getAttribute('data-nome');
+                var total = botao.getAttribute('data-total');
+                var acao = botao.getAttribute('data-acao');
+
+                if (acao === 'teste') {
+                    telefone = document.getElementById('mensagemWhatsappTelefoneTeste')?.value || '';
+                    nome = document.getElementById('mensagemWhatsappNomeTeste')?.value || 'Teste';
+                    total = 'R$ 50,00';
+                }
+
+                if (!telefone) {
+                    window.alert('Informe o WhatsApp do destinatario.');
+                    return;
+                }
+
+                var params = new URLSearchParams();
+                params.set('telefone', telefone);
+                if (nome) params.set('nomeProfissional', nome);
+                if (total) params.set('valorTotal', total);
+                if (campoGeral.value) params.set('textoMensagem', campoGeral.value);
+                var periodicidade = botao.getAttribute('data-periodicidade');
+                if (periodicidade) params.set('periodicidade', periodicidade);
+
+                window.open(urlAbrir + '?' + params.toString(), '_blank', 'noopener,noreferrer');
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>
