@@ -2372,6 +2372,8 @@
                                     Taxas da clínica
                                 </p>
                                 <ul th:if="${taxasSalaReferenciaLogado != null}">
+                                    <li><strong>Sala 4:</strong>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxaSala4Valor, 1, 2, 'COMMA')}">25,00</span></li>
                                     <li><strong>Avulso:</strong>
                                         R$ <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['AVULSO'], 1, 2, 'COMMA')}">35,00</span></li>
                                     <li><strong>Semanal:</strong>
@@ -2385,6 +2387,8 @@
                                         <span th:text="${#numbers.formatDecimal(taxasSalaReferenciaLogado['INDICACAO_PERCENT'], 1, 0, 'COMMA')}">30</span>% do valor da consulta</li>
                                 </ul>
                                 <ul th:unless="${taxasSalaReferenciaLogado != null}">
+                                    <li><strong>Sala 4:</strong>
+                                        R$ <span th:text="${#numbers.formatDecimal(taxaSala4Valor, 1, 2, 'COMMA')}">25,00</span></li>
                                     <li><strong>Avulso:</strong> R$ 35</li>
                                     <li><strong>Semanal:</strong> R$ 35</li>
                                     <li><strong>Quinzenal:</strong> R$ 35</li>
@@ -3727,12 +3731,30 @@
                 };
             }
 
+            function linhaSala4Referencia() {
+                return '<li><strong>Sala 4:</strong> R$ ' + formatMoneyHint(taxaSala4Atual) + '</li>';
+            }
+
+            function taxasReferenciaComSala4(mapa) {
+                var taxaSala4 = parseMoney(taxaSala4Atual);
+                if (!isSala4() || taxaSala4 <= 0) {
+                    return mapa;
+                }
+                return {
+                    AVULSO: taxaSala4,
+                    SEMANAL: taxaSala4,
+                    QUINZENAL: taxaSala4,
+                    MENSAL: taxaSala4,
+                    INDICACAO_PERCENT: mapa.INDICACAO_PERCENT
+                };
+            }
+
             function atualizarHintValoresProfissional(forcarAtualizacao) {
                 var hint = document.getElementById('valoresConsultaHint');
                 if (!hint) {
                     return;
                 }
-                if (!forcarAtualizacao && hint.getAttribute('data-hint-servidor') === 'true') {
+                if (!forcarAtualizacao && !isSala4() && hint.getAttribute('data-hint-servidor') === 'true') {
                     return;
                 }
                 var titulo = hint.querySelector('.titulo');
@@ -3750,6 +3772,7 @@
                     }
                 }
                 if (mapa && profId && !profissionalSemValores(profId)) {
+                    mapa = taxasReferenciaComSala4(mapa);
                     if (titulo) {
                         titulo.textContent = 'Taxas de sala deste profissional';
                     }
@@ -3758,6 +3781,7 @@
                         pctIndicacao = 30;
                     }
                     ul.innerHTML =
+                        linhaSala4Referencia() +
                         '<li><strong>Avulso:</strong> R$ ' + formatMoneyHint(mapa.AVULSO) + '</li>' +
                         '<li><strong>Semanal:</strong> R$ ' + formatMoneyHint(mapa.SEMANAL) + '</li>' +
                         '<li><strong>Quinzenal:</strong> R$ ' + formatMoneyHint(mapa.QUINZENAL) + '</li>' +
@@ -3769,11 +3793,18 @@
                 if (titulo) {
                     titulo.textContent = 'Taxas da clínica (padrão)';
                 }
+                var taxaSala4 = parseMoney(taxaSala4Atual);
+                var avulso = isSala4() && taxaSala4 > 0 ? taxaSala4 : 35;
+                var semanal = isSala4() && taxaSala4 > 0 ? taxaSala4 : 35;
+                var quinzenal = isSala4() && taxaSala4 > 0 ? taxaSala4 : 35;
+                var mensal = isSala4() && taxaSala4 > 0 ? taxaSala4 : 32;
                 ul.innerHTML =
-                    '<li><strong>Avulso:</strong> R$ 35</li>' +
-                    '<li><strong>Semanal:</strong> R$ 35</li>' +
-                    '<li><strong>Quinzenal:</strong> R$ 35</li>' +
-                    '<li><strong>Mensal:</strong> R$ 32 (1 consulta; remarcar no mês seguinte ou próxima semana)</li>' +
+                    linhaSala4Referencia() +
+                    '<li><strong>Avulso:</strong> R$ ' + formatMoneyHint(avulso) + '</li>' +
+                    '<li><strong>Semanal:</strong> R$ ' + formatMoneyHint(semanal) + '</li>' +
+                    '<li><strong>Quinzenal:</strong> R$ ' + formatMoneyHint(quinzenal) + '</li>' +
+                    '<li><strong>Mensal:</strong> R$ ' + formatMoneyHint(mensal) +
+                    ' (1 consulta; remarcar no mês seguinte ou próxima semana)</li>' +
                     '<li><strong>Indicação:</strong> 30% do valor da consulta</li>';
             }
 
@@ -3937,6 +3968,7 @@
                 salaSelect.addEventListener('change', function () {
                     clinicaManual = false;
                     atualizarClinicaAutomatica();
+                    atualizarHintValoresProfissional(true);
                 });
             }
 
@@ -4008,6 +4040,7 @@
 
             alternarPainelValores();
             atualizarClinicaAutomatica();
+            atualizarHintValoresProfissional(true);
 
             if (formAgendamento) {
                 formAgendamento.addEventListener('submit', prepararValoresParaEnvio);
