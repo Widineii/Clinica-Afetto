@@ -391,16 +391,17 @@ public class StartupDataInitializer implements CommandLineRunner {
         profissional.setLogin(usuarioPadrao.login());
         profissional.setCargo(usuarioPadrao.cargo());
         profissional.setDonaClinica(usuarioPadrao.donaClinica());
-        if (usuarioPadrao.donaClinica()) {
-            profissional.setDeveTrocarSenha(false);
-        }
         if (novo || (seedDemoData && "ROLE_ADMIN".equals(usuarioPadrao.cargo()))) {
             profissional.setSenha(passwordEncoder.encode(usuarioPadrao.senha()));
         }
         if (novo
                 && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()
-                && !"ROLE_ADMIN".equals(usuarioPadrao.cargo())) {
+                && !"ROLE_ADMIN".equals(usuarioPadrao.cargo())
+                && !usuarioPadrao.donaClinica()) {
             profissional.setDeveTrocarSenha(true);
+        }
+        if (usuarioPadrao.donaClinica()) {
+            profissional.setDeveTrocarSenha(false);
         }
         usuarioRepository.save(profissional);
     }

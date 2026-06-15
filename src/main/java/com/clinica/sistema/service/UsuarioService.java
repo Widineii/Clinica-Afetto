@@ -508,7 +508,7 @@ public class UsuarioService {
     }
 
     private boolean deveTrocarSenha(Usuario usuarioLogado) {
-        if (authService.isAdmin(usuarioLogado)) {
+        if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
             return false;
         }
         Usuario atualizado = usuarioRepository.findById(usuarioLogado.getId()).orElse(usuarioLogado);
