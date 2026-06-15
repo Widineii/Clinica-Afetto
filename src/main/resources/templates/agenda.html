@@ -3575,12 +3575,12 @@
                     }
                     return 0;
                 }
+                if (isSala4()) {
+                    return parseMoney(taxaSala4Atual);
+                }
                 var taxaProf = taxaSalaProfissionalAtual();
                 if (taxaProf != null && taxaProf > 0) {
                     return taxaProf;
-                }
-                if (isSala4()) {
-                    return parseMoney(taxaSala4Atual);
                 }
                 if (recorrenciaSelect) {
                     if (recorrenciaSelect.value === 'MENSAL') {
@@ -3692,14 +3692,12 @@
                     atualizarHintValoresProfissional(forcarHint);
                     return;
                 }
-                var taxa = taxaSalaProfissionalAtual();
-                if (taxa == null || taxa <= 0 || !clinicaInput) {
-                    atualizarHintValoresProfissional(forcarHint);
-                    return;
-                }
-                if (!clinicaCobraBloqueadaEdicao()) {
-                    clinicaInput.value = formatMoney(taxa);
-                    clinicaManual = false;
+                if (clinicaInput && !clinicaCobraBloqueadaEdicao()) {
+                    var tarifa = calcularTarifaClinica();
+                    if (tarifa > 0) {
+                        clinicaInput.value = formatMoney(tarifa);
+                        clinicaManual = false;
+                    }
                 }
                 if (recebeInput && recebeInput.value) {
                     atualizarLiquido();
@@ -4009,6 +4007,7 @@
             clinicaManual = false;
 
             alternarPainelValores();
+            atualizarClinicaAutomatica();
 
             if (formAgendamento) {
                 formAgendamento.addEventListener('submit', prepararValoresParaEnvio);

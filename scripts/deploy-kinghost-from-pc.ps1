@@ -30,4 +30,4 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "Deploy concluido. Confira v2.818 em http://${Host}:8080/login"
+Write-Host "Deploy concluido. Confira a versao em http://${Host}:8080/login"
