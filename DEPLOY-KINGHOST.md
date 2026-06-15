@@ -174,3 +174,41 @@ Depois do Nginx, pode fechar a porta 8080 externamente e deixar só 80/443.
 - [ ] Dados migrados do Neon (se aplicável)
 - [ ] Domínio + HTTPS
 - [ ] Desligar Railway/Neon só depois de tudo OK
+
+---
+
+## Deploy automatico (GitHub Actions)
+
+Apos cada `git push` na branch `main`, o workflow **CI** roda os testes. Se passar, o workflow **Deploy KingHost** entra no VPS, atualiza o codigo e faz rebuild.
+
+### Secrets no GitHub (obrigatorio)
+
+Repositorio → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+
+| Secret | Exemplo | Descricao |
+|--------|---------|-----------|
+| `KINGHOST_HOST` | `177.x.x.x` | IP publico do VPS |
+| `KINGHOST_USER` | `root` | Usuario SSH |
+| `KINGHOST_SSH_KEY` | conteudo da chave privada | Chave SSH (sem senha) autorizada no VPS |
+
+**Gerar chave no PC (se ainda nao tiver):**
+
+```bash
+ssh-keygen -t ed25519 -f kinghost-deploy -N ""
+```
+
+Copie `kinghost-deploy.pub` para `/root/.ssh/authorized_keys` no VPS.  
+Cole o conteudo de `kinghost-deploy` (privada) no secret `KINGHOST_SSH_KEY`.
+
+### Disparo manual
+
+GitHub → **Actions** → **Deploy KingHost** → **Run workflow**.
+
+### Fluxo
+
+1. `git push origin main`
+2. **CI** — `./mvnw test`
+3. **Deploy KingHost** — SSH no VPS → `scripts/deploy-kinghost.sh`
+4. Confira a versao no rodape do site (ex.: `2.822`)
+
+Se os secrets nao estiverem configurados, o deploy e ignorado (workflow verde, sem alterar o servidor).
