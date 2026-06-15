@@ -557,6 +557,25 @@
                 btn.setAttribute('aria-disabled', 'true');
             }
 
+            function motivoCancelarBloqueado(selecionado) {
+                if (!selecionado) return 'Selecione uma data acima antes de cancelar.';
+                if (selecionado.getAttribute('data-pode-cancelar') === 'true') return '';
+                if (selecionado.getAttribute('data-pago') === 'true') {
+                    return 'Pagamento já confirmado nesta data. Fale com a recepção para cancelar.';
+                }
+                var badge = selecionado.closest('.meus-agendamentos-data-badge');
+                if (badge && badge.classList.contains('meus-agendamentos-data-badge--passado')) {
+                    return 'Esta data já passou. Fale com a recepção.';
+                }
+                return 'Cancelamento só com mais de 24 horas de antecedência e sem pagamento confirmado.';
+            }
+
+            function motivoRealocarBloqueado(selecionado) {
+                if (!selecionado) return 'Selecione uma data acima antes de realocar.';
+                if (selecionado.getAttribute('data-pode-realocar') === 'true') return '';
+                return 'Realocação indisponível nesta data. Fale com a recepção.';
+            }
+
             function atualizarSelecao() {
                 var selecionado = card.querySelector('.meus-agendamentos-data-radio:checked');
                 card.querySelectorAll('.meus-agendamentos-data-badge--selectable').forEach(function (badge) {
@@ -568,9 +587,11 @@
                         if (podeCancelar) {
                             cancelForm.action = basePath + 'agendamentos/' + selecionado.value + '/cancelar';
                             cancelBtn.disabled = false;
+                            cancelBtn.removeAttribute('title');
                         } else {
                             cancelForm.removeAttribute('action');
                             cancelBtn.disabled = true;
+                            cancelBtn.title = motivoCancelarBloqueado(selecionado);
                         }
                     }
                     if (payBtn) {
@@ -599,15 +620,21 @@
                             relocBtn.href = basePath + 'agendamentos/' + selecionado.value + '/realocar';
                             relocBtn.classList.remove('disabled');
                             relocBtn.removeAttribute('aria-disabled');
+                            relocBtn.removeAttribute('title');
                         } else {
                             desabilitar(relocBtn);
+                            relocBtn.title = motivoRealocarBloqueado(selecionado);
                         }
                     }
                 } else {
                     if (cancelForm) cancelForm.removeAttribute('action');
-                    if (cancelBtn) cancelBtn.disabled = true;
+                    if (cancelBtn) {
+                        cancelBtn.disabled = true;
+                        cancelBtn.title = motivoCancelarBloqueado(null);
+                    }
                     desabilitar(payBtn);
                     desabilitar(relocBtn);
+                    if (relocBtn) relocBtn.title = motivoRealocarBloqueado(null);
                 }
             }
 
@@ -620,6 +647,28 @@
                     });
                 }
             });
+
+            var radioInicial = null;
+            radios.forEach(function (radio) {
+                var badgeData = radio.closest('.meus-agendamentos-data-badge');
+                if (!radioInicial && badgeData && !badgeData.classList.contains('meus-agendamentos-data-badge--passado')) {
+                    radioInicial = radio;
+                }
+            });
+            if (!radioInicial && radios.length > 0) radioInicial = radios[0];
+            if (radioInicial) radioInicial.checked = true;
+            atualizarSelecao();
+
+            if (relocBtn) {
+                relocBtn.addEventListener('click', function (evento) {
+                    if (relocBtn.classList.contains('disabled')) {
+                        evento.preventDefault();
+                        var selecionado = card.querySelector('.meus-agendamentos-data-radio:checked');
+                        var motivo = motivoRealocarBloqueado(selecionado);
+                        if (motivo) window.alert(motivo);
+                    }
+                });
+            }
 
             if (payBtn) {
                 payBtn.addEventListener('click', function (evento) {
@@ -652,6 +701,7 @@
                     var selecionado = card.querySelector('.meus-agendamentos-data-radio:checked');
                     if (!selecionado || !cancelForm.action) {
                         evento.preventDefault();
+                        window.alert(motivoCancelarBloqueado(selecionado));
                         return;
                     }
                     var rotulo = selecionado.getAttribute('data-data-rotulo') || selecionado.value;

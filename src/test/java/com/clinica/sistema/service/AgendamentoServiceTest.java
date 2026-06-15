@@ -504,9 +504,6 @@ class AgendamentoServiceTest {
         agendamento.setDataHoraInicio(LocalDate.now().plusDays(2).atTime(10, 0));
         agendamento.setDataReferenciaMesPagamento(LocalDate.now().plusDays(2).withDayOfMonth(1));
 
-        when(pagamentoConsultaService.resolverPeriodicidade(profissional))
-                .thenReturn(PeriodicidadePagamento.MENSAL);
-
         assertTrue(agendamentoService.podeRealocar(agendamento, profissional));
     }
 
@@ -554,6 +551,21 @@ class AgendamentoServiceTest {
     }
 
     @Test
+    void podeRealocarComPagamentoFuturoNoModoDiario() {
+        profissional.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(3L);
+        agendamento.setProfissional(profissional);
+        agendamento.setFixo(true);
+        agendamento.setTipoRecorrencia("SEMANAL");
+        agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+        agendamento.setDataHoraInicio(LocalDate.now().plusDays(14).atTime(10, 0));
+
+        assertTrue(agendamentoService.podeRealocar(agendamento, profissional));
+    }
+
+    @Test
     void podeRealocarComPagamentoFuturoNoModoSemanal() {
         profissional.setPeriodicidadePagamento(PeriodicidadePagamento.SEMANAL);
 
@@ -563,9 +575,6 @@ class AgendamentoServiceTest {
         agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
         agendamento.setDataHoraInicio(LocalDate.now().plusDays(2).atTime(10, 0));
         agendamento.setDataReferenciaSemanaPagamento(LocalDate.now().plusDays(2));
-
-        when(pagamentoConsultaService.resolverPeriodicidade(profissional))
-                .thenReturn(PeriodicidadePagamento.SEMANAL);
 
         assertTrue(agendamentoService.podeRealocar(agendamento, profissional));
     }

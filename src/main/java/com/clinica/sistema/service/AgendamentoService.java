@@ -1388,17 +1388,11 @@ public class AgendamentoService {
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return true;
         }
-        if (!PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento())) {
+        if (agendamento.getDataHoraInicio() == null
+                || !agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
             return false;
         }
-        if (agendamento.getProfissional() == null) {
-            return false;
-        }
-        PeriodicidadePagamento periodicidade = pagamentoConsultaService.resolverPeriodicidade(
-                agendamento.getProfissional()
-        );
-        return periodicidade == PeriodicidadePagamento.SEMANAL
-                || periodicidade == PeriodicidadePagamento.MENSAL;
+        return PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento());
     }
 
     @Transactional

@@ -169,10 +169,8 @@
             Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas datas pendentes.
         </p>
         <p class="meus-agendamentos-serie-linha__dica mb-2" th:unless="${isAdmin or isDonaClinica}">
-            Selecione uma data para cancelar, pagar ou realocar. Datas que <strong>já passaram</strong> (últimos 14 dias) continuam visíveis na lista enquanto as próximas são renovadas.
-            Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas datas pendentes — pagas não mudam.
-            Encerrar série remove todos os horários de uma vez.
-            Cancelar data: mais de 24h de antecedência e sem pagamento na data (fixo e quinzenal).
+            Toque na <strong>data</strong> (ex.: 29/06) para ativar os botões abaixo. Depois use Cancelar data ou Realocar data.
+            Cancelar: mais de 24h de antecedência e sem pagamento confirmado. Encerrar série remove todos os horários de uma vez.
         </p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
             <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
