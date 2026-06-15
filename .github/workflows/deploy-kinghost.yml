@@ -1,0 +1,34 @@
+name: Deploy KingHost
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar secrets
+        env:
+          KINGHOST_HOST: ${{ secrets.KINGHOST_HOST }}
+          KINGHOST_USER: ${{ secrets.KINGHOST_USER }}
+          KINGHOST_SSH_KEY: ${{ secrets.KINGHOST_SSH_KEY }}
+        run: |
+          if [ -z "$KINGHOST_HOST" ] || [ -z "$KINGHOST_USER" ] || [ -z "$KINGHOST_SSH_KEY" ]; then
+            echo "Configure os secrets KINGHOST_HOST, KINGHOST_USER e KINGHOST_SSH_KEY no GitHub."
+            exit 1
+          fi
+
+      - name: Atualizar app no VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.KINGHOST_HOST }}
+          username: ${{ secrets.KINGHOST_USER }}
+          key: ${{ secrets.KINGHOST_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/clinica-afetto
+            git fetch origin main
+            git pull origin main
+            chmod +x scripts/deploy-kinghost.sh
+            ./scripts/deploy-kinghost.sh
