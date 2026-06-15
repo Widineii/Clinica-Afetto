@@ -1,0 +1,173 @@
+:root {
+    --lgpd-teal-deep: #0a8785;
+    --lgpd-teal: #12c6bd;
+    --lgpd-text: #1a4a4a;
+    --lgpd-text-soft: #4a7575;
+    --lgpd-panel: rgba(255, 255, 255, 0.94);
+    --lgpd-border: rgba(10, 135, 133, 0.18);
+}
+
+html,
+body.lgpd-page {
+    min-height: 100vh;
+    margin: 0;
+}
+
+body.lgpd-page {
+    font-family: "Inter", "Segoe UI", sans-serif;
+    color: var(--lgpd-text);
+    background: #e6faf9;
+}
+
+.lgpd-page__backdrop {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 12% 18%, rgba(18, 198, 189, 0.18) 0%, transparent 42%),
+        radial-gradient(circle at 88% 82%, rgba(10, 135, 133, 0.12) 0%, transparent 38%),
+        linear-gradient(160deg, #e6faf9 0%, #f8fffe 48%, #dff7f5 100%);
+}
+
+.lgpd-page__shell {
+    position: relative;
+    z-index: 1;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.lgpd-card {
+    width: min(560px, 100%);
+    background: var(--lgpd-panel);
+    border: 1px solid var(--lgpd-border);
+    border-radius: 24px;
+    box-shadow: 0 18px 48px rgba(10, 135, 133, 0.12);
+    padding: clamp(1.25rem, 3vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.lgpd-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.lgpd-card__logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    margin: 0 auto 0.25rem;
+}
+
+.lgpd-card__kicker {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lgpd-teal-deep);
+}
+
+.lgpd-card__title {
+    font-size: clamp(1.35rem, 3vw, 1.65rem);
+    font-weight: 700;
+    color: var(--lgpd-text);
+    margin: 0;
+    line-height: 1.25;
+}
+
+.lgpd-card__saudacao {
+    font-size: 0.95rem;
+    color: var(--lgpd-text-soft);
+}
+
+.lgpd-card__body {
+    background: rgba(10, 135, 133, 0.06);
+    border: 1px solid rgba(10, 135, 133, 0.12);
+    border-radius: 16px;
+    padding: 1rem 1.1rem;
+}
+
+.lgpd-card__texto {
+    font-size: 0.96rem;
+    line-height: 1.55;
+    color: var(--lgpd-text);
+    margin-bottom: 0.85rem;
+}
+
+.lgpd-card__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.lgpd-card__check {
+    margin: 0;
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    border: 1px solid rgba(10, 135, 133, 0.16);
+    background: #fff;
+}
+
+.lgpd-card__check .form-check-input {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    border-color: rgba(10, 135, 133, 0.45);
+}
+
+.lgpd-card__check .form-check-input:checked {
+    background-color: var(--lgpd-teal-deep);
+    border-color: var(--lgpd-teal-deep);
+}
+
+.lgpd-card__check .form-check-label {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: var(--lgpd-text);
+    padding-left: 0.35rem;
+}
+
+.lgpd-card__btn {
+    border: none;
+    border-radius: 999px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, var(--lgpd-teal-deep) 0%, var(--lgpd-teal) 100%);
+    box-shadow: 0 10px 24px rgba(10, 135, 133, 0.24);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.lgpd-card__btn:hover:not(:disabled),
+.lgpd-card__btn:focus-visible:not(:disabled) {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(10, 135, 133, 0.28);
+}
+
+.lgpd-card__btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.lgpd-card__hint {
+    font-size: 0.84rem;
+    text-align: center;
+    color: var(--lgpd-text-soft);
+}
+
+@media (max-width: 575.98px) {
+    .lgpd-card {
+        border-radius: 18px;
+        padding: 1.1rem;
+    }
+
+    .lgpd-card__body {
+        padding: 0.9rem;
+    }
+}

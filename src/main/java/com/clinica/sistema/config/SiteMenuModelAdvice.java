@@ -90,6 +90,12 @@ public class SiteMenuModelAdvice {
         if (!model.containsAttribute("podeGerenciarEquipe")) {
             model.addAttribute("podeGerenciarEquipe", authService.podeGerenciarEquipe(usuario));
         }
+        if (!model.containsAttribute("podeGerenciarValoresConsulta")) {
+            model.addAttribute(
+                    "podeGerenciarValoresConsulta",
+                    authService.podeGerenciarValoresConsultaProfissionais(usuario)
+            );
+        }
         if (!model.containsAttribute("podeAcessarGestaoFinanceira")) {
             model.addAttribute(
                     "podeAcessarGestaoFinanceira",

@@ -3,24 +3,38 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.repository.SalaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ValorConsultaServiceTest {
 
     private ValorConsultaService service;
+
+    @Mock
+    private SalaRepository salaRepository;
     private Sala sala1;
     private Sala sala4;
 
     @BeforeEach
     void setUp() {
-        service = new ValorConsultaService();
+        service = new ValorConsultaService(salaRepository);
+        when(salaRepository.findByNomeIgnoreCase("Sala 4")).thenReturn(Optional.empty());
 
         sala1 = new Sala();
         sala1.setId(1L);

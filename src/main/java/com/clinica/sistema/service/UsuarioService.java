@@ -306,7 +306,7 @@ public class UsuarioService {
 
     private void validarGestaoValoresConsulta(Usuario usuarioLogado) {
         if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
-            throw new RuntimeException("Apenas a Polyana pode alterar os valores de consulta.");
+            throw new RuntimeException("Sem permissao para alterar taxas de sala.");
         }
     }
 
@@ -364,7 +364,7 @@ public class UsuarioService {
             Usuario usuarioLogado
     ) {
         if (!authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado)) {
-            throw new RuntimeException("Apenas a Polyana pode alterar a taxa de indicacao.");
+            throw new RuntimeException("Sem permissao para alterar taxa de indicacao.");
         }
         if (form == null || form.getUsuarioId() == null) {
             throw new RuntimeException("Selecione o profissional.");

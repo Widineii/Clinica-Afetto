@@ -8,6 +8,7 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.RelatorioMensalArquivadoRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.service.TaxaSalaService;
 import com.clinica.sistema.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -201,8 +202,17 @@ public class StartupDataInitializer implements CommandLineRunner {
             }
             Sala sala = new Sala();
             sala.setNome(nomeSala);
+            if ("Sala 4".equalsIgnoreCase(nomeSala)) {
+                sala.setTaxaClinica(TaxaSalaService.TAXA_SALA_4_PADRAO);
+            }
             salaRepository.save(sala);
         }
+        salaRepository.findByNomeIgnoreCase("Sala 4").ifPresent(sala -> {
+            if (sala.getTaxaClinica() == null) {
+                sala.setTaxaClinica(TaxaSalaService.TAXA_SALA_4_PADRAO);
+                salaRepository.save(sala);
+            }
+        });
     }
 
     private void garantirAdmin() {

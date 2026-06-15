@@ -101,6 +101,26 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             jdbcTemplate.execute(
                     """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS lgpd_consentimento_em TIMESTAMP
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE salas
+                    ADD COLUMN IF NOT EXISTS taxa_clinica NUMERIC(10,2)
+                    """
+            );
+            jdbcTemplate.update(
+                    """
+                    UPDATE salas
+                    SET taxa_clinica = 25.00
+                    WHERE LOWER(TRIM(nome)) = 'sala 4'
+                      AND taxa_clinica IS NULL
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
                     ALTER TABLE agendamentos
                     ADD COLUMN IF NOT EXISTS data_referencia_semana_pagamento DATE
                     """

@@ -7,6 +7,7 @@ import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.model.Usuario;
 
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.service.LgpdConsentimentoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.UsuarioService;
 
@@ -48,6 +49,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     private final PagamentoConsultaService pagamentoConsultaService;
 
+    private final LgpdConsentimentoService lgpdConsentimentoService;
+
 
 
     public ClinicaAuthenticationSuccessHandler(
@@ -58,7 +61,9 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
             UsuarioService usuarioService,
 
-            PagamentoConsultaService pagamentoConsultaService
+            PagamentoConsultaService pagamentoConsultaService,
+
+            LgpdConsentimentoService lgpdConsentimentoService
 
     ) {
 
@@ -69,6 +74,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         this.usuarioService = usuarioService;
 
         this.pagamentoConsultaService = pagamentoConsultaService;
+
+        this.lgpdConsentimentoService = lgpdConsentimentoService;
 
     }
 
@@ -92,7 +99,10 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
         salvarAcessoNoNavegador(request, response, authentication);
 
-        response.sendRedirect(request.getContextPath() + "/agendamentos/dashboard");
+        String destino = lgpdConsentimentoService.usuarioLogadoPrecisaConsentir()
+                ? "/conta/consentimento-lgpd"
+                : "/agendamentos/dashboard";
+        response.sendRedirect(request.getContextPath() + destino);
 
     }
 

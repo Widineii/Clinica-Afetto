@@ -32,6 +32,7 @@
         <ul class="small text-muted mb-0 ps-3">
             <li>Avulso, semanal e quinzenal: R$ 35,00</li>
             <li>Mensal: R$ 32,00 (1 consulta; remarcar no mês seguinte ou próxima semana)</li>
+            <li>Sala 4: R$ <span th:text="${taxaSala4Input}">25,00</span> (taxa fixa da sala)</li>
             <li>Indicação: 30% do valor da consulta</li>
         </ul>
     </div>
@@ -43,6 +44,7 @@
             atualiza só o campo <strong>Clín.</strong> (taxa de sala) e recalcula o <strong>Líq.</strong>
             — o <strong>Prof.</strong> (valor da consulta) nao muda.
             Avulso usa taxa avulso; semanal usa taxa semanal; quinzenal usa quinzenal; mensal usa mensal.
+            A <strong>Sala 4</strong> usa sempre a taxa fixa informada abaixo, independente do tipo.
             Clique em <strong>Menos</strong> para marcar quem não deve ser alterado.
         </p>
         <form th:action="@{/agendamentos/central-profissionais/valores/salvar-todos}" method="post" class="valores-prof-form valores-prof-form--global">
@@ -91,6 +93,17 @@
                            autocomplete="off"
                            placeholder="32,00"
                            value="32,00">
+                </div>
+                <div class="col-6 col-md-4 col-lg">
+                    <label class="form-label" for="taxaSala4Global">Sala 4 (R$)</label>
+                    <input type="text"
+                           class="form-control valor-moeda-brl"
+                           id="taxaSala4Global"
+                           name="taxaSala4"
+                           inputmode="decimal"
+                           autocomplete="off"
+                           placeholder="25,00"
+                           th:value="${taxaSala4Input != null ? taxaSala4Input : '25,00'}">
                 </div>
                 <div class="col-6 col-md-4 col-lg">
                     <label class="form-label" for="percentualIndicacaoGlobal">Indicação (%)</label>
@@ -149,6 +162,7 @@
                         <span class="valores-prof-linha">semanal = <strong th:text="${linha.valorSemanalFormatado()}">—</strong></span>
                         <span class="valores-prof-linha">quinzenal = <strong th:text="${linha.valorQuinzenalFormatado()}">—</strong></span>
                         <span class="valores-prof-linha">mensal = <strong th:text="${linha.valorMensalFormatado()}">—</strong></span>
+                        <span class="valores-prof-linha">sala 4 = <strong th:text="${taxaSala4Input != null ? taxaSala4Input : '25,00'}">25,00</strong></span>
                         <span class="valores-prof-linha">ind. = <strong th:text="${linha.percentualIndicacaoResumo()}">30%</strong></span>
                     </div>
                     <span class="valores-prof-resumo valores-prof-resumo--desktop d-none d-md-inline">
@@ -159,6 +173,8 @@
                         <span>quinzenal = <strong th:text="${linha.valorQuinzenalFormatado()}">—</strong></span>
                         <span class="valores-prof-sep" aria-hidden="true">·</span>
                         <span>mensal = <strong th:text="${linha.valorMensalFormatado()}">—</strong></span>
+                        <span class="valores-prof-sep" aria-hidden="true">·</span>
+                        <span>sala 4 = <strong th:text="${taxaSala4Input != null ? taxaSala4Input : '25,00'}">25,00</strong></span>
                         <span class="valores-prof-sep" aria-hidden="true">·</span>
                         <span>ind. = <strong th:text="${linha.percentualIndicacaoResumo()}">30%</strong></span>
                     </span>
@@ -213,6 +229,17 @@
                                    placeholder="0,00"
                                    th:id="${'valorMensal-' + linha.id}"
                                    th:value="${linha.valorMensalInput()}">
+                        </div>
+                        <div class="col-6 col-md-4 col-lg">
+                            <label class="form-label" th:attr="for=${'taxaSala4-' + linha.id}">Sala 4 (R$)</label>
+                            <input type="text"
+                                   class="form-control valor-moeda-brl"
+                                   name="taxaSala4"
+                                   inputmode="decimal"
+                                   autocomplete="off"
+                                   placeholder="25,00"
+                                   th:id="${'taxaSala4-' + linha.id}"
+                                   th:value="${taxaSala4Input != null ? taxaSala4Input : '25,00'}">
                         </div>
                         <div class="col-6 col-md-4 col-lg">
                             <label class="form-label" th:attr="for=${'percentualIndicacao-' + linha.id}">Indicação (%)</label>

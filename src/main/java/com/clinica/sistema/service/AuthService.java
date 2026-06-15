@@ -132,12 +132,12 @@ public class AuthService {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }
 
-    /** Valores padrao de consulta por profissional — somente Polyana (dona da clinica). */
+    /** Valores padrao de consulta por profissional — administracao e dona da clinica. */
     public boolean podeGerenciarValoresConsultaProfissionais(Usuario usuario) {
-        return isDonaClinica(usuario) && !isAdmin(usuario);
+        return podeGerenciarEquipe(usuario);
     }
 
-    /** Taxa de sala no formulario da agenda: somente leitura; alteracao na Central (Polyana). */
+    /** Taxa de sala no formulario da agenda: somente leitura; alteracao na Central (gestores). */
     public boolean clinicaCobraEditavelNaAgenda(Usuario usuario) {
         return false;
     }

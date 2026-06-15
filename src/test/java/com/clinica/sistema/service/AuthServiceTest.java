@@ -185,7 +185,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void polyanaGerenciaValoresConsultaProfissionais() {
+    void gestoresGerenciamValoresConsultaProfissionais() {
         Usuario polyana = new Usuario();
         polyana.setLogin("polyana");
         polyana.setCargo("ROLE_PROFISSIONAL");
@@ -199,10 +199,10 @@ class AuthServiceTest {
         admin.setCargo("ROLE_ADMIN");
 
         assertTrue(authService.podeGerenciarValoresConsultaProfissionais(polyana));
+        assertTrue(authService.podeGerenciarValoresConsultaProfissionais(admin));
         assertTrue(authService.elegivelParaGestaoValoresConsulta(julia));
         assertFalse(authService.elegivelParaGestaoValoresConsulta(polyana));
         assertFalse(authService.elegivelParaGestaoValoresConsulta(admin));
-        assertFalse(authService.podeGerenciarValoresConsultaProfissionais(admin));
     }
 
     @Test

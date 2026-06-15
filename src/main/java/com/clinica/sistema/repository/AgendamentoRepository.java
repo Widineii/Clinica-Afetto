@@ -32,6 +32,17 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> listarPorProfissionalParaPropagacaoValores(@Param("profissionalId") Long profissionalId);
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
+    @Query("""
+            SELECT a
+            FROM Agendamento a
+            JOIN a.sala s
+            WHERE LOWER(TRIM(s.nome)) = 'sala 4'
+              AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.PAGO
+            ORDER BY a.dataHoraInicio ASC
+            """)
+    List<Agendamento> listarSala4ParaPropagacaoTaxa();
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findByProfissionalIdOrderByDataHoraInicioAsc(Long profissionalId);
 
     @EntityGraph(attributePaths = {"profissional", "sala"})

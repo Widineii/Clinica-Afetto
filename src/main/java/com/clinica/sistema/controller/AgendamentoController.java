@@ -29,6 +29,7 @@ import com.clinica.sistema.service.RelatorioSemanalService;
 import com.clinica.sistema.service.RelatorioUsoSitePdfService;
 import com.clinica.sistema.service.RelatorioUsoSiteService;
 import com.clinica.sistema.service.RelatorioUsoSiteSessaoService;
+import com.clinica.sistema.service.TaxaSalaService;
 import com.clinica.sistema.service.UsuarioService;
 import com.clinica.sistema.util.MoedaBrasilUtil;
 import jakarta.servlet.http.HttpSession;
@@ -81,6 +82,7 @@ public class AgendamentoController {
     private final RelatorioUsoSiteService relatorioUsoSiteService;
     private final RelatorioUsoSiteSessaoService relatorioUsoSiteSessaoService;
     private final RelatorioUsoSitePdfService relatorioUsoSitePdfService;
+    private final TaxaSalaService taxaSalaService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -99,7 +101,8 @@ public class AgendamentoController {
             NovidadeSiteService novidadeSiteService,
             RelatorioUsoSiteService relatorioUsoSiteService,
             RelatorioUsoSiteSessaoService relatorioUsoSiteSessaoService,
-            RelatorioUsoSitePdfService relatorioUsoSitePdfService
+            RelatorioUsoSitePdfService relatorioUsoSitePdfService,
+            TaxaSalaService taxaSalaService
     ) {
         this.service = service;
         this.authService = authService;
@@ -118,6 +121,7 @@ public class AgendamentoController {
         this.relatorioUsoSiteService = relatorioUsoSiteService;
         this.relatorioUsoSiteSessaoService = relatorioUsoSiteSessaoService;
         this.relatorioUsoSitePdfService = relatorioUsoSitePdfService;
+        this.taxaSalaService = taxaSalaService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -128,6 +132,11 @@ public class AgendamentoController {
     @ModelAttribute("valoresConsultaPorProfissionalJson")
     public String valoresConsultaPorProfissionalJson() {
         return usuarioService.jsonValoresConsultaPadraoPorProfissional();
+    }
+
+    @ModelAttribute("taxaSala4Valor")
+    public BigDecimal taxaSala4Valor() {
+        return taxaSalaService.taxaClinicaSala4();
     }
 
     @ModelAttribute
@@ -678,6 +687,7 @@ public class AgendamentoController {
                     "profissionaisValoresConsulta",
                     usuarioService.listarProfissionaisParaGestaoValoresConsulta()
             );
+            model.addAttribute("taxaSala4Input", taxaSalaService.taxaClinicaSala4Input());
         } else {
             model.addAttribute("profissionaisValoresConsulta", List.of());
         }
@@ -733,6 +743,7 @@ public class AgendamentoController {
             @RequestParam(name = "valorSemanal", required = false) String valorSemanal,
             @RequestParam(name = "valorQuinzenal", required = false) String valorQuinzenal,
             @RequestParam(name = "valorMensal", required = false) String valorMensal,
+            @RequestParam(name = "taxaSala4", required = false) String taxaSala4,
             @RequestParam(name = "percentualTaxaIndicacao", required = false) String percentualTaxaIndicacao,
             RedirectAttributes redirectAttributes
     ) {
@@ -750,14 +761,19 @@ public class AgendamentoController {
             );
             form.setUsuarioId(usuarioId);
             int consultasAtualizadas = usuarioService.atualizarValoresConsultaProfissional(form, usuarioLogado);
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    consultasAtualizadas > 0
-                            ? "Taxas de sala salvas. Consultas não pagas ajustadas (Clin.): "
-                            + consultasAtualizadas
-                            + ". Consultas já pagas não foram alteradas. Recarregue a agenda (F5)."
-                            : "Taxas de sala salvas. Nenhuma consulta não paga precisou de ajuste (Clin. já igual ou locação de turno)."
-            );
+            int consultasSala4 = 0;
+            if (taxaSala4 != null && !taxaSala4.isBlank()) {
+                consultasSala4 = taxaSalaService.atualizarTaxaSala4(parseValorMoedaOpcional(taxaSala4));
+            }
+            String mensagem = consultasAtualizadas > 0
+                    ? "Taxas de sala salvas. Consultas não pagas ajustadas (Clin.): "
+                    + consultasAtualizadas
+                    + ". Consultas já pagas não foram alteradas. Recarregue a agenda (F5)."
+                    : "Taxas de sala salvas. Nenhuma consulta não paga precisou de ajuste (Clin. já igual ou locação de turno).";
+            if (consultasSala4 > 0) {
+                mensagem += " Sala 4: " + consultasSala4 + " consulta(s) não paga(s) ajustada(s).";
+            }
+            redirectAttributes.addFlashAttribute("sucesso", mensagem);
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
@@ -771,6 +787,7 @@ public class AgendamentoController {
             @RequestParam(name = "valorQuinzenal", required = false) String valorQuinzenal,
             @RequestParam(name = "valorMensal", required = false) String valorMensal,
             @RequestParam(name = "percentualTaxaIndicacao", required = false) String percentualTaxaIndicacao,
+            @RequestParam(name = "taxaSala4", required = false) String taxaSala4,
             @RequestParam(name = "excluirUsuarioIds", required = false) List<Long> excluirUsuarioIds,
             RedirectAttributes redirectAttributes
     ) {
@@ -792,11 +809,18 @@ public class AgendamentoController {
                             usuarioLogado,
                             excluirUsuarioIds
                     );
+            int consultasSala4 = 0;
+            if (taxaSala4 != null && !taxaSala4.isBlank()) {
+                consultasSala4 = taxaSalaService.atualizarTaxaSala4(parseValorMoedaOpcional(taxaSala4));
+            }
             String mensagem = "Taxas de sala alteradas para "
                     + resultado.profissionaisAtualizados()
                     + " profissional(is). Consultas não pagas ajustadas (Clin.): "
                     + resultado.consultasAtualizadas()
                     + ". Consultas já pagas não foram alteradas. Recarregue a agenda (F5).";
+            if (consultasSala4 > 0) {
+                mensagem += " Sala 4: " + consultasSala4 + " consulta(s) não paga(s) ajustada(s).";
+            }
             if (resultado.profissionaisExcluidos() > 0) {
                 mensagem += " "
                         + resultado.profissionaisExcluidos()

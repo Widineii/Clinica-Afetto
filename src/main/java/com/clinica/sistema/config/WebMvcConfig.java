@@ -9,18 +9,22 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final PrimeiroAcessoInterceptor primeiroAcessoInterceptor;
+    private final LgpdConsentimentoInterceptor lgpdConsentimentoInterceptor;
     private final PerfilFotoProperties perfilFotoProperties;
 
     public WebMvcConfig(
             PrimeiroAcessoInterceptor primeiroAcessoInterceptor,
+            LgpdConsentimentoInterceptor lgpdConsentimentoInterceptor,
             PerfilFotoProperties perfilFotoProperties
     ) {
         this.primeiroAcessoInterceptor = primeiroAcessoInterceptor;
+        this.lgpdConsentimentoInterceptor = lgpdConsentimentoInterceptor;
         this.perfilFotoProperties = perfilFotoProperties;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(lgpdConsentimentoInterceptor);
         registry.addInterceptor(primeiroAcessoInterceptor);
     }
 

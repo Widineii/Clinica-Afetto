@@ -3351,6 +3351,7 @@
     var clinicaCobraSomenteLeitura = /*[[${!clinicaCobraEditavelNaAgenda}]]*/ true;
     var podeAcompanharGanhosConsultaPropria = /*[[${podeAcompanharGanhosConsultaPropria}]]*/ false;
     var idProfissionalPolyana = /*[[${podeAcompanharGanhosConsultaPropria ? usuarioLogado.id : null}]]*/ null;
+    var taxaSala4Atual = /*[[${taxaSala4Valor}]]*/ 25;
 
     document.addEventListener('DOMContentLoaded', function () {
         (function initFormularioAgendamentoValores() {
@@ -3579,7 +3580,7 @@
                     return taxaProf;
                 }
                 if (isSala4()) {
-                    return 25;
+                    return parseMoney(taxaSala4Atual);
                 }
                 if (recorrenciaSelect) {
                     if (recorrenciaSelect.value === 'MENSAL') {

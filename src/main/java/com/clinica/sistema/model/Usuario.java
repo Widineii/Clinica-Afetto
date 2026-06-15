@@ -36,6 +36,10 @@ public class Usuario {
     @Column(name = "ultimo_acesso_em")
     private LocalDateTime ultimoAcessoEm;
 
+    /** Data/hora em que o usuario aceitou o consentimento LGPD do sistema. */
+    @Column(name = "lgpd_consentimento_em")
+    private LocalDateTime lgpdConsentimentoEm;
+
     /** Taxa de sala padrao por tipo de agendamento (Central → Valores). Nao e o valor que o cliente paga ao profissional. */
     @Column(name = "valor_consulta_avulso", precision = 10, scale = 2)
     private BigDecimal valorConsultaAvulso;

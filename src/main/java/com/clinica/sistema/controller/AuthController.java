@@ -6,6 +6,7 @@ import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.security.AcessoSalvoCookies;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.LgpdConsentimentoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.Cookie;
@@ -31,15 +32,18 @@ public class AuthController {
     private final AuthService authService;
     private final UsuarioService usuarioService;
     private final PagamentoConsultaService pagamentoConsultaService;
+    private final LgpdConsentimentoService lgpdConsentimentoService;
 
     public AuthController(
             AuthService authService,
             UsuarioService usuarioService,
-            PagamentoConsultaService pagamentoConsultaService
+            PagamentoConsultaService pagamentoConsultaService,
+            LgpdConsentimentoService lgpdConsentimentoService
     ) {
         this.authService = authService;
         this.usuarioService = usuarioService;
         this.pagamentoConsultaService = pagamentoConsultaService;
+        this.lgpdConsentimentoService = lgpdConsentimentoService;
     }
 
     @ModelAttribute
@@ -87,6 +91,9 @@ public class AuthController {
         if (authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken)) {
+            if (lgpdConsentimentoService.usuarioLogadoPrecisaConsentir()) {
+                return "redirect:/conta/consentimento-lgpd";
+            }
             return "redirect:/agendamentos/dashboard";
         }
 

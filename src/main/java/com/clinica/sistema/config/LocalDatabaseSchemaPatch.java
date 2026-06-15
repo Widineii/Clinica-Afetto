@@ -49,6 +49,9 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaUsuariosSeNecessario("percentual_taxa_indicacao", "DECIMAL(5,2)");
             adicionarColunaUsuariosSeNecessario("telefone_whatsapp", "VARCHAR(20)");
             adicionarColunaUsuariosSeNecessario("foto_perfil", "VARCHAR(120)");
+            adicionarColunaUsuariosSeNecessario("lgpd_consentimento_em", "TIMESTAMP");
+            adicionarColunaSalasSeNecessario("taxa_clinica", "DECIMAL(10,2)");
+            preencherTaxaSala4Padrao();
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");
             adicionarColunaSeNecessario("data_referencia_mes_pagamento", "DATE");
             adicionarColunaSeNecessario("historico_datas_mensal", "VARCHAR(120)");
@@ -91,6 +94,33 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
         if (existe != null && existe == 0) {
             jdbcTemplate.execute("ALTER TABLE usuarios ADD COLUMN " + coluna + " " + tipoSql);
         }
+    }
+
+    private void adicionarColunaSalasSeNecessario(String coluna, String tipoSql) {
+        Integer existe = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE UPPER(TABLE_NAME) = 'SALAS'
+                  AND UPPER(COLUMN_NAME) = ?
+                """,
+                Integer.class,
+                coluna.toUpperCase()
+        );
+        if (existe != null && existe == 0) {
+            jdbcTemplate.execute("ALTER TABLE salas ADD COLUMN " + coluna + " " + tipoSql);
+        }
+    }
+
+    private void preencherTaxaSala4Padrao() {
+        jdbcTemplate.update(
+                """
+                UPDATE salas
+                SET taxa_clinica = 25.00
+                WHERE UPPER(TRIM(nome)) = 'SALA 4'
+                  AND taxa_clinica IS NULL
+                """
+        );
     }
 
     private void preencherHistoricoMensalInicial() {

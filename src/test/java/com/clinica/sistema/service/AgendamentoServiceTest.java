@@ -83,11 +83,17 @@ class AgendamentoServiceTest {
     @Mock
     private PagamentoConsultaService pagamentoConsultaService;
 
-    @Spy
-    private ValorConsultaService valorConsultaService = new ValorConsultaService();
+    private ValorConsultaService valorConsultaService = criarValorConsultaService();
 
     @Spy
     private FeriadoBeloHorizonteService feriadoBeloHorizonteService = new FeriadoBeloHorizonteService();
+
+    private static ValorConsultaService criarValorConsultaService() {
+        SalaRepository salaRepository = org.mockito.Mockito.mock(SalaRepository.class);
+        org.mockito.Mockito.when(salaRepository.findByNomeIgnoreCase("Sala 4"))
+                .thenReturn(java.util.Optional.empty());
+        return new ValorConsultaService(salaRepository);
+    }
 
     private AgendamentoService agendamentoService;
 

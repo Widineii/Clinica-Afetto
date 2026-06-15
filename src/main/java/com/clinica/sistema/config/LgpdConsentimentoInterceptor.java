@@ -1,46 +1,43 @@
 package com.clinica.sistema.config;
 
-import com.clinica.sistema.service.UsuarioService;
+import com.clinica.sistema.service.LgpdConsentimentoService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
-public class PrimeiroAcessoInterceptor implements HandlerInterceptor {
+public class LgpdConsentimentoInterceptor implements HandlerInterceptor {
 
-    private final UsuarioService usuarioService;
+    private final LgpdConsentimentoService lgpdConsentimentoService;
 
-    public PrimeiroAcessoInterceptor(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
+    public LgpdConsentimentoInterceptor(LgpdConsentimentoService lgpdConsentimentoService) {
+        this.lgpdConsentimentoService = lgpdConsentimentoService;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
-        if (!"GET".equalsIgnoreCase(request.getMethod())) {
-            return true;
-        }
         String uri = request.getRequestURI();
-        if (uri == null || podeAcessarComTrocaSenhaPendente(uri)) {
+        if (uri == null || podeAcessarSemConsentimento(uri)) {
             return true;
         }
-        if (!usuarioService.usuarioLogadoDeveTrocarSenha()) {
+        if (!lgpdConsentimentoService.usuarioLogadoPrecisaConsentir()) {
             return true;
         }
-        response.sendRedirect(request.getContextPath() + "/agendamentos/dashboard");
+        response.sendRedirect(request.getContextPath() + "/conta/consentimento-lgpd");
         return false;
     }
 
-    private boolean podeAcessarComTrocaSenhaPendente(String uri) {
+    private boolean podeAcessarSemConsentimento(String uri) {
         return uri.equals("/")
                 || uri.startsWith("/login")
+                || uri.startsWith("/logout")
                 || uri.startsWith("/error")
                 || uri.startsWith("/css/")
                 || uri.startsWith("/js/")
                 || uri.startsWith("/images/")
                 || uri.startsWith("/actuator/health")
-                || uri.startsWith("/conta/consentimento-lgpd")
-                || uri.startsWith("/agendamentos/dashboard");
+                || uri.startsWith("/conta/consentimento-lgpd");
     }
 }

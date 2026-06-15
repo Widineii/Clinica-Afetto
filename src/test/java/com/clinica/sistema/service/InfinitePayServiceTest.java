@@ -2,24 +2,31 @@ package com.clinica.sistema.service;
 
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
+import com.clinica.sistema.repository.SalaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 
 class InfinitePayServiceTest {
 
     private InfinitePayService service;
     private Sala sala1;
     private Sala sala4;
+    private SalaRepository salaRepository;
 
     @BeforeEach
     void setUp() {
+        salaRepository = Mockito.mock(SalaRepository.class);
+        when(salaRepository.findByNomeIgnoreCase("Sala 4")).thenReturn(Optional.empty());
         service = new InfinitePayService(
                 new com.clinica.sistema.config.InfinitePayProperties(),
-                new ValorConsultaService()
+                new ValorConsultaService(salaRepository)
         );
 
         sala1 = new Sala();
@@ -64,7 +71,7 @@ class InfinitePayServiceTest {
         com.clinica.sistema.config.InfinitePayProperties props =
                 new com.clinica.sistema.config.InfinitePayProperties();
         props.setHandle("afettopsicologia");
-        InfinitePayService svc = new InfinitePayService(props, new ValorConsultaService());
+        InfinitePayService svc = new InfinitePayService(props, new ValorConsultaService(salaRepository));
 
         assertEquals(
                 "1RxANX7tdF",

@@ -5,7 +5,9 @@ import com.clinica.sistema.dto.TurnoLocacao;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Sala;
+import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.repository.SalaRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,6 +29,12 @@ public class ValorConsultaService {
     public static final BigDecimal CLINICA_AVULSO_QUINZENAL = CLINICA_AVULSO;
     public static final BigDecimal INDICACAO_PERCENTUAL = new BigDecimal("0.30");
     public static final BigDecimal INDICACAO_PERCENTUAL_PADRAO = new BigDecimal("30.00");
+
+    private final SalaRepository salaRepository;
+
+    public ValorConsultaService(SalaRepository salaRepository) {
+        this.salaRepository = salaRepository;
+    }
 
     /** Taxa de sala padrao do sistema (avulso/semanal/quinzenal 35; mensal 32). */
     public static BigDecimal taxaSalaPadraoSistema(String recorrencia) {
@@ -114,7 +122,7 @@ public class ValorConsultaService {
             return CLINICA_TURNO_LOCACAO;
         }
         if (isSala4(sala)) {
-            return CLINICA_SALA_4;
+            return taxaClinicaSala4Atual();
         }
         if ("SEMANAL".equalsIgnoreCase(recorrencia)) {
             return CLINICA_FIXO_SEMANAL;
@@ -222,6 +230,9 @@ public class ValorConsultaService {
         if (TurnoLocacao.isTurno(turnoLocacao)) {
             return CLINICA_TURNO_LOCACAO;
         }
+        if (isSala4(sala)) {
+            return taxaClinicaSala4Atual();
+        }
         return taxaSalaCadastradaProfissional(profissional, recorrencia)
                 .orElseGet(() -> calcularTarifaClinicaPadrao(sala, recorrencia, turnoLocacao));
     }
@@ -236,6 +247,14 @@ public class ValorConsultaService {
         return sala != null
                 && sala.getNome() != null
                 && sala.getNome().trim().equalsIgnoreCase("Sala 4");
+    }
+
+    public BigDecimal taxaClinicaSala4Atual() {
+        return salaRepository.findByNomeIgnoreCase("Sala 4")
+                .map(Sala::getTaxaClinica)
+                .filter(valor -> valor != null && valor.signum() > 0)
+                .map(valor -> valor.setScale(2, RoundingMode.HALF_UP))
+                .orElse(CLINICA_SALA_4);
     }
 
     public void copiarValores(Agendamento destino, Agendamento origem) {
