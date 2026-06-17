@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.824-central-corrigida",
+                        "2.824",
+                        "Central dos profissionais corrigida",
+                        "Correção ao abrir a Central (admin/Polyana): a tela de mensagens WhatsApp não quebra mais por tabela ausente no banco de produção.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        824,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.823-realocacao-retroativa",
                         "2.823",
                         "Realocação retroativa corrigida",

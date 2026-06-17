@@ -163,6 +163,7 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                     """
             );
             atualizarCheckStatusPagamento();
+            criarTabelaWhatsappMensagemPagamentoSeNecessario();
             log.info("Schema PostgreSQL: colunas de pagamento, usuarios e status_pagamento verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
@@ -210,5 +211,17 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                 """
         );
         log.info("Constraint agendamentos_status_pagamento_check atualizada com AGUARDANDO_APROVACAO_INDICACAO.");
+    }
+
+    private void criarTabelaWhatsappMensagemPagamentoSeNecessario() {
+        jdbcTemplate.execute(
+                """
+                CREATE TABLE IF NOT EXISTS whatsapp_mensagem_pagamento (
+                    periodicidade VARCHAR(20) PRIMARY KEY,
+                    texto VARCHAR(2000) NOT NULL
+                )
+                """
+        );
+        log.info("Schema PostgreSQL: tabela whatsapp_mensagem_pagamento verificada.");
     }
 }

@@ -89,6 +89,9 @@ public class GlobalControllerExceptionHandler {
         if (uri.startsWith("/login") || uri.startsWith("/logout")) {
             return "/login";
         }
+        if (uri.contains("/central-profissionais")) {
+            return "/agendamentos/central-profissionais?aba=equipe";
+        }
         return "/agendamentos/dashboard";
     }
 
@@ -105,6 +108,9 @@ public class GlobalControllerExceptionHandler {
         }
         if (uri.startsWith("/senha")) {
             return "senha";
+        }
+        if (uri.contains("/central-profissionais")) {
+            return "central";
         }
         return "agendamento";
     }

@@ -35,10 +35,14 @@ public class WhatsAppMensagemPagamentoService {
 
     @Transactional(readOnly = true)
     public String resolverTextoGeral() {
-        return repository.findById(PeriodicidadePagamento.DIARIO)
-                .map(WhatsAppMensagemPagamento::getTexto)
-                .filter(texto -> !texto.isBlank())
-                .orElseGet(pagamentoConsultaService::frasePadraoWhatsappGeral);
+        try {
+            return repository.findById(PeriodicidadePagamento.DIARIO)
+                    .map(WhatsAppMensagemPagamento::getTexto)
+                    .filter(texto -> !texto.isBlank())
+                    .orElseGet(pagamentoConsultaService::frasePadraoWhatsappGeral);
+        } catch (RuntimeException ex) {
+            return pagamentoConsultaService.frasePadraoWhatsappGeral();
+        }
     }
 
     @Transactional(readOnly = true)
