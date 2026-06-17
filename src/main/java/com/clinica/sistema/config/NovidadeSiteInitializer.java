@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.825-forma-pagamento-agenda",
+                        "2.825",
+                        "Forma de pagamento na agenda",
+                        "Profissionais veem o card Diário, Semanal ou Mensal logo abaixo do menu, sem precisar abrir Meus pagamentos.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        825,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.824-central-corrigida",
                         "2.824",
                         "Central dos profissionais corrigida",

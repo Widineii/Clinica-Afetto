@@ -3,6 +3,7 @@ package com.clinica.sistema.config;
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
 import com.clinica.sistema.dto.TrocarSenhaForm;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.service.AuthService;
@@ -128,6 +129,23 @@ public class SiteMenuModelAdvice {
         }
         if (!model.containsAttribute("podeEscolherFormaPagamento")) {
             model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuario));
+        }
+        if (authService.podeEscolherFormaPagamento(usuario)) {
+            if (!model.containsAttribute("periodicidadesPagamento")) {
+                model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
+            }
+            if (!model.containsAttribute("podeAlterarPeriodicidadePropria")) {
+                model.addAttribute(
+                        "podeAlterarPeriodicidadePropria",
+                        usuarioService.podeAlterarPeriodicidadePropria(usuario)
+                );
+            }
+            if (!model.containsAttribute("mensagemBloqueioPeriodicidade")) {
+                model.addAttribute(
+                        "mensagemBloqueioPeriodicidade",
+                        usuarioService.mensagemBloqueioPeriodicidade(usuario)
+                );
+            }
         }
         if (!model.containsAttribute("periodicidadePagamento")) {
             model.addAttribute("periodicidadePagamento", pagamentoConsultaService.resolverPeriodicidade(usuario));
