@@ -107,6 +107,12 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             jdbcTemplate.execute(
                     """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS email VARCHAR(120)
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
                     ALTER TABLE salas
                     ADD COLUMN IF NOT EXISTS taxa_clinica NUMERIC(10,2)
                     """
@@ -164,6 +170,7 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             atualizarCheckStatusPagamento();
             criarTabelaWhatsappMensagemPagamentoSeNecessario();
+            criarTabelaSenhaRecuperacaoSeNecessario();
             log.info("Schema PostgreSQL: colunas de pagamento, usuarios e status_pagamento verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
@@ -223,5 +230,21 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                 """
         );
         log.info("Schema PostgreSQL: tabela whatsapp_mensagem_pagamento verificada.");
+    }
+
+    private void criarTabelaSenhaRecuperacaoSeNecessario() {
+        jdbcTemplate.execute(
+                """
+                CREATE TABLE IF NOT EXISTS senha_recuperacao (
+                    id BIGSERIAL PRIMARY KEY,
+                    usuario_id BIGINT NOT NULL,
+                    codigo_hash VARCHAR(120) NOT NULL,
+                    criado_em TIMESTAMP NOT NULL,
+                    expira_em TIMESTAMP NOT NULL,
+                    usado_em TIMESTAMP
+                )
+                """
+        );
+        log.info("Schema PostgreSQL: tabela senha_recuperacao verificada.");
     }
 }

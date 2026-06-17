@@ -36,6 +36,9 @@ build/
 run.log
 run.err.log
 cookies.txt
+scripts/kinghost.env
+scripts/local-mail.env
+dashboard-live.html
 local-run.log
 local-run.err.log
 data/

@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.826-recuperacao-senha",
+                        "2.826",
+                        "Esqueci minha senha por e-mail",
+                        "Na tela de login, informe login e e-mail para receber um codigo e redefinir a senha.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        826,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.825-forma-pagamento-agenda",
                         "2.825",
                         "Forma de pagamento na agenda",

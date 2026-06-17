@@ -40,6 +40,11 @@ services:
       APP_INFINITEPAY_BASE_URL: ${APP_INFINITEPAY_BASE_URL:-http://SEU_IP:8080}
       APP_INFINITEPAY_HANDLE: ${APP_INFINITEPAY_HANDLE:-afettopsicologia}
       PAGAMENTO_WEBHOOK_SECRET: ${PAGAMENTO_WEBHOOK_SECRET:-}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-widineimartins4@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      RECUPERACAO_SENHA_MODO_CONSOLA: ${RECUPERACAO_SENHA_MODO_CONSOLA:-true}
     ports:
       - "8080:8080"
     restart: unless-stopped

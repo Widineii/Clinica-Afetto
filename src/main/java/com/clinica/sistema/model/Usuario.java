@@ -57,6 +57,10 @@ public class Usuario {
     @Column(name = "percentual_taxa_indicacao", precision = 5, scale = 2)
     private BigDecimal percentualTaxaIndicacao;
 
+    /** E-mail para recuperacao de senha e avisos futuros. */
+    @Column(length = 120)
+    private String email;
+
     /** WhatsApp do profissional (DDI 55 + DDD + numero) para avisos da clinica, ex.: pagamento pendente. */
     @Column(name = "telefone_whatsapp", length = 20)
     private String telefoneWhatsapp;

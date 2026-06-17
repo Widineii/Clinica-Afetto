@@ -108,11 +108,8 @@
                             <input class="form-check-input" type="checkbox" id="lembrarAcesso" name="remember-me" value="true">
                             <label class="form-check-label" for="lembrarAcesso">Lembrar meu acesso</label>
                         </div>
-                        <a class="link-forgot" href="#" id="linkEsqueciSenha">Esqueci minha senha</a>
+                        <a class="link-forgot" th:href="@{/senha/esqueci}">Esqueci minha senha</a>
                     </div>
-                    <p class="forgot-hint d-none" id="hintEsqueciSenha">
-                        Para redefinir a senha, fale com a administração da clínica.
-                    </p>
 
                     <div class="d-grid">
                         <button type="submit" class="btn btn-enter" id="btnEntrar">
@@ -219,14 +216,6 @@
         });
     }
 
-    var linkEsqueci = document.getElementById('linkEsqueciSenha');
-    var hintEsqueci = document.getElementById('hintEsqueciSenha');
-    if (linkEsqueci && hintEsqueci) {
-        linkEsqueci.addEventListener('click', function (evento) {
-            evento.preventDefault();
-            hintEsqueci.classList.toggle('d-none');
-        });
-    }
 })();
 </script>
 </body>
