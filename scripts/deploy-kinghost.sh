@@ -21,6 +21,9 @@ git log -1 --oneline
 echo "==> Rebuild e restart (pode levar alguns minutos)..."
 docker compose -f "$COMPOSE_FILE" up -d --build
 
+echo "==> E-mail recuperacao de senha (se configurado no .env):"
+docker compose -f "$COMPOSE_FILE" logs app 2>/dev/null | grep -i "Recuperacao de senha" | tail -1 || true
+
 echo "==> Health:"
 sleep 5
 curl -sf "http://localhost:8080/actuator/health" || echo "Aguardando app subir — veja logs abaixo."

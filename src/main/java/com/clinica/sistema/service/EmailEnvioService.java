@@ -51,6 +51,11 @@ public class EmailEnvioService {
 
         if (deveUsarModoConsola()) {
             log.warn("[RecuperacaoSenha] modo consola — destino={} codigo={}", destinatario, codigo);
+            if (!recuperacaoSenhaProperties.isModoConsola()) {
+                throw new RuntimeException(
+                        "Envio de e-mail indisponivel no servidor. Informe a administracao (MAIL_PASSWORD / SMTP)."
+                );
+            }
             return;
         }
 

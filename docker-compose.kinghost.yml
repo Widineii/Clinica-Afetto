@@ -44,7 +44,7 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-widineimartins4@gmail.com}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      RECUPERACAO_SENHA_MODO_CONSOLA: ${RECUPERACAO_SENHA_MODO_CONSOLA:-true}
+      RECUPERACAO_SENHA_MODO_CONSOLA: ${RECUPERACAO_SENHA_MODO_CONSOLA:-false}
     ports:
       - "8080:8080"
     restart: unless-stopped
