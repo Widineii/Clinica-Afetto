@@ -155,9 +155,6 @@ class AgendamentoServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         mockSalaLivre(sala.getId());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -190,9 +187,6 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
@@ -209,17 +203,14 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
 
         assertEquals(Boolean.TRUE, agendamento.getFixo());
         verify(agendamentoRepository, times(2)).saveAll(any());
-        verify(agendamentoRepository, times(12)).findFirstOcupacaoAtivaNoHorarioExceto(
-                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+        verify(agendamentoRepository, times(12)).findCandidatosConflitoSalaNoHorario(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
         );
     }
 
@@ -232,17 +223,14 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
 
         assertEquals("QUINZENAL", agendamento.getRecorrencia());
         assertEquals(Boolean.TRUE, agendamento.getFixo());
-        verify(agendamentoRepository, times(6)).findFirstOcupacaoAtivaNoHorarioExceto(
-                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+        verify(agendamentoRepository, times(6)).findCandidatosConflitoSalaNoHorario(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
         );
     }
 
@@ -255,9 +243,6 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
@@ -265,8 +250,8 @@ class AgendamentoServiceTest {
         assertEquals("MENSAL", agendamento.getRecorrencia());
         assertEquals(Boolean.FALSE, agendamento.getFixo());
         assertEquals(null, agendamento.getSerieFixaId());
-        verify(agendamentoRepository, times(1)).findFirstOcupacaoAtivaNoHorarioExceto(
-                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L)
+        verify(agendamentoRepository, times(1)).findCandidatosConflitoSalaNoHorario(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
         );
     }
 
@@ -464,27 +449,27 @@ class AgendamentoServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(2L)).thenReturn(Optional.of(sala));
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.of(existente));
+        when(agendamentoRepository.findCandidatosConflitoProfissionalNoHorario(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class), eq(-1L), any(LocalDateTime.class)
+        )).thenReturn(List.of(existente));
+        when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(existente)).thenReturn(true);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.salvar(form, profissional));
 
-        assertEquals("Você já tem um agendamento nesse horário na Sala 1.", exception.getMessage());
+        assertTrue(exception.getMessage().contains("Sala 1"));
+        assertTrue(exception.getMessage().contains("já tem consulta"));
         verify(agendamentoRepository, never()).save(any(Agendamento.class));
-        verify(agendamentoRepository, never()).findFirstOcupacaoAtivaNoHorarioExceto(
-                ArgumentMatchers.anyLong(), any(LocalDateTime.class), any(LocalDateTime.class), any(Long.class)
-        );
     }
 
     @Test
     void naoDevePermitirConflitoDeSala() {
-        AgendamentoForm form = novoForm(proximaDataUtil(LocalTime.of(9, 0)));
+        LocalDateTime inicio = proximaDataUtil(LocalTime.of(9, 0));
+        AgendamentoForm form = novoForm(inicio);
 
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
-        mockSalaOcupada(sala.getId());
+        mockSalaOcupada(sala.getId(), inicio);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.salvar(form, profissional));
 
@@ -532,16 +517,8 @@ class AgendamentoServiceTest {
         form.setDataAtendimento(novaData);
         form.setHorarioAtendimento(LocalTime.of(14, 0));
 
-        when(pagamentoConsultaService.resolverPeriodicidade(profissional))
-                .thenReturn(PeriodicidadePagamento.MENSAL);
         when(agendamentoRepository.findById(51L)).thenReturn(Optional.of(agendamento));
         when(salaRepository.findById(9L)).thenReturn(Optional.of(outraSala));
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
-        )).thenReturn(Optional.empty());
-        when(agendamentoRepository.findFirstOcupacaoAtivaNoHorarioExceto(
-                eq(9L), any(LocalDateTime.class), any(LocalDateTime.class), eq(51L)
-        )).thenReturn(Optional.empty());
         when(agendamentoRepository.save(agendamento)).thenReturn(agendamento);
 
         Agendamento atualizado = agendamentoService.realocar(51L, form, profissional);
@@ -619,16 +596,8 @@ class AgendamentoServiceTest {
         form.setDataAtendimento(inicioSemana.plusDays(3));
         form.setHorarioAtendimento(LocalTime.of(14, 0));
 
-        when(pagamentoConsultaService.resolverPeriodicidade(profissional))
-                .thenReturn(PeriodicidadePagamento.SEMANAL);
         when(agendamentoRepository.findById(50L)).thenReturn(Optional.of(agendamento));
         when(salaRepository.findById(9L)).thenReturn(Optional.of(outraSala));
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
-        )).thenReturn(Optional.empty());
-        when(agendamentoRepository.findFirstOcupacaoAtivaNoHorarioExceto(
-                eq(9L), any(LocalDateTime.class), any(LocalDateTime.class), eq(50L)
-        )).thenReturn(Optional.empty());
         when(agendamentoRepository.save(agendamento)).thenReturn(agendamento);
 
         Agendamento atualizado = agendamentoService.realocar(50L, form, profissional);
@@ -639,14 +608,15 @@ class AgendamentoServiceTest {
 
     @Test
     void realocarMudaSalaDataHorarioSemNovoPagamento() {
+        LocalDateTime inicioSerie = proximaDataUtil(LocalTime.of(10, 0));
         Agendamento agendamento = new Agendamento();
         agendamento.setId(50L);
         agendamento.setProfissional(profissional);
         agendamento.setSala(sala);
         agendamento.setNomeCliente("Cliente teste");
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
-        agendamento.setDataHoraInicio(proximaDataUtil(LocalTime.of(10, 0)));
-        agendamento.setDataHoraFim(agendamento.getDataHoraInicio().plusHours(1));
+        agendamento.setDataHoraInicio(inicioSerie);
+        agendamento.setDataHoraFim(inicioSerie.plusHours(1));
         agendamento.setFixo(true);
         agendamento.setSerieFixaId("semanal-test-1");
         agendamento.setTipoRecorrencia("SEMANAL");
@@ -655,21 +625,22 @@ class AgendamentoServiceTest {
         outraSala.setId(9L);
         outraSala.setNome("Sala 1");
 
+        LocalDate novaData = inicioSerie.toLocalDate().plusDays(1);
+        if (novaData.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            novaData = novaData.plusDays(1);
+        }
+
         RelocacaoAgendamentoForm form = new RelocacaoAgendamentoForm();
         form.setSalaId(9L);
-        form.setDataAtendimento(proximaDataUtil(LocalTime.of(14, 0)).plusWeeks(1).toLocalDate());
+        form.setDataAtendimento(novaData);
         form.setHorarioAtendimento(LocalTime.of(14, 0));
 
         when(agendamentoRepository.findById(50L)).thenReturn(Optional.of(agendamento));
-        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioAsc("semanal-test-1"))
-                .thenReturn(Optional.of(agendamento));
+        when(agendamentoRepository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                eq("semanal-test-1"),
+                eq(inicioSerie)
+        )).thenReturn(List.of());
         when(salaRepository.findById(9L)).thenReturn(Optional.of(outraSala));
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
-        )).thenReturn(Optional.empty());
-        when(agendamentoRepository.findFirstOcupacaoAtivaNoHorarioExceto(
-                eq(9L), any(LocalDateTime.class), any(LocalDateTime.class), eq(50L)
-        )).thenReturn(Optional.empty());
         when(agendamentoRepository.save(agendamento)).thenReturn(agendamento);
 
         Agendamento atualizado = agendamentoService.realocar(50L, form, profissional);
@@ -992,7 +963,6 @@ class AgendamentoServiceTest {
 
         when(authService.isAdmin(polyana)).thenReturn(false);
         when(authService.isDonaClinica(polyana)).thenReturn(true);
-        when(pagamentoConsultaService.resolverPeriodicidade(julia)).thenReturn(PeriodicidadePagamento.SEMANAL);
         when(agendamentoRepository.findById(10L)).thenReturn(Optional.of(passado));
 
         assertTrue(agendamentoService.podeCancelarAgendamento(passado, polyana));
@@ -1009,7 +979,6 @@ class AgendamentoServiceTest {
 
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(authService.isDonaClinica(profissional)).thenReturn(false);
-        when(pagamentoConsultaService.resolverPeriodicidade(profissional)).thenReturn(PeriodicidadePagamento.SEMANAL);
 
         assertFalse(agendamentoService.podeCancelarAgendamento(passado, profissional));
         assertFalse(agendamentoService.podeRealocar(passado, profissional));
@@ -1422,9 +1391,6 @@ class AgendamentoServiceTest {
         when(usuarioRepository.findById(carol.getId())).thenReturn(Optional.of(carol));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(carol.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, polyana));
@@ -1691,16 +1657,11 @@ class AgendamentoServiceTest {
 
         when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
                 .thenReturn(List.of(serieId));
-        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
-                .thenReturn(2L);
         when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
                 .thenReturn(Optional.of(ultimo));
         when(agendamentoRepository.existsBySerieFixaIdAndDataHoraInicio(eq(serieId), any(LocalDateTime.class)))
                 .thenReturn(false);
         mockSalaLivre(sala.getId());
-        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         assertDoesNotThrow(() -> agendamentoService.renovarSeriesRecorrentesAtivas());
@@ -2095,13 +2056,19 @@ class AgendamentoServiceTest {
         assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
     }
 
-    private void mockSalaOcupada(Long salaId) {
-        when(agendamentoRepository.findFirstOcupacaoAtivaNoHorarioExceto(
+    private void mockSalaOcupada(Long salaId, LocalDateTime inicioOcupacao) {
+        Agendamento ocupante = new Agendamento();
+        ocupante.setNomeCliente("Cliente existente");
+        ocupante.setDataHoraInicio(inicioOcupacao);
+        ocupante.setDataHoraFim(inicioOcupacao.plusHours(1));
+        when(agendamentoRepository.findCandidatosConflitoSalaNoHorario(
                 eq(salaId),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class),
-                eq(-1L)
-        )).thenReturn(Optional.of(new Agendamento()));
+                eq(-1L),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(ocupante));
+        when(pagamentoConsultaService.agendamentoOcupaHorarioParaNovaReserva(ocupante)).thenReturn(true);
     }
 
     @Test
@@ -2169,7 +2136,6 @@ class AgendamentoServiceTest {
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
         )).thenReturn(List.of(deMaria));
-        when(pagamentoConsultaService.resolverPeriodicidade(maria)).thenReturn(PeriodicidadePagamento.SEMANAL);
 
         var intervalo = AcompanhamentoAgendaFiltros.resolverIntervalo(
                 AcompanhamentoAgendaFiltros.Periodo.HOJE,

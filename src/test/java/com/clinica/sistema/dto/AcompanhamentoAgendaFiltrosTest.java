@@ -13,7 +13,7 @@ class AcompanhamentoAgendaFiltrosTest {
 
     @Test
     void resolverIntervalo_proximos3Dias_incluiHojeMaisDois() {
-        LocalDate hoje = LocalDate.of(2026, 6, 4);
+        LocalDate hoje = LocalDate.now();
         var intervalo = AcompanhamentoAgendaFiltros.resolverIntervalo(
                 AcompanhamentoAgendaFiltros.Periodo.PROXIMOS_3_DIAS,
                 hoje

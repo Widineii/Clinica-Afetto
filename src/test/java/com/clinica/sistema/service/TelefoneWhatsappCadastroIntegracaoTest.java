@@ -1,6 +1,7 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.repository.UsuarioRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,17 @@ class TelefoneWhatsappCadastroIntegracaoTest {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @BeforeEach
+    void prepararUsuariosDemonstracao() {
+        var carol = usuarioRepository.findByLogin("carol").orElseThrow();
+        carol.setTelefoneWhatsapp(null);
+        usuarioRepository.save(carol);
+
+        var julia = usuarioRepository.findByLogin("julia").orElseThrow();
+        julia.setTelefoneWhatsapp("5537998550994");
+        usuarioRepository.save(julia);
+    }
 
     @Test
     void carolDevePrecisarCadastrarWhatsapp() {

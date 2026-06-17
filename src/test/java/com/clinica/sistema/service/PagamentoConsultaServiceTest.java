@@ -865,7 +865,7 @@ class PagamentoConsultaServiceTest {
         when(authService.podeVerPagamentoDeTodos(polyana)).thenReturn(true);
 
         assertEquals(
-                "Ana Paula: pagamento do dia 01 ao 10",
+                "Ana Paula: pagamento do dia 01 ao 10/06",
                 pagamentoConsultaService.rotuloEsperandoNaGrade(agendamento, polyana)
         );
     }

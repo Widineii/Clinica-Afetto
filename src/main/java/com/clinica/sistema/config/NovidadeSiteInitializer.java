@@ -30,6 +30,24 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.823-realocacao-retroativa",
+                        "2.823",
+                        "Realocação retroativa corrigida",
+                        "A gestão volta a poder realocar consultas passadas recentes sem bloqueio indevido do status de pagamento.",
+                        NovidadePublicoAlvo.DONA_CLINICA,
+                        823,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
+                        "v2.823-agenda-estabilidade",
+                        "2.823",
+                        "Agenda mais estável",
+                        "Correções na grade semanal, no caderno mensal e nos conflitos de sala e horário para evitar erro ao abrir ou salvar agendamentos.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        822,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.813-tema-claro-escuro-sistema",
                         "2.813",
                         "Tema Claro, Escuro e Sistema",

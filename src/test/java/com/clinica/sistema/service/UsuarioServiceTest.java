@@ -288,7 +288,7 @@ class UsuarioServiceTest {
         AtualizarTelefoneWhatsappForm form = new AtualizarTelefoneWhatsappForm();
         form.setTelefoneWhatsapp("(37) 99855-0994");
 
-        when(authService.podeCadastrarProprioTelefoneWhatsapp(profissional)).thenReturn(true);
+        when(authService.podeEditarProprioPerfil(profissional)).thenReturn(true);
         when(usuarioRepository.findById(2L)).thenReturn(Optional.of(profissional));
         when(usuarioRepository.save(profissional)).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -302,7 +302,7 @@ class UsuarioServiceTest {
         AtualizarTelefoneWhatsappForm form = new AtualizarTelefoneWhatsappForm();
         form.setTelefoneWhatsapp("37998550994");
 
-        when(authService.podeCadastrarProprioTelefoneWhatsapp(admin)).thenReturn(false);
+        when(authService.podeEditarProprioPerfil(admin)).thenReturn(false);
 
         assertThrows(RuntimeException.class, () -> usuarioService.atualizarTelefoneWhatsapp(form, admin));
     }

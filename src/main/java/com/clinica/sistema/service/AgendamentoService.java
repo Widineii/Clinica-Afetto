@@ -1439,9 +1439,6 @@ public class AgendamentoService {
         if (agendamento == null || usuarioLogado == null) {
             return false;
         }
-        if (!statusPermiteRealocacao(agendamento)) {
-            return false;
-        }
         if (agendamento.getDataHoraInicio() == null) {
             return false;
         }
@@ -1451,6 +1448,9 @@ public class AgendamentoService {
         }
         if (ocorrenciaPassada(agendamento)) {
             return realocacaoRetroativaGestao(agendamento, usuarioLogado);
+        }
+        if (!statusPermiteRealocacao(agendamento)) {
+            return false;
         }
         if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
             return true;
