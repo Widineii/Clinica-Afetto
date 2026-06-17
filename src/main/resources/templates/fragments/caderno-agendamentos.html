@@ -12,12 +12,21 @@
     <p th:if="${#lists.isEmpty(agendamentos)}"
        class="text-muted small mb-0 py-1"
        th:text="${vazioRotulo != null ? vazioRotulo : 'Nenhum agendamento avulso.'}">Nenhum agendamento avulso.</p>
-    <div th:each="agendamento : ${agendamentos}" class="meus-agendamentos-avulso-linha">
-        <div>
+    <div th:each="agendamento : ${agendamentos}"
+         th:with="podeRealocarAvulso=${agendamentoService != null and usuarioLogado != null and agendamentoService.podeRealocar(agendamento, usuarioLogado)}"
+         class="meus-agendamentos-avulso-linha">
+        <div class="meus-agendamentos-avulso-linha__conteudo">
             <span class="meus-agendamentos-avulso-linha__texto"
                   th:text="${(agendamento.nomeCliente ?: '-') + ' - ' + (agendamento.sala?.nome ?: '-') + (agendamento.dataHoraInicio != null ? ' - ' + #temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm') : '')}">Cliente</span>
             <div th:replace="~{fragments/caderno-agendamentos :: valores-linha(agendamento=${agendamento})}"></div>
-            <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
+            <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento}, realocarNoCard=${true})}"></div>
+        </div>
+        <div class="meus-agendamentos-avulso-linha__acoes"
+             th:if="${podeRealocarAvulso and agendamento.id != null}">
+            <a th:href="@{/agendamentos/{id}/realocar(id=${agendamento.id})}"
+               class="btn btn-sm btn-outline-info">
+                Realocar
+            </a>
         </div>
     </div>
 </div>
@@ -47,7 +56,7 @@
                       title="Pagar">$</span>
             </span>
         </div>
-        <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
+        <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento}, realocarNoCard=${false})}"></div>
         <p class="meus-agendamentos-serie-linha__dica mb-2">
             Use <strong>Alterar valor</strong> para mudar quanto o cliente paga (Prof.) nas consultas pendentes — pagas não mudam.
             Datas que <strong>já passaram</strong> (últimos 14 dias) continuam visíveis enquanto você marca as próximas (até 5 no card: 1 passada + 4 futuras).

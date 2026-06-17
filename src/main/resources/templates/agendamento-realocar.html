@@ -46,17 +46,17 @@
             </p>
             <p class="text-muted small mb-3"
                th:if="${realocacaoAvulsa and (pagamentoService == null or (!pagamentoService.realocacaoSemanalComCobrancaPendente(agendamento) and !pagamentoService.realocacaoMensalComCobrancaPendente(agendamento)))}">
-                O pagamento já realizado será mantido. Escolha outra sala, data e horário disponíveis (somente futuros).
+                O pagamento já realizado será mantido. Escolha outra sala, data e horário — qualquer dia futuro disponível na grade.
             </p>
             <p class="text-muted small mb-3"
                th:if="${!realocacaoAvulsa and agendamento != null and agendamento.quinzenal}">
-                O pagamento já realizado será mantido. Para série quinzenal, escolha uma das próximas 6 datas da cadência
-                (a cada 2 semanas, mesmo dia da semana). A série não é empurrada.
+                O pagamento já realizado será mantido. Para série quinzenal, escolha uma data após este atendimento
+                e antes do próximo atendimento fixo da série (pode ser outro dia da semana). A série não é empurrada.
             </p>
             <p class="text-muted small mb-3"
                th:if="${!realocacaoAvulsa and agendamento != null and !agendamento.quinzenal}">
-                O pagamento já realizado será mantido. Para série fixa semanal, escolha uma das próximas 12 datas da cadência
-                (mesmo dia da semana). A série não é empurrada.
+                O pagamento já realizado será mantido. Para série fixa semanal, escolha uma data desta semana ou da próxima,
+                antes do próximo atendimento fixo da série (pode ser outro dia da semana). A série não é empurrada.
             </p>
 
             <div class="alert alert-secondary py-2 small" th:if="${agendamento != null}">

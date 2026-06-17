@@ -1319,8 +1319,8 @@ public class AgendamentoService {
     }
 
     /**
-     * Serie fixa semanal: proximas 12 datas no mesmo dia da semana da cadencia.
-     * Serie quinzenal: proximas 6 datas a cada 2 semanas.
+     * Serie fixa semanal: dias da semana da consulta e da semana seguinte, antes da proxima ocorrencia.
+     * Serie quinzenal: do dia seguinte ao atendimento ate o dia anterior da proxima ocorrencia.
      * Avulso e mensal: lista vazia (qualquer data futura na tela).
      */
     public List<LocalDate> listarDatasPermitidasRealocacao(Agendamento agendamento) {
@@ -1332,22 +1332,97 @@ public class AgendamentoService {
         }
 
         String recorrencia = recorrenciaDoAgendamento(agendamento);
-        int limiteOcorrencias = obterLimiteOcorrenciasFuturas(recorrencia);
-        LocalDate anchor = obterDataAncoraSerie(agendamento);
+        if (RECORRENCIA_SEMANAL.equals(recorrencia)) {
+            return listarDatasPermitidasRealocacaoSerieFixaSemanal(agendamento);
+        }
+        if (RECORRENCIA_QUINZENAL.equals(recorrencia)) {
+            return listarDatasPermitidasRealocacaoSerieFixaQuinzenal(agendamento);
+        }
+
+        return List.of();
+    }
+
+    private List<LocalDate> listarDatasPermitidasRealocacaoSerieFixaSemanal(Agendamento agendamento) {
+        LocalDate dataConsulta = agendamento.getDataHoraInicio().toLocalDate();
         LocalTime horario = agendamento.getDataHoraInicio().toLocalTime();
         LocalDateTime agora = LocalDateTime.now();
+        LocalDate proximaOcorrencia = obterProximaDataOcorrenciaSerieFixa(agendamento, 1);
 
+        LocalDate inicioSemanaConsulta = dataConsulta.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate fimSemanaSeguinte = inicioSemanaConsulta.plusWeeks(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+        LocalDate fimJanela = proximaOcorrencia.minusDays(1);
+        if (fimSemanaSeguinte.isBefore(fimJanela)) {
+            fimJanela = fimSemanaSeguinte;
+        }
+
+        LocalDate inicioJanela = inicioSemanaConsulta;
+        LocalDate hoje = LocalDate.now();
+        if (inicioJanela.isBefore(hoje)) {
+            inicioJanela = hoje;
+        }
+        if (fimJanela.isBefore(inicioJanela)) {
+            return List.of();
+        }
+
+        return montarDatasRealocacaoNaJanela(inicioJanela, fimJanela, dataConsulta, horario, agora);
+    }
+
+    private List<LocalDate> listarDatasPermitidasRealocacaoSerieFixaQuinzenal(Agendamento agendamento) {
+        LocalDate dataConsulta = agendamento.getDataHoraInicio().toLocalDate();
+        LocalTime horario = agendamento.getDataHoraInicio().toLocalTime();
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDate hoje = LocalDate.now();
+        LocalDate proximaOcorrencia = obterProximaDataOcorrenciaSerieFixa(agendamento, 2);
+        LocalDate fimJanela = proximaOcorrencia.minusDays(1);
+
+        LocalDate inicioJanela = hoje.isAfter(dataConsulta) ? hoje : dataConsulta.plusDays(1);
+        if (fimJanela.isBefore(inicioJanela)) {
+            return List.of();
+        }
+        return montarDatasRealocacaoNaJanela(inicioJanela, fimJanela, dataConsulta, horario, agora);
+    }
+
+    private List<LocalDate> montarDatasRealocacaoNaJanela(
+            LocalDate inicioJanela,
+            LocalDate fimJanela,
+            LocalDate dataConsulta,
+            LocalTime horario,
+            LocalDateTime agora
+    ) {
         List<LocalDate> permitidas = new ArrayList<>();
-        LocalDate candidata = primeiraDataPadraoDaSerieApos(LocalDate.now(), anchor, obterSaltoSemanas(recorrencia));
-        int guarda = 0;
-        while (permitidas.size() < limiteOcorrencias && guarda++ < 52) {
-            LocalDateTime inicioCandidato = LocalDateTime.of(candidata, horario);
-            if (!inicioCandidato.isBefore(agora)) {
-                permitidas.add(candidata);
+        LocalDate candidata = inicioJanela;
+        while (!candidata.isAfter(fimJanela)) {
+            if (!candidata.equals(dataConsulta) && candidata.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                LocalDateTime inicioCandidato = LocalDateTime.of(candidata, horario);
+                if (!inicioCandidato.isBefore(agora)) {
+                    permitidas.add(candidata);
+                }
             }
-            candidata = candidata.plusWeeks(obterSaltoSemanas(recorrencia));
+            candidata = candidata.plusDays(1);
         }
         return permitidas;
+    }
+
+    private LocalDate obterProximaDataOcorrenciaSerieFixa(Agendamento agendamento, int saltoSemanas) {
+        LocalDateTime inicioAtual = agendamento.getDataHoraInicio();
+        if (inicioAtual == null) {
+            return LocalDate.now().plusWeeks(saltoSemanas);
+        }
+        String serieId = agendamento.getSerieFixaId();
+        if (serieId != null && !serieId.isBlank()) {
+            List<Agendamento> posteriores = repository
+                    .findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                            serieId,
+                            inicioAtual
+                    );
+            for (Agendamento ocorrencia : posteriores) {
+                if (ocorrencia.getDataHoraInicio() != null
+                        && ocorrencia.getDataHoraInicio().isAfter(inicioAtual)) {
+                    return ocorrencia.getDataHoraInicio().toLocalDate();
+                }
+            }
+        }
+        return inicioAtual.toLocalDate().plusWeeks(saltoSemanas);
     }
 
     public boolean dataPermitidaParaRealocacao(Agendamento agendamento, LocalDate data) {
@@ -1441,11 +1516,16 @@ public class AgendamentoService {
             String recorrencia = recorrenciaDoAgendamento(agendamento);
             if (RECORRENCIA_QUINZENAL.equals(recorrencia)) {
                 throw new RuntimeException(
-                        "Para série quinzenal, escolha uma das próximas 6 datas da cadência (a cada 2 semanas, mesmo dia da semana)."
+                        "Para série quinzenal, escolha uma data após este atendimento e antes do próximo atendimento fixo da série."
+                );
+            }
+            if (RECORRENCIA_SEMANAL.equals(recorrencia)) {
+                throw new RuntimeException(
+                        "Para série fixa semanal, escolha uma data desta semana ou da próxima, antes do próximo atendimento fixo da série."
                 );
             }
             throw new RuntimeException(
-                    "Para série fixa semanal, escolha uma das próximas 12 datas da cadência (mesmo dia da semana)."
+                    "Data não permitida para realocação desta série."
             );
         }
 

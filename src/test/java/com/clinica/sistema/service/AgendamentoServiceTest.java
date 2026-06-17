@@ -681,7 +681,7 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    void serieFixaSemanalSoPermiteDatasDaCadenciaNaRealocacao() {
+    void serieFixaSemanalPermiteOutroDiaDaSemanaAntesDaProximaOcorrencia() {
         LocalDateTime inicioSerie = proximaDataUtil(LocalTime.of(7, 0));
         Agendamento agendamento = new Agendamento();
         agendamento.setId(52L);
@@ -694,21 +694,27 @@ class AgendamentoServiceTest {
         agendamento.setSerieFixaId("semanal-cadencia");
         agendamento.setTipoRecorrencia("SEMANAL");
 
-        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioAsc("semanal-cadencia"))
-                .thenReturn(Optional.of(agendamento));
+        when(agendamentoRepository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                "semanal-cadencia",
+                inicioSerie
+        )).thenReturn(List.of());
 
         List<LocalDate> permitidas = agendamentoService.listarDatasPermitidasRealocacao(agendamento);
         assertFalse(permitidas.isEmpty());
-        assertEquals(inicioSerie.getDayOfWeek(), permitidas.get(0).getDayOfWeek());
-        assertTrue(agendamentoService.dataPermitidaParaRealocacao(agendamento, permitidas.get(0)));
+        LocalDate outroDia = inicioSerie.toLocalDate().plusDays(1);
+        while (outroDia.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            outroDia = outroDia.plusDays(1);
+        }
+        assertTrue(permitidas.contains(outroDia));
+        assertTrue(agendamentoService.dataPermitidaParaRealocacao(agendamento, outroDia));
         assertFalse(agendamentoService.dataPermitidaParaRealocacao(
                 agendamento,
-                permitidas.get(0).plusDays(1)
+                inicioSerie.toLocalDate().plusWeeks(1)
         ));
     }
 
     @Test
-    void realocarSerieFixaRejeitaDataForaDaCadencia() {
+    void realocarSerieFixaSemanalRejeitaDataDaProximaOcorrencia() {
         LocalDateTime inicioSerie = proximaDataUtil(LocalTime.of(7, 0));
         Agendamento agendamento = new Agendamento();
         agendamento.setId(53L);
@@ -723,12 +729,14 @@ class AgendamentoServiceTest {
 
         RelocacaoAgendamentoForm form = new RelocacaoAgendamentoForm();
         form.setSalaId(sala.getId());
-        form.setDataAtendimento(inicioSerie.plusDays(1).toLocalDate());
+        form.setDataAtendimento(inicioSerie.plusWeeks(1).toLocalDate());
         form.setHorarioAtendimento(LocalTime.of(14, 0));
 
         when(agendamentoRepository.findById(53L)).thenReturn(Optional.of(agendamento));
-        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioAsc("semanal-cadencia-2"))
-                .thenReturn(Optional.of(agendamento));
+        when(agendamentoRepository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                "semanal-cadencia-2",
+                inicioSerie
+        )).thenReturn(List.of());
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
 
         RuntimeException ex = assertThrows(
@@ -736,6 +744,58 @@ class AgendamentoServiceTest {
                 () -> agendamentoService.realocar(53L, form, profissional)
         );
         assertTrue(ex.getMessage().contains("série fixa semanal"));
+    }
+
+    @Test
+    void serieFixaQuinzenalPermiteOutroDiaAntesDaProximaOcorrencia() {
+        LocalDateTime inicioSerie = proximaDataUtil(LocalTime.of(9, 0));
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(54L);
+        agendamento.setProfissional(profissional);
+        agendamento.setSala(sala);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+        agendamento.setDataHoraInicio(inicioSerie);
+        agendamento.setDataHoraFim(inicioSerie.plusHours(1));
+        agendamento.setFixo(true);
+        agendamento.setSerieFixaId("quinzenal-cadencia");
+        agendamento.setTipoRecorrencia("QUINZENAL");
+
+        when(agendamentoRepository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                "quinzenal-cadencia",
+                inicioSerie
+        )).thenReturn(List.of());
+
+        List<LocalDate> permitidas = agendamentoService.listarDatasPermitidasRealocacao(agendamento);
+        assertFalse(permitidas.isEmpty());
+        LocalDate outroDia = inicioSerie.toLocalDate().plusDays(1);
+        while (outroDia.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            outroDia = outroDia.plusDays(1);
+        }
+        assertTrue(permitidas.contains(outroDia));
+        assertFalse(agendamentoService.dataPermitidaParaRealocacao(
+                agendamento,
+                inicioSerie.toLocalDate().plusWeeks(2)
+        ));
+    }
+
+    @Test
+    void avulsoPermiteRealocarParaQualquerDataFutura() {
+        LocalDateTime inicio = proximaDataUtil(LocalTime.of(9, 0));
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(55L);
+        agendamento.setProfissional(profissional);
+        agendamento.setSala(sala);
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+        agendamento.setDataHoraInicio(inicio);
+        agendamento.setDataHoraFim(inicio.plusHours(1));
+        agendamento.setFixo(false);
+        agendamento.setTipoRecorrencia("AVULSO");
+
+        assertTrue(agendamentoService.isRealocacaoAvulsa(agendamento));
+        assertTrue(agendamentoService.podeRealocar(agendamento, profissional));
+        assertTrue(agendamentoService.listarDatasPermitidasRealocacao(agendamento).isEmpty());
+        LocalDate dataLivre = inicio.toLocalDate().plusMonths(1);
+        assertTrue(agendamentoService.dataPermitidaParaRealocacao(agendamento, dataLivre));
     }
 
     @Test

@@ -1187,7 +1187,7 @@
         .meus-agendamentos-avulso-linha {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 8px;
             padding: 10px 14px;
@@ -1196,6 +1196,11 @@
             background: #ffffff;
             border: 1px solid #e2e8f0;
             font-size: 0.86rem;
+        }
+
+        .meus-agendamentos-avulso-linha__conteudo {
+            flex: 1 1 12rem;
+            min-width: 0;
         }
 
         .meus-agendamentos-avulso-linha__texto {
@@ -1207,6 +1212,8 @@
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
+            flex-shrink: 0;
+            align-self: center;
         }
 
         #novo-agendamento.agendamento-form-destaque {
@@ -2093,6 +2100,9 @@
         <a th:if="${pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
            href="#pagamentos-pendentes"
            class="btn btn-sm btn-warning">Pagamentos pendentes</a>
+        <span class="agenda-quick-nav__dica small text-muted ms-1 d-none d-md-inline">
+            A grade com horários fica logo abaixo (celular) ou à direita (telas grandes).
+        </span>
     </nav>
     <script>
         (function initAtalhosAgendaNav() {
@@ -2159,6 +2169,9 @@
                     }, 80);
                 } else {
                     marcarAtivo(nav, links, 'grade-semanal');
+                    window.setTimeout(function () {
+                        irParaSecao('grade-semanal', nav, links);
+                    }, 120);
                 }
             }
 
@@ -2171,7 +2184,7 @@
     </script>
 
     <div class="row g-4 align-items-start agenda-main">
-        <div class="col-12 col-xl-4 agenda-sidebar">
+        <div class="col-12 col-xl-4 agenda-sidebar order-2 order-xl-1">
             <div class="card shell-card" id="novo-agendamento">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -2494,7 +2507,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-xl-8" id="grade-semanal">
+        <div class="col-12 col-xl-8 order-1 order-xl-2" id="grade-semanal">
             <div class="card shell-card">
                 <div class="card-body p-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">

@@ -68,7 +68,7 @@
     </th:block>
 </div>
 
-<div th:fragment="acoes (agendamento)">
+<div th:fragment="acoes (agendamento, realocarNoCard)">
     <div th:if="${agendamento != null}" class="pagamento-acoes mt-2 d-flex flex-wrap gap-2 align-items-center">
         <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
 
@@ -123,7 +123,7 @@
         </span>
         </th:block>
 
-        <a th:if="${agendamentoService != null and usuarioLogado != null and agendamentoService.podeRealocar(agendamento, usuarioLogado) and agendamento.id != null}"
+        <a th:if="${(realocarNoCard == null or !realocarNoCard) and agendamentoService != null and usuarioLogado != null and agendamentoService.podeRealocar(agendamento, usuarioLogado) and agendamento.id != null}"
            th:href="@{/agendamentos/{id}/realocar(id=${agendamento.id})}"
            class="btn btn-sm btn-outline-info">
             Realocar
