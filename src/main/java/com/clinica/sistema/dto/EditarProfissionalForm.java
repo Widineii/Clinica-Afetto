@@ -11,4 +11,8 @@ public class EditarProfissionalForm {
     private String telefoneWhatsapp;
     /** Quando true, remove o WhatsApp cadastrado mesmo com o campo vazio. */
     private Boolean removerWhatsapp;
+    /** E-mail pessoal para avisos de pagamento. Opcional — preencha para cadastrar ou trocar. */
+    private String email;
+    /** Quando true, remove o e-mail cadastrado. */
+    private Boolean removerEmail;
 }

@@ -497,6 +497,16 @@ public class UsuarioService {
             }
         }
 
+        if (Boolean.TRUE.equals(form.getRemoverEmail())) {
+            alvo.setEmail(null);
+        } else if (form.getEmail() != null && !form.getEmail().isBlank()) {
+            String email = form.getEmail().trim().toLowerCase();
+            if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                throw new RuntimeException("Informe um e-mail valido.");
+            }
+            alvo.setEmail(email);
+        }
+
         return usuarioRepository.save(alvo);
     }
 

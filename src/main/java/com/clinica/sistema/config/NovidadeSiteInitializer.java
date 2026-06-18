@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.834-equipe-email-central",
+                        "2.834",
+                        "E-mail na Central da equipe",
+                        "Admin e Polyana veem o e-mail de cada profissional na aba Equipe e podem editar pelo modal Editar profissional.",
+                        NovidadePublicoAlvo.ADMIN,
+                        834,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.833-aviso-pagamento-email",
                         "2.833",
                         "Avisos de pagamento por e-mail",

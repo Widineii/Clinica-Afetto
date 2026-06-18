@@ -668,6 +668,21 @@
             color: #94a3b8;
         }
 
+        .prof-email {
+            font-size: 0.78rem;
+            color: #334155;
+            max-width: 11rem;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .prof-email--vazio {
+            color: #94a3b8;
+        }
+
         .badge-perfil {
             display: inline-block;
             padding: 4px 10px;
@@ -1079,6 +1094,7 @@
                         <col>
                         <col class="d-none d-md-table-column" style="width: 10.5rem;">
                         <col class="d-none d-lg-table-column" style="width: 9.5rem;">
+                        <col class="d-none d-xl-table-column" style="width: 11rem;">
                         <col style="width: 7.25rem;">
                         <col style="width: 11.5rem;">
                     </colgroup>
@@ -1088,6 +1104,7 @@
                         <th>Profissional</th>
                         <th class="d-none d-md-table-cell">Login</th>
                         <th class="d-none d-lg-table-cell">WhatsApp</th>
+                        <th class="d-none d-xl-table-cell">E-mail</th>
                         <th>Perfil</th>
                         <th class="prof-pagamento-head">Pagamento</th>
                     </tr>
@@ -1096,7 +1113,7 @@
                     <tr th:each="prof : ${profissionais}"
                         class="prof-row"
                         th:with="fotoEquipeUrl=${fotosPerfilEquipe != null and fotosPerfilEquipe.containsKey(prof.id) ? fotosPerfilEquipe[prof.id] : null}"
-                        th:attr="data-id=${prof.id},data-nome=${prof.nome},data-login=${prof.login},data-whatsapp=${prof.telefoneWhatsappFormulario},data-iniciais=${#strings.substring(prof.nome, 0, 1)}">
+                        th:attr="data-id=${prof.id},data-nome=${prof.nome},data-login=${prof.login},data-whatsapp=${prof.telefoneWhatsappFormulario},data-email=${prof.email},data-iniciais=${#strings.substring(prof.nome, 0, 1)}">
                         <td>
                             <input type="radio"
                                    name="usuarioSelecionado"
@@ -1124,6 +1141,9 @@
                                     <div class="prof-whatsapp d-lg-none"
                                          th:classappend="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? ' prof-whatsapp--vazio' : ''}"
                                          th:text="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? 'Sem WhatsApp' : prof.telefoneWhatsappFormulario}">37998550994</div>
+                                    <div class="prof-email d-xl-none"
+                                         th:classappend="${#strings.isEmpty(prof.email) ? ' prof-email--vazio' : ''}"
+                                         th:text="${#strings.isEmpty(prof.email) ? 'Sem e-mail' : prof.email}">email@exemplo.com</div>
                                 </div>
                             </div>
                         </td>
@@ -1134,6 +1154,12 @@
                             <span class="prof-whatsapp"
                                   th:classappend="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? ' prof-whatsapp--vazio' : ''}"
                                   th:text="${#strings.isEmpty(prof.telefoneWhatsappFormulario) ? '—' : prof.telefoneWhatsappFormulario}">37998550994</span>
+                        </td>
+                        <td class="d-none d-xl-table-cell">
+                            <span class="prof-email"
+                                  th:classappend="${#strings.isEmpty(prof.email) ? ' prof-email--vazio' : ''}"
+                                  th:attr="title=${!#strings.isEmpty(prof.email) ? prof.email : null}"
+                                  th:text="${#strings.isEmpty(prof.email) ? '—' : prof.email}">email@exemplo.com</span>
                         </td>
                         <td>
                             <span th:if="${prof.donaClinica}" class="badge-perfil badge-perfil--dona">Dona da clínica</span>
@@ -1378,7 +1404,7 @@
             <div class="modal-header px-4 py-3">
                 <div>
                     <h2 class="modal-title h5 mb-1">Editar profissional</h2>
-                    <p class="text-muted small mb-0">Nome, login e WhatsApp para avisos da clínica.</p>
+                    <p class="text-muted small mb-0">Nome, login, WhatsApp e e-mail para avisos da clínica.</p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
@@ -1415,6 +1441,25 @@
                                    value="true"
                                    id="editarRemoverWhatsapp">
                             <label class="form-check-label" for="editarRemoverWhatsapp">Remover WhatsApp cadastrado</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="editarEmail">E-mail pessoal</label>
+                        <input type="email"
+                               name="email"
+                               class="form-control"
+                               id="editarEmail"
+                               maxlength="120"
+                               autocomplete="email"
+                               placeholder="profissional@exemplo.com">
+                        <div class="form-text">Opcional. Usado nos avisos automáticos de pagamento pendente.</div>
+                        <div class="form-check mt-2">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   name="removerEmail"
+                                   value="true"
+                                   id="editarRemoverEmail">
+                            <label class="form-check-label" for="editarRemoverEmail">Remover e-mail cadastrado</label>
                         </div>
                     </div>
                     <div class="col-12 d-grid pt-1">
@@ -1485,6 +1530,8 @@
         var editarLogin = document.getElementById('editarLogin');
         var editarWhatsapp = document.getElementById('editarWhatsapp');
         var editarRemoverWhatsapp = document.getElementById('editarRemoverWhatsapp');
+        var editarEmail = document.getElementById('editarEmail');
+        var editarRemoverEmail = document.getElementById('editarRemoverEmail');
         var selectSenha = document.getElementById('selectUsuarioSenha');
         var selecaoHint = document.getElementById('selecaoHint');
         var rows = document.querySelectorAll('.prof-row');
@@ -1514,6 +1561,8 @@
             if (editarLogin) editarLogin.value = row.getAttribute('data-login') || '';
             if (editarWhatsapp) editarWhatsapp.value = row.getAttribute('data-whatsapp') || '';
             if (editarRemoverWhatsapp) editarRemoverWhatsapp.checked = false;
+            if (editarEmail) editarEmail.value = row.getAttribute('data-email') || '';
+            if (editarRemoverEmail) editarRemoverEmail.checked = false;
         }
 
         function atualizarBotoes() {
