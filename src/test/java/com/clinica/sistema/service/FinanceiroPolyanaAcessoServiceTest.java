@@ -33,10 +33,22 @@ class FinanceiroPolyanaAcessoServiceTest {
     }
 
     @Test
+    void adminComFlagHabilitadaDeveAcessar() {
+        financeiroProperties.getPolyana().setEnabled(true);
+        Usuario admin = new Usuario();
+        admin.setCargo("ROLE_ADMIN");
+        when(authService.isDonaClinica(admin)).thenReturn(false);
+        when(authService.isAdmin(admin)).thenReturn(true);
+
+        assertTrue(service.podeAcessarGestaoFinanceira(admin));
+    }
+
+    @Test
     void profissionalComumNaoDeveAcessar() {
         financeiroProperties.getPolyana().setEnabled(true);
         Usuario julia = new Usuario();
         when(authService.isDonaClinica(julia)).thenReturn(false);
+        when(authService.isAdmin(julia)).thenReturn(false);
 
         assertFalse(service.podeAcessarGestaoFinanceira(julia));
     }

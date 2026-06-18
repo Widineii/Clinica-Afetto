@@ -22,6 +22,6 @@ public class FinanceiroPolyanaAcessoService {
         if (!financeiroProperties.getPolyana().isEnabled()) {
             return false;
         }
-        return authService.isDonaClinica(usuario);
+        return authService.isDonaClinica(usuario) || authService.isAdmin(usuario);
     }
 }

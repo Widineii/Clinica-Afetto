@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.828-financeiro-admin",
+                        "2.828",
+                        "Financeiro visivel para admin",
+                        "O administrador passa a acessar o mesmo painel Financeiro que a Polyana (receitas, despesas e graficos).",
+                        NovidadePublicoAlvo.ADMIN,
+                        828,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.827-email-recuperacao-senha",
                         "2.827",
                         "Esqueci minha senha por e-mail ativo",
