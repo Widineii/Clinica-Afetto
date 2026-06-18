@@ -14,6 +14,8 @@ public class RecuperacaoSenhaProperties {
     private int intervaloReenvioMinutos = 2;
     private String remetenteNome = "Agenda Afetto";
     private String remetenteEmail = "";
+    /** URL publica do site (logo e links no e-mail HTML). */
+    private String urlSite = "";
 
     public boolean isEnabled() {
         return enabled;
@@ -61,5 +63,13 @@ public class RecuperacaoSenhaProperties {
 
     public void setRemetenteEmail(String remetenteEmail) {
         this.remetenteEmail = remetenteEmail;
+    }
+
+    public String getUrlSite() {
+        return urlSite;
+    }
+
+    public void setUrlSite(String urlSite) {
+        this.urlSite = urlSite;
     }
 }

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -37,17 +38,11 @@ public class EmailEnvioService {
 
     public void enviarCodigoRecuperacaoSenha(String destinatario, String codigo) {
         String assunto = "Código para redefinir sua senha — Agenda Afetto";
-        String corpo = """
-                Olá,
-
-                Você solicitou a redefinição de senha no Agenda Afetto.
-
-                Seu código é: %s
-
-                Ele expira em %d minutos. Se você não fez esta solicitação, ignore este e-mail.
-
-                Clínica Afetto
-                """.formatted(codigo, recuperacaoSenhaProperties.getCodigoExpiracaoMinutos());
+        RecuperacaoSenhaEmailTemplate.ConteudoEmail conteudo = RecuperacaoSenhaEmailTemplate.montar(
+                codigo,
+                recuperacaoSenhaProperties.getCodigoExpiracaoMinutos(),
+                recuperacaoSenhaProperties.getUrlSite()
+        );
 
         if (deveUsarModoConsola()) {
             log.warn("[RecuperacaoSenha] modo consola — destino={} codigo={}", destinatario, codigo);
@@ -62,11 +57,15 @@ public class EmailEnvioService {
         try {
             JavaMailSender mailSender = mailSenderProvider.getObject();
             MimeMessage mensagem = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mensagem, false, StandardCharsets.UTF_8.name());
+            MimeMessageHelper helper = new MimeMessageHelper(mensagem, true, StandardCharsets.UTF_8.name());
             helper.setFrom(remetenteFormatado());
             helper.setTo(destinatario);
             helper.setSubject(assunto);
-            helper.setText(corpo, false);
+            helper.setText(conteudo.textoPlano(), conteudo.html());
+            helper.addInline(
+                    RecuperacaoSenhaEmailTemplate.LOGO_CONTENT_ID,
+                    new ClassPathResource("static/images/logo-afetto.png")
+            );
             mailSender.send(mensagem);
             log.info("[RecuperacaoSenha] codigo enviado para {}", mascararEmail(destinatario));
         } catch (Exception ex) {
