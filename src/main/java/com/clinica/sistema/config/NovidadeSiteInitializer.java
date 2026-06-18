@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.831-email-logo-maior",
+                        "2.831",
+                        "Logo maior no e-mail de recuperacao",
+                        "O e-mail com codigo de senha exibe a logo da clinica em tamanho maior, no cabecalho.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        831,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.830-email-recuperacao-html",
                         "2.830",
                         "E-mail de recuperacao com logo",

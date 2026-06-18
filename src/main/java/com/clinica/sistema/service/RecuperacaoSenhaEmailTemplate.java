@@ -50,8 +50,8 @@ final class RecuperacaoSenhaEmailTemplate {
                             <td style="padding:28px 30px 22px;border-bottom:1px solid #E2E8F0;">
                               <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
-                                  <td valign="middle" style="width:140px;padding-right:16px;">
-                                    <img src="cid:%s" alt="Clínica Afetto" width="120" height="62" style="display:block;width:120px;height:auto;max-height:72px;border:0;">
+                                  <td valign="middle" style="width:200px;padding-right:20px;">
+                                    <img src="cid:%s" alt="Clínica Afetto" width="180" style="display:block;width:180px;max-width:180px;height:auto;max-height:96px;border:0;">
                                   </td>
                                   <td valign="middle" align="right" style="text-align:right;">
                                     <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:700;line-height:1.2;color:#1B4D5C;">Clínica Afetto</p>
