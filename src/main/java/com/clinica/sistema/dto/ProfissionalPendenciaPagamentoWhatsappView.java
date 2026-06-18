@@ -10,6 +10,7 @@ public record ProfissionalPendenciaPagamentoWhatsappView(
         String nome,
         String login,
         String telefoneWhatsapp,
+        String email,
         int quantidadePendencias,
         String valorTotalFormatado,
         String mensagemPreview,
@@ -17,6 +18,7 @@ public record ProfissionalPendenciaPagamentoWhatsappView(
         PeriodicidadePagamento periodicidade,
         String periodicidadeRotulo,
         boolean bloqueado,
-        boolean temWhatsapp
+        boolean temWhatsapp,
+        boolean temEmail
 ) {
 }

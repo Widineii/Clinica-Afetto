@@ -1,6 +1,7 @@
 package com.clinica.sistema.controller;
 
 import com.clinica.sistema.dto.LoginForm;
+import com.clinica.sistema.dto.AtualizarEmailProfissionalForm;
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
@@ -182,6 +183,34 @@ public class AuthController {
             redirectAttributes.addFlashAttribute("reabrirModalTelefoneWhatsapp", true);
         }
         return "redirect:" + normalizarRetornoPerfil(retorno);
+    }
+
+    @PostMapping("/conta/email-profissional")
+    public String cadastrarEmailProfissional(
+            @ModelAttribute AtualizarEmailProfissionalForm atualizarEmailProfissionalForm,
+            @org.springframework.web.bind.annotation.RequestParam(name = "retorno", defaultValue = "/agendamentos/dashboard")
+            String retorno,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.atualizarEmailNotificacao(atualizarEmailProfissionalForm, usuarioLogado);
+            usuarioService.dispensarCadastroEmailNotificacao(session);
+            redirectAttributes.addFlashAttribute("sucesso", "E-mail cadastrado com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erroEmail", e.getMessage());
+            redirectAttributes.addFlashAttribute("atualizarEmailProfissionalForm", atualizarEmailProfissionalForm);
+            redirectAttributes.addFlashAttribute("reabrirModalEmailNotificacao", true);
+        }
+        return "redirect:" + normalizarRetornoPerfil(retorno);
+    }
+
+    @PostMapping("/conta/email-profissional/pular")
+    public String pularCadastroEmailProfissional(HttpSession session) {
+        authService.buscarUsuarioLogadoObrigatorio();
+        usuarioService.dispensarCadastroEmailNotificacao(session);
+        return "redirect:/agendamentos/dashboard";
     }
 
     @PostMapping("/conta/telefone-whatsapp")

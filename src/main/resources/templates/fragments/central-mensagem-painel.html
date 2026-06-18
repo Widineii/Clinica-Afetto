@@ -10,7 +10,7 @@
             <thead>
             <tr>
                 <th>Profissional</th>
-                <th class="d-none d-md-table-cell">WhatsApp</th>
+                <th class="d-none d-md-table-cell">E-mail</th>
                 <th>Situação</th>
                 <th></th>
             </tr>
@@ -22,8 +22,8 @@
                     <div class="text-muted small" th:text="${linha.login}">login</div>
                 </td>
                 <td class="d-none d-md-table-cell">
-                    <span th:if="${linha.temWhatsapp()}" th:text="${linha.telefoneWhatsapp}">31999</span>
-                    <span th:unless="${linha.temWhatsapp()}" class="text-muted">—</span>
+                    <span th:if="${linha.temEmail()}" th:text="${linha.email}">email</span>
+                    <span th:unless="${linha.temEmail()}" class="text-muted">—</span>
                 </td>
                 <td>
                     <span th:if="${linha.quantidadePendencias() > 0}"
@@ -34,18 +34,19 @@
                           class="text-success small">Em dia</span>
                 </td>
                 <td class="text-end">
-                    <button th:if="${linha.temWhatsapp()}"
-                            type="button"
-                            class="btn btn-sm btn-success btn-whatsapp-abrir"
-                            data-acao="profissional"
-                            th:attr="data-telefone=${linha.telefoneWhatsapp},
-                                     data-nome=${linha.nome},
-                                     data-total=${linha.quantidadePendencias() > 0 ? linha.valorTotalFormatado : 'R$ 0,00'},
-                                     data-periodicidade=${periodicidadeNome}">
-                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                        Avisar
-                    </button>
-                    <span th:unless="${linha.temWhatsapp()}" class="text-muted small">Sem WhatsApp</span>
+                    <form th:if="${linha.temEmail() and linha.quantidadePendencias() > 0}"
+                          th:action="@{/agendamentos/central-profissionais/mensagem/enviar-email}"
+                          method="post"
+                          class="d-inline">
+                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                        <input type="hidden" name="profissionalId" th:value="${linha.profissionalId}">
+                        <input type="hidden" name="periodicidade" th:value="${periodicidadeNome}">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                            Avisar
+                        </button>
+                    </form>
+                    <span th:if="${!linha.temEmail()}" class="text-muted small">Sem e-mail</span>
                 </td>
             </tr>
             </tbody>
@@ -92,14 +93,15 @@
         <div>
             <h2 class="central-panel__title">Aviso de pagamento pendente</h2>
             <p class="central-panel__hint mb-0">
-                Uma mensagem para todos. O envio automático ocorre nos horários abaixo, só para quem tiver pendência.
+                Mesma regra do WhatsApp: envia e-mail só para quem tem pendência; quitou, para de avisar.
+                O envio automático ocorre nos horários abaixo.
             </p>
             <p class="central-panel__hint mb-0 mt-1" th:if="${avisoPagamentoAutomaticoAtivo}">
                 <span class="badge text-bg-success">Envio automático ativo</span>
             </p>
             <p class="central-panel__hint mb-0 mt-1" th:unless="${avisoPagamentoAutomaticoAtivo}">
                 <span class="badge text-bg-secondary">Envio automático inativo</span>
-                <span class="text-muted small ms-1">Configure WhatsApp Meta para ativar.</span>
+                <span class="text-muted small ms-1">Configure MAIL_USERNAME e MAIL_PASSWORD para ativar.</span>
             </p>
         </div>
         <div class="central-stat">
@@ -111,7 +113,7 @@
         </div>
     </div>
 
-    <div class="mensagem-pagamento-grupo mensagem-pagamento-grupo--compacto mb-3">
+    <div class="mensagem-pagamento-grupo mensagem-pagamento-grupo--compacto mb-3" th:unless="${avisoPagamentoPorEmail}">
         <label class="form-label fw-semibold mb-1" for="mensagemWhatsappGeral">Mensagem para todos</label>
         <div class="mensagem-campo-wrap mb-2">
             <input type="text"
@@ -184,7 +186,7 @@
                     <thead>
                     <tr>
                         <th>Profissional</th>
-                        <th class="d-none d-md-table-cell">WhatsApp</th>
+                        <th class="d-none d-md-table-cell">E-mail</th>
                         <th>Situação</th>
                         <th></th>
                     </tr>
@@ -196,8 +198,8 @@
                             <div class="text-muted small" th:text="${linha.login}">login</div>
                         </td>
                         <td class="d-none d-md-table-cell">
-                            <span th:if="${linha.temWhatsapp()}" th:text="${linha.telefoneWhatsapp}">31999</span>
-                            <span th:unless="${linha.temWhatsapp()}" class="text-muted">—</span>
+                            <span th:if="${linha.temEmail()}" th:text="${linha.email}">email</span>
+                            <span th:unless="${linha.temEmail()}" class="text-muted">—</span>
                         </td>
                         <td>
                             <span th:if="${linha.quantidadePendencias() > 0}"
@@ -208,18 +210,21 @@
                                   class="text-success small">Em dia</span>
                         </td>
                         <td class="text-end">
-                            <button th:if="${linha.temWhatsapp()}"
-                                    type="button"
-                                    class="btn btn-sm btn-success btn-whatsapp-abrir"
-                                    data-acao="profissional"
-                                    th:attr="data-telefone=${linha.telefoneWhatsapp},
-                                             data-nome=${linha.nome},
-                                             data-total=${linha.quantidadePendencias() > 0 ? linha.valorTotalFormatado : 'R$ 0,00'},
-                                             data-periodicidade=${secaoAviso.periodicidade.name()}">
-                                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                                Avisar
-                            </button>
-                            <span th:unless="${linha.temWhatsapp()}" class="text-muted small">Sem WhatsApp</span>
+                            <form th:if="${linha.temEmail() and linha.quantidadePendencias() > 0}"
+                                  th:action="@{/agendamentos/central-profissionais/mensagem/enviar-email}"
+                                  method="post"
+                                  class="d-inline">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <input type="hidden" name="profissionalId" th:value="${linha.profissionalId}">
+                                <input type="hidden" name="periodicidade" th:value="${secaoAviso.periodicidade.name()}">
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                                    Avisar
+                                </button>
+                            </form>
+                            <span th:if="${!linha.temEmail()}" class="text-muted small">Sem e-mail</span>
+                            <span th:if="${linha.temEmail() and linha.quantidadePendencias() == 0}"
+                                  class="text-muted small">Em dia</span>
                         </td>
                     </tr>
                     </tbody>
@@ -229,6 +234,30 @@
     </article>
 
     <script th:inline="javascript">
+        (function () {
+            var pane = document.getElementById('central-pane-mensagem');
+            if (!pane) return;
+
+            pane.addEventListener('click', function (event) {
+                var toggle = event.target.closest('.mensagem-secao-toggle');
+                if (!toggle) return;
+                var listaId = toggle.getAttribute('aria-controls');
+                var lista = listaId ? document.getElementById(listaId) : null;
+                if (!lista) return;
+                var aberto = toggle.getAttribute('aria-expanded') === 'true';
+                var novoEstado = !aberto;
+                toggle.setAttribute('aria-expanded', novoEstado ? 'true' : 'false');
+                toggle.classList.toggle('is-open', novoEstado);
+                lista.hidden = !novoEstado;
+                var hint = toggle.querySelector('.mensagem-secao-toggle__hint');
+                if (hint) {
+                    hint.textContent = novoEstado ? 'Ocultar profissionais' : 'Ver profissionais';
+                }
+            });
+        })();
+    </script>
+
+    <script th:inline="javascript" th:if="${!avisoPagamentoPorEmail}">
         (function () {
             var pane = document.getElementById('central-pane-mensagem');
             if (!pane) return;
@@ -290,23 +319,6 @@
             }
 
             pane.addEventListener('click', function (event) {
-                var toggle = event.target.closest('.mensagem-secao-toggle');
-                if (toggle) {
-                    var listaId = toggle.getAttribute('aria-controls');
-                    var lista = listaId ? document.getElementById(listaId) : null;
-                    if (!lista) return;
-                    var aberto = toggle.getAttribute('aria-expanded') === 'true';
-                    var novoEstado = !aberto;
-                    toggle.setAttribute('aria-expanded', novoEstado ? 'true' : 'false');
-                    toggle.classList.toggle('is-open', novoEstado);
-                    lista.hidden = !novoEstado;
-                    var hint = toggle.querySelector('.mensagem-secao-toggle__hint');
-                    if (hint) {
-                        hint.textContent = novoEstado ? 'Ocultar profissionais' : 'Ver profissionais';
-                    }
-                    return;
-                }
-
                 var botao = event.target.closest('.btn-whatsapp-abrir');
                 if (!botao || !campoGeral) return;
 

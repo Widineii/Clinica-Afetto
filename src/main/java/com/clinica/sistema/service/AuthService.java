@@ -150,6 +150,12 @@ public class AuthService {
                 && "ROLE_PROFISSIONAL".equals(usuario.getCargo());
     }
 
+    /** Profissional que paga locacao cadastra e-mail para avisos automaticos de pagamento. */
+    public boolean podeCadastrarEmailNotificacaoPagamento(Usuario usuario) {
+        return podeCadastrarProprioTelefoneWhatsapp(usuario)
+                && !profissionalIgnoraValoresEPagamento(usuario);
+    }
+
     /** Foto e WhatsApp proprios: profissionais e dona da clinica. */
     public boolean podeEditarProprioPerfil(Usuario usuario) {
         return podeAcessarMeusPacientes(usuario);

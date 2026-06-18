@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.833-aviso-pagamento-email",
+                        "2.833",
+                        "Avisos de pagamento por e-mail",
+                        "Profissionais cadastram e-mail no login. Avisos automaticos de pendencia saem nos horarios da forma de pagamento (diario, semanal ou mensal), com botao para pagar no site.",
+                        NovidadePublicoAlvo.PROFISSIONAL,
+                        833,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.832-manual-atualizado",
                         "2.832",
                         "Manual atualizado",

@@ -20,12 +20,13 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
 
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.stereotype.Component;
 
-
-
 import java.io.IOException;
+import java.net.URI;
 
 
 
@@ -37,6 +38,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     public static final String SESSION_LOGIN_COM_TROCA_SENHA = "loginComTrocaSenhaPendente";
     public static final String SESSION_LOGIN_COM_WHATSAPP_PENDENTE = "loginComWhatsappPendente";
+    public static final String SESSION_LOGIN_COM_EMAIL_PENDENTE = "loginComEmailPendente";
     public static final String SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO = "loginComPendenciasPagamentoPendente";
 
 
@@ -50,6 +52,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     private final PagamentoConsultaService pagamentoConsultaService;
 
     private final LgpdConsentimentoService lgpdConsentimentoService;
+
+    private final RequestCache requestCache = new HttpSessionRequestCache();
 
 
 
@@ -94,15 +98,27 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     ) throws IOException {
 
         marcarTrocaSenhaPendenteNoLogin(request, authentication);
-        marcarWhatsappPendenteNoLogin(request, authentication);
+        marcarEmailNotificacaoPendenteNoLogin(request, authentication);
         marcarPendenciasPagamentoNoLogin(request, authentication);
 
         salvarAcessoNoNavegador(request, response, authentication);
 
-        String destino = lgpdConsentimentoService.usuarioLogadoPrecisaConsentir()
-                ? "/conta/consentimento-lgpd"
-                : "/agendamentos/dashboard";
-        response.sendRedirect(request.getContextPath() + destino);
+        if (lgpdConsentimentoService.usuarioLogadoPrecisaConsentir()) {
+            response.sendRedirect(request.getContextPath() + "/conta/consentimento-lgpd");
+            return;
+        }
+
+        SavedRequest savedRequest = requestCache.getRequest(request, response);
+        if (savedRequest != null) {
+            String targetUrl = savedRequest.getRedirectUrl();
+            if (destinoPosLoginSeguro(request, targetUrl)) {
+                requestCache.removeRequest(request, response);
+                response.sendRedirect(targetUrl);
+                return;
+            }
+        }
+
+        response.sendRedirect(request.getContextPath() + "/agendamentos/dashboard");
 
     }
 
@@ -204,7 +220,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     }
 
-    private void marcarWhatsappPendenteNoLogin(HttpServletRequest request, Authentication authentication) {
+    private void marcarEmailNotificacaoPendenteNoLogin(HttpServletRequest request, Authentication authentication) {
 
         if (!(authentication.getPrincipal() instanceof ClinicaUserPrincipal principal)) {
 
@@ -220,15 +236,9 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
         }
 
-        HttpSession session = request.getSession(false);
+        HttpSession session = request.getSession(true);
 
-        if (session == null) {
-
-            return;
-
-        }
-
-        usuarioService.marcarCadastroTelefoneWhatsappPendenteNoLogin(session, usuario);
+        usuarioService.marcarCadastroEmailNotificacaoPendenteNoLogin(session, usuario);
 
     }
 
@@ -258,6 +268,35 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
         pagamentoConsultaService.marcarLembretePendenciasPagamentoNoLogin(session, usuario);
 
+    }
+
+    private boolean destinoPosLoginSeguro(HttpServletRequest request, String targetUrl) {
+        if (targetUrl == null || targetUrl.isBlank()) {
+            return false;
+        }
+        String path = extrairPathInterno(request, targetUrl);
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        return path.startsWith("/agendamentos/meus-pagamentos")
+                || path.startsWith("/pagamentos/")
+                || path.startsWith("/agendamentos/meus-pacientes")
+                || path.startsWith("/agendamentos/dashboard");
+    }
+
+    private String extrairPathInterno(HttpServletRequest request, String targetUrl) {
+        if (targetUrl.startsWith("/") && !targetUrl.startsWith("//")) {
+            return targetUrl;
+        }
+        try {
+            URI uri = URI.create(targetUrl);
+            if (uri.getHost() != null && !uri.getHost().equalsIgnoreCase(request.getServerName())) {
+                return null;
+            }
+            return uri.getPath();
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
 }

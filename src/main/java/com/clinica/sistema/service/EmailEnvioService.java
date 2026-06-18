@@ -54,6 +54,36 @@ public class EmailEnvioService {
             return;
         }
 
+        enviarHtmlInterno(destinatario, assunto, conteudo.textoPlano(), conteudo.html(), RecuperacaoSenhaEmailTemplate.LOGO_CONTENT_ID);
+        log.info("[RecuperacaoSenha] codigo enviado para {}", mascararEmail(destinatario));
+    }
+
+    public boolean enviarHtml(String destinatario, String assunto, String textoPlano, String html) {
+        if (deveUsarModoConsolaAviso()) {
+            log.warn("[AvisoPagamentoEmail] modo consola — destino={} assunto={}", mascararEmail(destinatario), assunto);
+            return true;
+        }
+        try {
+            enviarHtmlInterno(destinatario, assunto, textoPlano, html, AvisoPagamentoEmailTemplate.LOGO_CONTENT_ID);
+            log.info("[AvisoPagamentoEmail] enviado para {}", mascararEmail(destinatario));
+            return true;
+        } catch (RuntimeException ex) {
+            log.error("[AvisoPagamentoEmail] falha para {}: {}", mascararEmail(destinatario), ex.getMessage());
+            return false;
+        }
+    }
+
+    public boolean envioRealDisponivel() {
+        return !deveUsarModoConsolaAviso();
+    }
+
+    private void enviarHtmlInterno(
+            String destinatario,
+            String assunto,
+            String textoPlano,
+            String html,
+            String logoContentId
+    ) {
         try {
             JavaMailSender mailSender = mailSenderProvider.getObject();
             MimeMessage mensagem = mailSender.createMimeMessage();
@@ -61,17 +91,16 @@ public class EmailEnvioService {
             helper.setFrom(remetenteFormatado());
             helper.setTo(destinatario);
             helper.setSubject(assunto);
-            helper.setText(conteudo.textoPlano(), conteudo.html());
-            helper.addInline(
-                    RecuperacaoSenhaEmailTemplate.LOGO_CONTENT_ID,
-                    new ClassPathResource("static/images/logo-afetto.png")
-            );
+            helper.setText(textoPlano, html);
+            helper.addInline(logoContentId, new ClassPathResource("static/images/logo-afetto.png"));
             mailSender.send(mensagem);
-            log.info("[RecuperacaoSenha] codigo enviado para {}", mascararEmail(destinatario));
         } catch (Exception ex) {
-            log.error("[RecuperacaoSenha] falha ao enviar e-mail para {}: {}", mascararEmail(destinatario), ex.getMessage());
-            throw new RuntimeException("Nao foi possivel enviar o e-mail agora. Tente novamente em alguns minutos.");
+            throw new RuntimeException("Nao foi possivel enviar o e-mail agora. Tente novamente em alguns minutos.", ex);
         }
+    }
+
+    private boolean deveUsarModoConsolaAviso() {
+        return mailSenderProvider.getIfAvailable() == null || !mailConfigurado();
     }
 
     private boolean deveUsarModoConsola() {

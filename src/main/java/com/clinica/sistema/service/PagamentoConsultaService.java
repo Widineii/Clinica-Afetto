@@ -1467,6 +1467,8 @@ public class PagamentoConsultaService {
         ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(profissional);
         String telefone = profissional.getTelefoneWhatsappFormulario();
         boolean temWhatsapp = telefone != null && !telefone.isBlank();
+        String email = profissional.getEmail() != null ? profissional.getEmail().trim().toLowerCase() : "";
+        boolean temEmail = !email.isBlank() && email.contains("@");
         PeriodicidadePagamento periodicidade = resolverPeriodicidade(profissional);
         String mensagem = resumo.temPendencias()
                 ? montarTextoWhatsappPendenciaPagamento(profissional, resumo)
@@ -1486,6 +1488,7 @@ public class PagamentoConsultaService {
                 profissional.getNome(),
                 profissional.getLogin(),
                 telefone,
+                email,
                 resumo.quantidade(),
                 resumo.temPendencias() ? resumo.valorTotalFormatado() : "Em dia",
                 mensagem,
@@ -1493,7 +1496,8 @@ public class PagamentoConsultaService {
                 periodicidade,
                 periodicidade.getRotulo(),
                 profissionalBloqueadoPorPendenciaPagamento(profissional),
-                temWhatsapp
+                temWhatsapp,
+                temEmail
         );
     }
 

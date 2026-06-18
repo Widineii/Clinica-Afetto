@@ -3117,6 +3117,7 @@
 </div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pos-agendamento(agendamento=${pagamentoAgendamento})}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
+<div th:replace="~{fragments/cadastro-email-profissional :: modal}"></div>
 <div th:replace="~{fragments/cadastro-telefone-whatsapp-profissional :: modal}"></div>
 
 <div th:if="${podeTrocarPropriaSenha}" class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
@@ -3250,6 +3251,7 @@
     var exibirModalNovidades = /*[[${exibirModalNovidades}]]*/ false;
     var exibirModalPendenciasPagamento = /*[[${exibirModalPendenciasPagamento}]]*/ false;
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
+    var exibirModalEmailNotificacao = /*[[${exibirModalEmailNotificacao}]]*/ false;
     var exibirModalTelefoneWhatsapp = /*[[${exibirModalTelefoneWhatsapp}]]*/ false;
 
     function rolarParaPendenciasDestaque() {
@@ -3260,7 +3262,7 @@
     }
 
     function abrirModalNovidadesEntrada() {
-        if (exibirModalTrocarSenhaObrigatoria || exibirModalTelefoneWhatsapp || !exibirModalNovidades) {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalEmailNotificacao || exibirModalTelefoneWhatsapp || !exibirModalNovidades) {
             return;
         }
         var novidadesModalEl = document.getElementById('novidadesModal');
@@ -3281,7 +3283,7 @@
     }
 
     function abrirModalPendenciasPagamentoEntrada(abrirNovidadesDepois) {
-        if (exibirModalTrocarSenhaObrigatoria || exibirModalTelefoneWhatsapp || !exibirModalPendenciasPagamento) {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalEmailNotificacao || exibirModalTelefoneWhatsapp || !exibirModalPendenciasPagamento) {
             if (abrirNovidadesDepois) {
                 abrirModalNovidadesEntrada();
             }
@@ -3327,6 +3329,33 @@
         }
     }
 
+    function abrirModalEmailNotificacaoEntrada(tentativas) {
+        if (!exibirModalEmailNotificacao) {
+            return;
+        }
+        if (typeof bootstrap === 'undefined') {
+            if ((tentativas || 0) < 20) {
+                window.setTimeout(function () {
+                    abrirModalEmailNotificacaoEntrada((tentativas || 0) + 1);
+                }, 50);
+            }
+            return;
+        }
+        var modalEmailEl = document.getElementById('emailNotificacaoModal');
+        if (!modalEmailEl) {
+            return;
+        }
+        fecharModalPendenciasSeAberto();
+        bootstrap.Modal.getOrCreateInstance(modalEmailEl, {
+            backdrop: 'static',
+            keyboard: false
+        }).show();
+        var inputEmail = document.getElementById('emailProfissionalNotificacao');
+        if (inputEmail) {
+            window.setTimeout(function () { inputEmail.focus(); }, 250);
+        }
+    }
+
     function abrirModalTelefoneWhatsappEntrada(tentativas) {
         if (!exibirModalTelefoneWhatsapp) {
             return;
@@ -3356,6 +3385,10 @@
 
     function inicializarModaisEntradaAgenda() {
         if (exibirModalTrocarSenhaObrigatoria) {
+            return;
+        }
+        if (exibirModalEmailNotificacao) {
+            abrirModalEmailNotificacaoEntrada();
             return;
         }
         if (exibirModalTelefoneWhatsapp) {

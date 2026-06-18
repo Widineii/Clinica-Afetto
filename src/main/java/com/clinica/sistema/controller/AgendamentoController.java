@@ -13,6 +13,7 @@ import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.EditarProfissionalForm;
 import com.clinica.sistema.dto.AvisoWhatsappPeriodicidadePainelView;
+import com.clinica.sistema.model.AvisoPagamentoEmailJanela;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.PagamentoStatus;
@@ -31,6 +32,7 @@ import com.clinica.sistema.service.RelatorioUsoSitePdfService;
 import com.clinica.sistema.service.RelatorioUsoSiteService;
 import com.clinica.sistema.service.RelatorioUsoSiteSessaoService;
 import com.clinica.sistema.service.TaxaSalaService;
+import com.clinica.sistema.service.AvisoPagamentoEmailService;
 import com.clinica.sistema.service.WhatsAppAvisoPagamentoService;
 import com.clinica.sistema.service.WhatsAppMensagemPagamentoService;
 import com.clinica.sistema.service.WhatsAppNotificacaoService;
@@ -92,6 +94,7 @@ public class AgendamentoController {
     private final WhatsAppNotificacaoService whatsAppNotificacaoService;
     private final WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService;
     private final WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService;
+    private final AvisoPagamentoEmailService avisoPagamentoEmailService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -114,7 +117,8 @@ public class AgendamentoController {
             TaxaSalaService taxaSalaService,
             WhatsAppNotificacaoService whatsAppNotificacaoService,
             WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService,
-            WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService
+            WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService,
+            AvisoPagamentoEmailService avisoPagamentoEmailService
     ) {
         this.service = service;
         this.authService = authService;
@@ -137,6 +141,7 @@ public class AgendamentoController {
         this.whatsAppNotificacaoService = whatsAppNotificacaoService;
         this.whatsAppMensagemPagamentoService = whatsAppMensagemPagamentoService;
         this.whatsAppAvisoPagamentoService = whatsAppAvisoPagamentoService;
+        this.avisoPagamentoEmailService = avisoPagamentoEmailService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -194,6 +199,12 @@ public class AgendamentoController {
         }
         if (!model.containsAttribute("exibirModalTelefoneWhatsapp")) {
             model.addAttribute("exibirModalTelefoneWhatsapp", false);
+        }
+        if (!model.containsAttribute("exibirModalEmailNotificacao")) {
+            model.addAttribute("exibirModalEmailNotificacao", false);
+        }
+        if (!model.containsAttribute("podeCadastrarEmailNotificacao")) {
+            model.addAttribute("podeCadastrarEmailNotificacao", false);
         }
         if (!model.containsAttribute("podeCadastrarTelefoneWhatsapp")) {
             model.addAttribute("podeCadastrarTelefoneWhatsapp", false);
@@ -356,15 +367,33 @@ public class AgendamentoController {
         model.addAttribute("exibirModalTrocarSenhaObrigatoria", exibirModalTrocarSenhaObrigatoria);
         model.addAttribute("trocaSenhaAindaPendente", trocaSenhaAindaPendente);
         boolean podeCadastrarTelefoneWhatsapp = authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado);
+        boolean podeCadastrarEmailNotificacao = authService.podeCadastrarEmailNotificacaoPagamento(usuarioLogado);
         boolean reabrirModalTelefoneWhatsapp = model.containsAttribute("reabrirModalTelefoneWhatsapp");
+        boolean reabrirModalEmailNotificacao = model.containsAttribute("reabrirModalEmailNotificacao");
+        boolean exibirModalEmailNotificacao = !exibirModalTrocarSenhaObrigatoria
+                && usuarioService.exibirModalEmailNotificacaoEntrada(
+                session,
+                reabrirModalEmailNotificacao,
+                usuarioLogado
+        );
         boolean exibirModalTelefoneWhatsapp = !exibirModalTrocarSenhaObrigatoria
+                && !exibirModalEmailNotificacao
                 && usuarioService.exibirModalTelefoneWhatsappEntrada(
                 session,
                 reabrirModalTelefoneWhatsapp,
                 usuarioLogado
         );
-        if (exibirModalTelefoneWhatsapp) {
+        if (exibirModalEmailNotificacao || exibirModalTelefoneWhatsapp) {
             model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
+        model.addAttribute("podeCadastrarEmailNotificacao", podeCadastrarEmailNotificacao);
+        model.addAttribute("exibirModalEmailNotificacao", exibirModalEmailNotificacao);
+        if (podeCadastrarEmailNotificacao && !model.containsAttribute("atualizarEmailProfissionalForm")) {
+            var emailForm = new com.clinica.sistema.dto.AtualizarEmailProfissionalForm();
+            if (usuarioLogado.getEmail() != null && !usuarioLogado.getEmail().isBlank()) {
+                emailForm.setEmail(usuarioLogado.getEmail());
+            }
+            model.addAttribute("atualizarEmailProfissionalForm", emailForm);
         }
         model.addAttribute("podeCadastrarTelefoneWhatsapp", podeCadastrarTelefoneWhatsapp);
         model.addAttribute("exibirModalTelefoneWhatsapp", exibirModalTelefoneWhatsapp);
@@ -704,10 +733,11 @@ public class AgendamentoController {
         model.addAttribute("podeVerRelatorioUsoSite", podeVerRelatorioUsoSite);
         model.addAttribute("podeGerenciarValoresConsulta", podeGerenciarValoresConsulta);
         model.addAttribute("whatsappMetaAtivo", whatsAppNotificacaoService.ativo());
-        var secoesAvisoWhatsapp = whatsAppAvisoPagamentoService.montarPainelCentral();
+        var secoesAvisoWhatsapp = avisoPagamentoEmailService.montarPainelCentral();
         model.addAttribute("secoesAvisoWhatsapp", secoesAvisoWhatsapp);
         model.addAttribute("msgWhatsappGeral", whatsAppMensagemPagamentoService.resolverTextoGeral());
-        model.addAttribute("avisoPagamentoAutomaticoAtivo", whatsAppAvisoPagamentoService.avisoAutomaticoAtivo());
+        model.addAttribute("avisoPagamentoAutomaticoAtivo", avisoPagamentoEmailService.avisoAutomaticoAtivo());
+        model.addAttribute("avisoPagamentoPorEmail", true);
         int totalProfissionaisWhatsapp = secoesAvisoWhatsapp.stream()
                 .mapToInt(secao -> secao.profissionais().size())
                 .sum();
@@ -881,6 +911,32 @@ public class AgendamentoController {
                 .orElseThrow(() -> new RuntimeException(
                         "WhatsApp invalido. Use DDD + numero (ex.: 31999887766)."
                 ));
+    }
+
+    @PostMapping("/central-profissionais/mensagem/enviar-email")
+    public String enviarMensagemEmailCentral(
+            @RequestParam Long profissionalId,
+            @RequestParam(required = false) PeriodicidadePagamento periodicidade,
+            RedirectAttributes redirectAttributes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarCentralProfissionais(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        try {
+            AvisoPagamentoEmailJanela janela = periodicidade != null
+                    ? switch (periodicidade) {
+                        case DIARIO -> AvisoPagamentoEmailJanela.DIARIO_MANHA;
+                        case SEMANAL -> AvisoPagamentoEmailJanela.SEMANAL_SABADO_TARDE;
+                        case MENSAL -> AvisoPagamentoEmailJanela.MENSAL_DIA1;
+                    }
+                    : null;
+            avisoPagamentoEmailService.enviarManualProfissional(profissionalId, janela);
+            redirectAttributes.addFlashAttribute("sucesso", "E-mail de aviso enviado.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais?aba=mensagem";
     }
 
     @PostMapping("/central-profissionais/mensagem/enviar-teste")

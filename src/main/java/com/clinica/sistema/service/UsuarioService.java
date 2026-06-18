@@ -6,6 +6,7 @@ import com.clinica.sistema.dto.AtualizarPeriodicidadeForm;
 import com.clinica.sistema.dto.GraficoJsonUtil;
 import com.clinica.sistema.dto.AtualizarPercentualIndicacaoProfissionalForm;
 import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
+import com.clinica.sistema.dto.AtualizarEmailProfissionalForm;
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
@@ -568,6 +569,66 @@ public class UsuarioService {
         if (session != null) {
             session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE);
         }
+    }
+
+    public boolean precisaCadastrarEmailNotificacao(Usuario usuario) {
+        if (!authService.podeCadastrarEmailNotificacaoPagamento(usuario)) {
+            return false;
+        }
+        Usuario atualizado = usuarioRepository.findById(usuario.getId()).orElse(usuario);
+        String email = atualizado.getEmail();
+        return email == null || email.isBlank();
+    }
+
+    public boolean exibirModalEmailNotificacaoEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
+        if (!precisaCadastrarEmailNotificacao(usuario)) {
+            return false;
+        }
+        if (reabrirAposErro) {
+            return true;
+        }
+        if (session == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_EMAIL_PENDENTE));
+    }
+
+    public void marcarCadastroEmailNotificacaoPendenteNoLogin(HttpSession session, Usuario usuario) {
+        if (session == null || !precisaCadastrarEmailNotificacao(usuario)) {
+            return;
+        }
+        session.setAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_EMAIL_PENDENTE, Boolean.TRUE);
+    }
+
+    public void dispensarCadastroEmailNotificacao(HttpSession session) {
+        if (session != null) {
+            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_EMAIL_PENDENTE);
+        }
+    }
+
+    @Transactional
+    public void atualizarEmailNotificacao(AtualizarEmailProfissionalForm form, Usuario usuarioLogado) {
+        validarCadastroEmailNotificacao(usuarioLogado);
+        Usuario usuario = carregarUsuarioPersistido(usuarioLogado);
+        aplicarEmailNotificacaoNoUsuario(usuario, form);
+        usuarioRepository.save(usuario);
+    }
+
+    private void validarCadastroEmailNotificacao(Usuario usuarioLogado) {
+        if (!authService.podeCadastrarEmailNotificacaoPagamento(usuarioLogado)) {
+            throw new RuntimeException("Cadastro de e-mail nao disponivel para este usuario.");
+        }
+    }
+
+    private void aplicarEmailNotificacaoNoUsuario(Usuario usuario, AtualizarEmailProfissionalForm form) {
+        if (form == null || form.getEmail() == null || form.getEmail().isBlank()) {
+            throw new RuntimeException("Informe seu e-mail pessoal.");
+        }
+        String email = form.getEmail().trim().toLowerCase();
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            throw new RuntimeException("Informe um e-mail valido.");
+        }
+        usuario.setEmail(email);
     }
 
     @Transactional
