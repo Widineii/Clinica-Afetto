@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * Resumo de uso do banco para acompanhamento do limite Neon (armazenamento).
+ * Resumo de uso do banco para acompanhamento do limite de armazenamento (Neon ou KingHost).
  * Classe com getters para compatibilidade total com Thymeleaf.
  */
 @Getter
@@ -27,9 +27,16 @@ public class UsoBancoView {
     private final Long bytesBancoReal;
     private final String tamanhoBancoRealLabel;
     private final String tamanhoEstimadoLabel;
-    private final int limiteNeonMb;
+    private final String painelProvedor;
+    private final String limitePlanoLabel;
+    private final int limiteStorageMb;
     private final String percentualLabel;
     private final int barraPercentual;
     private final String nivelAlerta;
     private final boolean postgresComTamanhoReal;
+
+    /** Compatibilidade com templates/tests antigos. */
+    public int getLimiteNeonMb() {
+        return limiteStorageMb;
+    }
 }

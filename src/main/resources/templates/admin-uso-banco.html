@@ -78,7 +78,7 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
                 <p class="text-uppercase small mb-2 opacity-75">Administracao</p>
-                <h1 class="h2 mb-2">Uso do banco (Neon)</h1>
+                <h1 class="h2 mb-2" th:text="|Uso do banco (${resumo.painelProvedor})|">Uso do banco</h1>
                 <p class="mb-0 opacity-75">
                     Acompanhe quantos agendamentos estao gravados e uma estimativa do espaco.
                 </p>
@@ -96,7 +96,7 @@
     <div class="shell-card">
         <h2 class="h5 mb-3">Armazenamento</h2>
         <p class="mb-2" th:if="${resumo.postgresComTamanhoReal}">
-            Tamanho real do banco (PostgreSQL/Neon):
+            Tamanho real do banco (PostgreSQL/<span th:text="${resumo.painelProvedor}">KingHost</span>):
             <strong th:text="${resumo.tamanhoBancoRealLabel}">0 MB</strong>
         </p>
         <p class="mb-2" th:unless="${resumo.postgresComTamanhoReal}">
@@ -104,8 +104,9 @@
             <strong th:text="${resumo.tamanhoEstimadoLabel}">0 MB</strong>
         </p>
         <p class="hint mb-3">
-            Limite configurado do plano Neon:
-            <strong th:text="|${resumo.limiteNeonMb} MB (0,5 GB)|">512 MB</strong>.
+            Limite configurado do plano
+            <span th:text="${resumo.painelProvedor}">KingHost</span>:
+            <strong th:text="${resumo.limitePlanoLabel}">70 GB</strong>.
             <span th:if="${resumo.postgresComTamanhoReal}">
                 Estimativa por contagem: <span th:text="${resumo.tamanhoEstimadoLabel}">—</span>.
             </span>

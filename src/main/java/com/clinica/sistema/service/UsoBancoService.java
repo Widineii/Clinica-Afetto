@@ -40,8 +40,11 @@ public class UsoBancoService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    @Value("${app.neon.storage-limit-mb:512}")
-    private int limiteNeonMb;
+    @Value("${app.banco.storage-limit-mb:${app.neon.storage-limit-mb:512}}")
+    private int limiteStorageMb;
+
+    @Value("${app.banco.painel-provedor:Neon}")
+    private String painelProvedor;
 
     public UsoBancoService(
             AgendamentoRepository agendamentoRepository,
@@ -98,7 +101,7 @@ public class UsoBancoService {
 
         Long bytesBancoReal = postgres ? consultarTamanhoBancoPostgresForaDaTransacaoPrincipal().orElse(null) : null;
         long bytesReferencia = bytesBancoReal != null ? bytesBancoReal : bytesEstimados;
-        long limiteBytes = (long) limiteNeonMb * 1024L * 1024L;
+        long limiteBytes = (long) limiteStorageMb * 1024L * 1024L;
         double percentual = limiteBytes > 0
                 ? Math.min(100.0, (bytesReferencia * 100.0) / limiteBytes)
                 : 0.0;
@@ -121,7 +124,9 @@ public class UsoBancoService {
                 bytesBancoReal,
                 bytesBancoReal != null ? formatarBytes(bytesBancoReal) : null,
                 formatarBytes(bytesEstimados),
-                limiteNeonMb,
+                painelProvedor != null ? painelProvedor.trim() : "Neon",
+                formatarLimitePlano(limiteStorageMb),
+                limiteStorageMb,
                 formatarPercentual(percentual),
                 barraPercentual,
                 classificarAlerta(percentual),
@@ -189,6 +194,16 @@ public class UsoBancoService {
 
     static String formatarPercentual(double percentual) {
         return String.format(Locale.forLanguageTag("pt-BR"), "%.1f%%", percentual);
+    }
+
+    static String formatarLimitePlano(int limiteMb) {
+        if (limiteMb >= 1024 && limiteMb % 1024 == 0) {
+            return (limiteMb / 1024) + " GB";
+        }
+        if (limiteMb >= 1024) {
+            return String.format(Locale.forLanguageTag("pt-BR"), "%.1f GB", limiteMb / 1024.0);
+        }
+        return limiteMb + " MB";
     }
 
     public static String formatarBytes(long bytes) {

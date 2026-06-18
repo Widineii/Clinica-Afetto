@@ -47,7 +47,8 @@ class UsoBancoServiceTest {
                 salaRepository,
                 dataSource
         );
-        ReflectionTestUtils.setField(usoBancoService, "limiteNeonMb", 512);
+        ReflectionTestUtils.setField(usoBancoService, "limiteStorageMb", 512);
+        ReflectionTestUtils.setField(usoBancoService, "painelProvedor", "Neon");
     }
 
     @Test
@@ -82,5 +83,7 @@ class UsoBancoServiceTest {
         assertEquals("512 B", UsoBancoService.formatarBytes(512));
         assertEquals("1,5 KB", UsoBancoService.formatarBytes(1536));
         assertEquals("2,00 MB", UsoBancoService.formatarBytes(2_097_152));
+        assertEquals("70 GB", UsoBancoService.formatarLimitePlano(71680));
+        assertEquals("512 MB", UsoBancoService.formatarLimitePlano(512));
     }
 }

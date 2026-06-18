@@ -30,6 +30,15 @@ public class NovidadeSiteInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<NovidadeSeed> seeds = List.of(
                 new NovidadeSeed(
+                        "v2.829-uso-banco-kinghost",
+                        "2.829",
+                        "Painel Uso do banco KingHost",
+                        "No admin, o painel de uso do banco mostra limite de 70 GB do VPS KingHost em vez do plano Neon.",
+                        NovidadePublicoAlvo.ADMIN,
+                        829,
+                        diasAtras(0)
+                ),
+                new NovidadeSeed(
                         "v2.828-financeiro-admin",
                         "2.828",
                         "Financeiro visivel para admin",
