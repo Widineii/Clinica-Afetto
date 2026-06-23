@@ -131,6 +131,36 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             );
             jdbcTemplate.execute(
                     """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS boas_vindas_exibicoes_noite INTEGER DEFAULT 0
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS boas_vindas_oculto_noite BOOLEAN DEFAULT FALSE
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS boas_vindas_primeiro_login_concluido BOOLEAN DEFAULT FALSE
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS boas_vindas_apenas_apresentacao BOOLEAN DEFAULT FALSE
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS boas_vindas_apresentacao_exibida BOOLEAN DEFAULT FALSE
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
                     ALTER TABLE salas
                     ADD COLUMN IF NOT EXISTS taxa_clinica NUMERIC(10,2)
                     """

@@ -1160,6 +1160,19 @@ html[data-afetto-theme="dark"] .admin-modal .modal-header {
     border-bottom-color: var(--afetto-border) !important;
 }
 
+html[data-afetto-theme="dark"] .boas-vindas-login-modal .modal-header,
+html[data-afetto-theme="dark"] .boas-vindas-login-modal__header {
+    background: var(--afetto-gradient-showcase) !important;
+    border-bottom-color: transparent !important;
+}
+
+html[data-afetto-theme="dark"] .boas-vindas-login-modal .modal-title,
+html[data-afetto-theme="dark"] .boas-vindas-login-modal__nome,
+html[data-afetto-theme="dark"] .boas-vindas-login-modal__data,
+html[data-afetto-theme="dark"] .boas-vindas-login-modal__header-sub {
+    color: #fff !important;
+}
+
 html[data-afetto-theme="dark"] .admin-modal .modal-title {
     color: var(--afetto-text-strong) !important;
 }

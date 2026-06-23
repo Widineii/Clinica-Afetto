@@ -213,6 +213,9 @@ public class AgendamentoController {
         if (!model.containsAttribute("exibirModalBoasVindasLogin")) {
             model.addAttribute("exibirModalBoasVindasLogin", false);
         }
+        if (!model.containsAttribute("exigeFormaPagamentoBoasVindas")) {
+            model.addAttribute("exigeFormaPagamentoBoasVindas", false);
+        }
         if (!model.containsAttribute("pendenciasPagamentoDepoisBoasVindas")) {
             model.addAttribute("pendenciasPagamentoDepoisBoasVindas", false);
         }
@@ -418,6 +421,10 @@ public class AgendamentoController {
                 && boasVindasLoginService.elegivelBoasVindas(usuarioLogado);
         if (exibirModalBoasVindasLogin) {
             model.addAttribute("boasVindasLogin", boasVindasLoginService.montar(usuarioLogado));
+            model.addAttribute(
+                    "exigeFormaPagamentoBoasVindas",
+                    boasVindasLoginService.exigeFormaPagamentoPrimeiroAcesso(usuarioLogado)
+            );
             model.addAttribute("exibirModalPendenciasPagamento", false);
         }
         model.addAttribute("exibirModalBoasVindasLogin", exibirModalBoasVindasLogin);

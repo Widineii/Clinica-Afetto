@@ -45,13 +45,33 @@ public class Usuario {
     @Column(name = "boas_vindas_controle_data")
     private LocalDate boasVindasControleData;
 
-    /** Quantas vezes o modal de boas-vindas foi fechado hoje (sem marcar ocultar). */
+    /** Quantas vezes o modal de atendimentos de hoje foi fechado (antes das 21h). */
     @Column(name = "boas_vindas_exibicoes_hoje")
     private Integer boasVindasExibicoesHoje = 0;
 
-    /** Usuario marcou para nao ver o modal de boas-vindas novamente no dia atual. */
+    /** Usuario marcou para nao ver atendimentos de hoje novamente (antes das 21h). */
     @Column(name = "boas_vindas_oculto_hoje")
     private Boolean boasVindasOcultoHoje = false;
+
+    /** Quantas vezes o modal de atendimentos de amanha foi fechado (a partir das 21h). */
+    @Column(name = "boas_vindas_exibicoes_noite")
+    private Integer boasVindasExibicoesNoite = 0;
+
+    /** Usuario marcou para nao ver atendimentos de amanha novamente na noite atual. */
+    @Column(name = "boas_vindas_oculto_noite")
+    private Boolean boasVindasOcultoNoite = false;
+
+    /** Modal de boas-vindas com atendimentos ja exibido no primeiro login da conta. */
+    @Column(name = "boas_vindas_primeiro_login_concluido")
+    private Boolean boasVindasPrimeiroLoginConcluido = false;
+
+    /** Profissional existente: tela de boas-vindas so para apresentar a novidade (sem exigir pagamento). */
+    @Column(name = "boas_vindas_apenas_apresentacao")
+    private Boolean boasVindasApenasApresentacao = false;
+
+    /** Apresentacao unica da novidade ja vista (profissionais que ja usavam o sistema). */
+    @Column(name = "boas_vindas_apresentacao_exibida")
+    private Boolean boasVindasApresentacaoExibida = false;
 
     /** Taxa de sala padrao por tipo de agendamento (Central → Valores). Nao e o valor que o cliente paga ao profissional. */
     @Column(name = "valor_consulta_avulso", precision = 10, scale = 2)

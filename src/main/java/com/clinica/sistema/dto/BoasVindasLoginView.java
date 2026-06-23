@@ -7,6 +7,8 @@ public record BoasVindasLoginView(
         String primeiroNome,
         String dataHojeFormatada,
         boolean atendimentosDeAmanha,
+        boolean primeiroLogin,
+        boolean apenasApresentacao,
         List<AtendimentoSalaHojeView> salasComAtendimentos,
         int totalAtendimentos
 ) {

@@ -1,20 +1,156 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="modal"
-     th:if="${exibirModalBoasVindasLogin == true and boasVindasLogin != null}"
+
+<!-- Incluído pela agenda: um dos dois modais abaixo entra no DOM -->
+<div th:fragment="modal">
+    <div th:replace="~{fragments/boas-vindas-login :: modalPrimeiroAcesso}"></div>
+    <div th:replace="~{fragments/boas-vindas-login :: modalBoasVindasDiario}"></div>
+</div>
+
+<!-- Primeiro acesso: conta nova, sem agendamentos, aparece uma única vez -->
+<div th:fragment="modalPrimeiroAcesso"
+     th:if="${exibirModalBoasVindasLogin == true and boasVindasLogin != null and boasVindasLogin.primeiroLogin}"
      class="modal fade admin-modal boas-vindas-login-modal"
      id="boasVindasLoginModal"
      tabindex="-1"
      aria-labelledby="boasVindasLoginModalTitulo"
      aria-hidden="true"
      data-bs-backdrop="static"
-     data-bs-keyboard="false">
+     data-bs-keyboard="false"
+     th:attr="data-primeiro-login=true,
+              data-exige-forma-pagamento=${exigeFormaPagamentoBoasVindas}">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header boas-vindas-login-modal__header border-0 pb-3 px-4 pt-4">
+                <div class="w-100 text-center">
+                    <p class="badge rounded-pill boas-vindas-login-modal__badge mb-2"
+                       th:text="${boasVindasLogin.apenasApresentacao() ? 'Novidade no sistema' : 'Seu primeiro acesso'}">
+                        Seu primeiro acesso
+                    </p>
+                    <p class="boas-vindas-login-modal__data small mb-2"
+                       th:text="${boasVindasLogin.dataHojeFormatada}">Terça-feira, 23 de junho</p>
+                    <h2 class="modal-title h3 mb-0" id="boasVindasLoginModalTitulo">
+                        <span th:text="${boasVindasLogin.saudacao}">Bom dia</span>,
+                        <span class="boas-vindas-login-modal__nome"
+                              th:text="${boasVindasLogin.primeiroNome}">Maria</span>!
+                    </h2>
+                    <p class="boas-vindas-login-modal__header-sub small mt-2 mb-0"
+                       th:text="${boasVindasLogin.apenasApresentacao()}
+                           ? 'Conheça a nova tela de boas-vindas do Agenda Afetto.'
+                           : 'Bem-vinda ao Agenda Afetto. Configure sua conta para começar.'">
+                        Bem-vinda ao Agenda Afetto. Configure sua conta para começar.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-body px-4 pb-2 pt-1">
+                <div class="boas-vindas-login-modal__intro mb-3">
+                    <p class="boas-vindas-login-modal__intro-text mb-0">
+                        O <strong>Agenda Afetto</strong> é o sistema da clínica para você
+                        <strong>agendar salas</strong>, <strong>acompanhar seus atendimentos</strong>,
+                        <strong>pagar consultas</strong> e organizar sua rotina na Afetto — tudo em um só lugar.
+                    </p>
+                </div>
+
+                <section th:if="${exigeFormaPagamentoBoasVindas and periodicidadesPagamento != null}"
+                         class="boas-vindas-login-modal__pagamento"
+                         id="boasVindasPrimeiroLoginFormaPagamento">
+                    <div class="periodicidade-resumo-card boas-vindas-login-modal__pagamento-card mb-0">
+                        <div class="periodicidade-resumo-card__titulo">Forma de pagamento</div>
+                        <p class="periodicidade-resumo-card__hint mb-0">
+                            Qual forma de pagamento você deseja usar? Escolha uma opção para continuar.
+                        </p>
+                        <div class="periodicidade-resumo-opcoes mt-2 boas-vindas-login-modal__pagamento-opcoes"
+                             role="radiogroup"
+                             aria-label="Forma de pagamento">
+                            <label th:each="opt : ${periodicidadesPagamento}"
+                                   class="periodicidade-resumo-btn boas-vindas-login-modal__pagamento-btn mb-0"
+                                   th:attr="data-descricao=${opt.descricao}">
+                                <input type="radio"
+                                       class="visually-hidden"
+                                       name="boasVindasPeriodicidade"
+                                       th:value="${opt.name()}"
+                                       th:id="${'boasVindasPagamento_' + opt.name()}">
+                                <span th:text="${opt.rotulo}">Diário</span>
+                            </label>
+                        </div>
+                        <p class="periodicidade-resumo-card__descricao mb-0 mt-2"
+                           id="boasVindasPagamentoDescricao">
+                            Selecione uma forma de pagamento acima.
+                        </p>
+                        <p class="small text-danger mb-0 mt-2 d-none"
+                           id="boasVindasPagamentoErro"
+                           role="alert">
+                            Selecione a forma de pagamento para continuar.
+                        </p>
+                    </div>
+                </section>
+
+                <section class="boas-vindas-login-modal__acesso mt-4">
+                    <h3 class="boas-vindas-login-modal__acesso-titulo">Acesso rápido</h3>
+                    <div class="boas-vindas-login-modal__acesso-grid">
+                        <a th:href="@{/manual}"
+                           class="boas-vindas-login-modal__acesso-card boas-vindas-login-modal__acesso-card--manual">
+                            <span class="boas-vindas-login-modal__acesso-icone" aria-hidden="true">📖</span>
+                            <span class="boas-vindas-login-modal__acesso-nome">Manual de uso</span>
+                            <span class="boas-vindas-login-modal__acesso-sub">Passo a passo completo</span>
+                        </a>
+                        <a th:if="${manualWhatsappClinicaAtivo}"
+                           th:href="${manualWhatsappClinicaUrl}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="boas-vindas-login-modal__acesso-card boas-vindas-login-modal__acesso-card--whatsapp">
+                            <span class="boas-vindas-login-modal__acesso-icone" aria-hidden="true">💬</span>
+                            <span class="boas-vindas-login-modal__acesso-nome">WhatsApp da clínica</span>
+                            <span class="boas-vindas-login-modal__acesso-sub">Tire dúvidas</span>
+                        </a>
+                        <a th:unless="${manualWhatsappClinicaAtivo}"
+                           th:href="@{/manual#duvidas}"
+                           class="boas-vindas-login-modal__acesso-card boas-vindas-login-modal__acesso-card--whatsapp">
+                            <span class="boas-vindas-login-modal__acesso-icone" aria-hidden="true">💬</span>
+                            <span class="boas-vindas-login-modal__acesso-nome">WhatsApp da clínica</span>
+                            <span class="boas-vindas-login-modal__acesso-sub">Tire dúvidas</span>
+                        </a>
+                        <button type="button"
+                                class="boas-vindas-login-modal__acesso-card boas-vindas-login-modal__acesso-card--perfil"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editarPerfilModal">
+                            <span class="boas-vindas-login-modal__acesso-icone" aria-hidden="true">👤</span>
+                            <span class="boas-vindas-login-modal__acesso-nome">Meu perfil</span>
+                            <span class="boas-vindas-login-modal__acesso-sub">Contato e senha</span>
+                        </button>
+                    </div>
+                </section>
+            </div>
+            <div class="modal-footer boas-vindas-login-modal__footer flex-column align-items-center gap-2 border-0 px-4 pb-4 pt-2">
+                <button type="button"
+                        class="boas-vindas-login-modal__cta"
+                        id="boasVindasLoginContinuar"
+                        th:disabled="${exigeFormaPagamentoBoasVindas}">
+                    Começar a usar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logins seguintes: atendimentos do dia / amanhã -->
+<div th:fragment="modalBoasVindasDiario"
+     th:if="${exibirModalBoasVindasLogin == true and boasVindasLogin != null and !boasVindasLogin.primeiroLogin}"
+     class="modal fade admin-modal boas-vindas-login-modal"
+     id="boasVindasLoginModal"
+     tabindex="-1"
+     aria-labelledby="boasVindasLoginModalTitulo"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
+     data-primeiro-login="false"
+     data-exige-forma-pagamento="false">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-2 px-4 pt-4">
+            <div class="modal-header boas-vindas-login-modal__header border-0 pb-3 px-4 pt-4">
                 <div class="w-100 text-center">
-                    <p class="boas-vindas-login-modal__data text-muted small mb-2"
+                    <p class="boas-vindas-login-modal__data small mb-2"
                        th:text="${boasVindasLogin.dataHojeFormatada}">Terça-feira, 23 de junho</p>
                     <h2 class="modal-title h3 mb-0" id="boasVindasLoginModalTitulo">
                         <span th:text="${boasVindasLogin.saudacao}">Bom dia</span>,
@@ -35,7 +171,9 @@
                 </div>
                 <div th:unless="${boasVindasLogin.semAtendimentos()}">
                     <h3 class="boas-vindas-login-modal__secao-titulo text-center"
-                        th:text="${boasVindasLogin.atendimentosDeAmanha()} ? 'Atendimentos de amanhã' : 'Atendimentos do dia'">
+                        th:text="${boasVindasLogin.atendimentosDeAmanha()}
+                            ? 'Atendimentos de amanhã'
+                            : 'Atendimentos do dia'">
                         Atendimentos do dia
                     </h3>
                     <div class="boas-vindas-login-modal__salas">
@@ -56,19 +194,22 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer flex-column align-items-stretch gap-2 border-0 px-4 pb-4 pt-2">
-                <div class="form-check text-start mb-1">
+            <div class="modal-footer boas-vindas-login-modal__footer flex-column align-items-center gap-2 border-0 px-4 pb-4 pt-2">
+                <div class="form-check text-start mb-1 w-100">
                     <input class="form-check-input"
                            type="checkbox"
                            id="boasVindasLoginNaoMostrarHoje"
                            name="naoMostrarMaisHoje"
                            value="true">
-                    <label class="form-check-label small text-muted" for="boasVindasLoginNaoMostrarHoje">
+                    <label class="form-check-label small text-muted" for="boasVindasLoginNaoMostrarHoje"
+                           th:text="${boasVindasLogin.atendimentosDeAmanha()}
+                               ? 'Não mostrar mais hoje (amanhã)'
+                               : 'Não mostrar mais hoje'">
                         Não mostrar mais hoje
                     </label>
                 </div>
                 <button type="button"
-                        class="btn btn-teal btn-lg w-100"
+                        class="boas-vindas-login-modal__cta"
                         id="boasVindasLoginContinuar">
                     Ver minha agenda
                 </button>
@@ -76,5 +217,6 @@
         </div>
     </div>
 </div>
+
 </body>
 </html>

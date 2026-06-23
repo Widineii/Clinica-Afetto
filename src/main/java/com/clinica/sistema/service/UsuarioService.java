@@ -445,6 +445,9 @@ public class UsuarioService {
         if (segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
             usuario.setDeveTrocarSenha(true);
         }
+        usuario.setBoasVindasPrimeiroLoginConcluido(false);
+        usuario.setBoasVindasApenasApresentacao(false);
+        usuario.setBoasVindasApresentacaoExibida(false);
         return usuarioRepository.save(usuario);
     }
 
@@ -754,6 +757,23 @@ public class UsuarioService {
             );
         }
 
+        return aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
+    }
+
+    @Transactional
+    public int confirmarPeriodicidadePrimeiroAcesso(PeriodicidadePagamento nova, Usuario profissionalLogado) {
+        validarProfissionalComPeriodicidade(profissionalLogado);
+        if (nova == null) {
+            throw new RuntimeException("Selecione a forma de pagamento.");
+        }
+        Usuario alvo = recarregarProfissional(profissionalLogado);
+        PeriodicidadePagamento atual = pagamentoConsultaService.resolverPeriodicidade(alvo);
+        if (nova == atual) {
+            alvo.setPeriodicidadePagamento(nova);
+            alvo.setPeriodicidadeAlteradaEm(LocalDateTime.now());
+            usuarioRepository.save(alvo);
+            return 0;
+        }
         return aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
     }
 

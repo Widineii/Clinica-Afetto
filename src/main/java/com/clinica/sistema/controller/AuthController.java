@@ -4,6 +4,7 @@ import com.clinica.sistema.dto.LoginForm;
 import com.clinica.sistema.dto.AtualizarEmailProfissionalForm;
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
+import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.security.AcessoSalvoCookies;
 import com.clinica.sistema.service.AuthService;
@@ -223,11 +224,26 @@ public class AuthController {
 
     @PostMapping("/conta/boas-vindas-login/pular")
     public String pularBoasVindasLogin(
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean naoMostrarMaisHoje,
+            @RequestParam(defaultValue = "false") boolean naoMostrarMaisHoje,
+            @RequestParam(required = false) String periodicidade,
             HttpSession session
     ) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-        boasVindasLoginService.registrarFechamentoBoasVindas(usuarioLogado, naoMostrarMaisHoje);
+        Usuario registro = usuarioService.recarregarUsuario(usuarioLogado);
+        if (boasVindasLoginService.isPrimeiroLoginPendente(registro)) {
+            if (boasVindasLoginService.exigeFormaPagamentoPrimeiroAcesso(registro)) {
+                if (periodicidade == null || periodicidade.isBlank()) {
+                    throw new RuntimeException("Selecione a forma de pagamento para continuar.");
+                }
+                usuarioService.confirmarPeriodicidadePrimeiroAcesso(
+                        PeriodicidadePagamento.valueOf(periodicidade.trim()),
+                        usuarioLogado
+                );
+            }
+            boasVindasLoginService.registrarFechamentoBoasVindas(usuarioLogado, false);
+        } else {
+            boasVindasLoginService.registrarFechamentoBoasVindas(usuarioLogado, naoMostrarMaisHoje);
+        }
         boasVindasLoginService.dispensarBoasVindasLogin(session);
         return "redirect:/agendamentos/dashboard";
     }

@@ -26,9 +26,15 @@ import java.util.Map;
 @Service
 public class BoasVindasLoginService {
 
-    public static final int LIMITE_EXIBICOES_BOAS_VINDAS_DIA = 4;
+    public static final int LIMITE_EXIBICOES_ATENDIMENTOS_HOJE = 4;
 
-    private static final int HORA_EXIBIR_PROXIMO_DIA = 21;
+    public static final int LIMITE_EXIBICOES_ATENDIMENTOS_AMANHA = 2;
+
+    /** Início do período que exibe atendimentos do dia (5h). */
+    public static final int HORA_INICIO_PERIODO_DIA = 5;
+
+    /** Início do período que exibe atendimentos de amanhã (21h). */
+    public static final int HORA_INICIO_PERIODO_NOITE = 21;
 
     private static final ZoneId FUSO_CLINICA = ZoneId.of("America/Sao_Paulo");
     private static final DateTimeFormatter FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm");
@@ -72,11 +78,54 @@ public class BoasVindasLoginService {
         if (usuario == null) {
             return false;
         }
+        if (isPrimeiroLoginPendente(usuario)) {
+            return true;
+        }
+        if (!emPeriodoAtivo()) {
+            return false;
+        }
+        if (emPeriodoNoite()) {
+            if (Boolean.TRUE.equals(usuario.getBoasVindasOcultoNoite())) {
+                return false;
+            }
+            int exibicoes = usuario.getBoasVindasExibicoesNoite() != null ? usuario.getBoasVindasExibicoesNoite() : 0;
+            return exibicoes < LIMITE_EXIBICOES_ATENDIMENTOS_AMANHA;
+        }
         if (Boolean.TRUE.equals(usuario.getBoasVindasOcultoHoje())) {
             return false;
         }
         int exibicoes = usuario.getBoasVindasExibicoesHoje() != null ? usuario.getBoasVindasExibicoesHoje() : 0;
-        return exibicoes < LIMITE_EXIBICOES_BOAS_VINDAS_DIA;
+        return exibicoes < LIMITE_EXIBICOES_ATENDIMENTOS_HOJE;
+    }
+
+    public boolean isPrimeiroLoginPendente(Usuario usuario) {
+        return usuario != null && !Boolean.TRUE.equals(usuario.getBoasVindasPrimeiroLoginConcluido());
+    }
+
+    public boolean exigeFormaPagamentoPrimeiroAcesso(Usuario usuario) {
+        if (usuario == null || !authService.podeEscolherFormaPagamento(usuario)) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(usuario.getBoasVindasApenasApresentacao())) {
+            return false;
+        }
+        return isPrimeiroLoginPendente(usuario);
+    }
+
+    /** Período do dia: 5h às 21h — atendimentos de hoje. */
+    public boolean emPeriodoDia() {
+        LocalTime agora = LocalTime.now(FUSO_CLINICA);
+        return !agora.isBefore(LocalTime.of(HORA_INICIO_PERIODO_DIA, 0))
+                && agora.isBefore(LocalTime.of(HORA_INICIO_PERIODO_NOITE, 0));
+    }
+
+    /** Período da noite: 21h à meia-noite — atendimentos de amanhã. */
+    public boolean emPeriodoNoite() {
+        return LocalTime.now(FUSO_CLINICA).getHour() >= HORA_INICIO_PERIODO_NOITE;
+    }
+
+    public boolean emPeriodoAtivo() {
+        return emPeriodoDia() || emPeriodoNoite();
     }
 
     @Transactional
@@ -92,6 +141,8 @@ public class BoasVindasLoginService {
         registro.setBoasVindasControleData(hoje);
         registro.setBoasVindasExibicoesHoje(0);
         registro.setBoasVindasOcultoHoje(false);
+        registro.setBoasVindasExibicoesNoite(0);
+        registro.setBoasVindasOcultoNoite(false);
         return usuarioRepository.save(registro);
     }
 
@@ -103,11 +154,29 @@ public class BoasVindasLoginService {
         Usuario registro = sincronizarControleDiario(usuario);
         LocalDate hoje = LocalDate.now(FUSO_CLINICA);
         registro.setBoasVindasControleData(hoje);
-        if (naoMostrarMaisHoje) {
-            registro.setBoasVindasOcultoHoje(true);
-        } else {
-            int exibicoes = registro.getBoasVindasExibicoesHoje() != null ? registro.getBoasVindasExibicoesHoje() : 0;
-            registro.setBoasVindasExibicoesHoje(exibicoes + 1);
+        if (isPrimeiroLoginPendente(registro)) {
+            if (Boolean.TRUE.equals(registro.getBoasVindasApenasApresentacao())) {
+                registro.setBoasVindasApresentacaoExibida(true);
+            }
+            registro.setBoasVindasPrimeiroLoginConcluido(true);
+            registro.setBoasVindasApenasApresentacao(false);
+            usuarioRepository.save(registro);
+            return;
+        }
+        if (emPeriodoNoite()) {
+            if (naoMostrarMaisHoje) {
+                registro.setBoasVindasOcultoNoite(true);
+            } else {
+                int exibicoes = registro.getBoasVindasExibicoesNoite() != null ? registro.getBoasVindasExibicoesNoite() : 0;
+                registro.setBoasVindasExibicoesNoite(exibicoes + 1);
+            }
+        } else if (emPeriodoDia()) {
+            if (naoMostrarMaisHoje) {
+                registro.setBoasVindasOcultoHoje(true);
+            } else {
+                int exibicoes = registro.getBoasVindasExibicoesHoje() != null ? registro.getBoasVindasExibicoesHoje() : 0;
+                registro.setBoasVindasExibicoesHoje(exibicoes + 1);
+            }
         }
         usuarioRepository.save(registro);
     }
@@ -126,15 +195,35 @@ public class BoasVindasLoginService {
     }
 
     public BoasVindasLoginView montar(Usuario usuario) {
-        String primeiroNome = extrairPrimeiroNome(usuario != null ? usuario.getNome() : null);
+        Usuario registro = usuario != null && usuario.getId() != null
+                ? usuarioRepository.findById(usuario.getId()).orElse(usuario)
+                : usuario;
+        boolean primeiroLogin = isPrimeiroLoginPendente(registro);
+        String primeiroNome = extrairPrimeiroNome(registro != null ? registro.getNome() : null);
         String saudacao = resolverSaudacao();
         LocalDate hoje = LocalDate.now(FUSO_CLINICA);
-        LocalDate dataReferencia = resolverDataReferenciaAtendimentos();
+
+        if (primeiroLogin) {
+            boolean apenasApresentacao = Boolean.TRUE.equals(registro.getBoasVindasApenasApresentacao());
+            String dataFormatada = capitalizarPrimeiraLetra(hoje.format(FORMATO_DATA));
+            return new BoasVindasLoginView(
+                    saudacao,
+                    primeiroNome,
+                    dataFormatada,
+                    false,
+                    true,
+                    apenasApresentacao,
+                    List.of(),
+                    0
+            );
+        }
+
+        LocalDate dataReferencia = resolverDataReferenciaAtendimentos(false);
         boolean atendimentosDeAmanha = dataReferencia.isAfter(hoje);
         String dataFormatada = capitalizarPrimeiraLetra(dataReferencia.format(FORMATO_DATA));
 
         List<Agendamento> agendamentosDoDia = agendamentoService
-                .listarAgendamentosDoDia(usuario, false, dataReferencia);
+                .listarAgendamentosDoDia(registro, false, dataReferencia);
         List<AtendimentoSalaHojeView> salasComAtendimentos = agruparAtendimentosPorSala(agendamentosDoDia);
 
         return new BoasVindasLoginView(
@@ -142,15 +231,27 @@ public class BoasVindasLoginService {
                 primeiroNome,
                 dataFormatada,
                 atendimentosDeAmanha,
+                primeiroLogin,
+                false,
                 salasComAtendimentos,
                 agendamentosDoDia.size()
         );
     }
 
+    LocalDate resolverDataReferenciaAtendimentos(boolean primeiroLogin) {
+        LocalDate hoje = LocalDate.now(FUSO_CLINICA);
+        if (primeiroLogin) {
+            return hoje;
+        }
+        if (LocalTime.now(FUSO_CLINICA).getHour() >= HORA_INICIO_PERIODO_NOITE) {
+            return hoje.plusDays(1);
+        }
+        return hoje;
+    }
+
     static LocalDate resolverDataReferenciaAtendimentos() {
         LocalDate hoje = LocalDate.now(FUSO_CLINICA);
-        int hora = LocalTime.now(FUSO_CLINICA).getHour();
-        if (hora >= HORA_EXIBIR_PROXIMO_DIA) {
+        if (LocalTime.now(FUSO_CLINICA).getHour() >= HORA_INICIO_PERIODO_NOITE) {
             return hoje.plusDays(1);
         }
         return hoje;

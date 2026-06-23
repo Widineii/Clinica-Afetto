@@ -55,6 +55,11 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaUsuariosSeNecessario("boas_vindas_controle_data", "DATE");
             adicionarColunaUsuariosSeNecessario("boas_vindas_exibicoes_hoje", "INT DEFAULT 0");
             adicionarColunaUsuariosSeNecessario("boas_vindas_oculto_hoje", "BOOLEAN DEFAULT FALSE");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_exibicoes_noite", "INT DEFAULT 0");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_oculto_noite", "BOOLEAN DEFAULT FALSE");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_primeiro_login_concluido", "BOOLEAN DEFAULT FALSE");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_apenas_apresentacao", "BOOLEAN DEFAULT FALSE");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_apresentacao_exibida", "BOOLEAN DEFAULT FALSE");
             adicionarColunaSalasSeNecessario("taxa_clinica", "DECIMAL(10,2)");
             preencherTaxaSala4Padrao();
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");

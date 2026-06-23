@@ -1359,11 +1359,37 @@
         }
 
         .boas-vindas-login-modal .modal-content {
-            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 42%);
+            background: #ffffff;
+        }
+
+        .boas-vindas-login-modal .modal-header,
+        .boas-vindas-login-modal__header {
+            border-bottom: 0;
+            background: var(--afetto-gradient-hero);
+        }
+
+        .boas-vindas-login-modal__badge {
+            background: rgba(255, 255, 255, 0.18);
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .boas-vindas-login-modal__data {
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        .boas-vindas-login-modal .modal-title {
+            color: #fff;
+        }
+
+        .boas-vindas-login-modal__header-sub {
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .boas-vindas-login-modal__nome {
-            color: #0d9488;
+            color: #e6fffb;
         }
 
         .boas-vindas-login-modal__secao-titulo {
@@ -1423,6 +1449,102 @@
             font-size: 0.82rem;
             color: #64748b;
             white-space: nowrap;
+        }
+
+        .boas-vindas-login-modal__intro {
+            background: linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(248, 250, 252, 0.9) 100%);
+            border: 1px solid #ccfbf1;
+            border-radius: 16px;
+            padding: 0.85rem 1rem;
+        }
+
+        .boas-vindas-login-modal__intro-text {
+            font-size: 0.9rem;
+            line-height: 1.55;
+            color: #475569;
+        }
+
+        .boas-vindas-login-modal__pagamento-card {
+            padding: 1rem 1.1rem;
+        }
+
+        .boas-vindas-login-modal__pagamento-btn {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .boas-vindas-login-modal__pagamento-btn:has(input:checked) {
+            background: #0d9488;
+            border-color: #0d9488;
+            color: #fff;
+        }
+
+        .boas-vindas-login-modal__acesso-titulo {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+        }
+
+        .boas-vindas-login-modal__acesso-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+
+        .boas-vindas-login-modal__acesso-card {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.15rem;
+            min-height: 5.5rem;
+            padding: 0.85rem 0.9rem;
+            border: 0;
+            border-radius: 18px;
+            text-decoration: none;
+            text-align: left;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .boas-vindas-login-modal__acesso-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .boas-vindas-login-modal__acesso-card--manual { background: #ecfeff; }
+        .boas-vindas-login-modal__acesso-card--whatsapp { background: #ecfdf5; }
+        .boas-vindas-login-modal__acesso-card--perfil { background: #eff6ff; }
+
+        .boas-vindas-login-modal__acesso-icone {
+            font-size: 1.15rem;
+            line-height: 1;
+            margin-bottom: 0.15rem;
+        }
+
+        .boas-vindas-login-modal__acesso-nome {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .boas-vindas-login-modal__acesso-sub {
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.35;
+        }
+
+        .boas-vindas-login-modal__footer {
+            align-items: center;
+        }
+
+        @media (max-width: 575.98px) {
+            .boas-vindas-login-modal__acesso-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         #novidadesModal .modal-dialog {
@@ -2125,6 +2247,42 @@
     }
     </style>
     <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
+    <style>
+        .boas-vindas-login-modal__cta,
+        #boasVindasLoginContinuar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: min(100%, 16.5rem);
+            padding: 0.85rem 2.75rem;
+            border: 0;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #0a8785 0%, #12c6bd 100%);
+            color: #fff !important;
+            font-weight: 700;
+            font-size: 1rem;
+            line-height: 1.2;
+            box-shadow: 0 8px 22px rgba(10, 135, 133, 0.32);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+            cursor: pointer;
+        }
+
+        .boas-vindas-login-modal__cta:hover:not(:disabled),
+        #boasVindasLoginContinuar:hover:not(:disabled) {
+            color: #fff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px rgba(10, 135, 133, 0.38);
+        }
+
+        .boas-vindas-login-modal__cta:disabled,
+        #boasVindasLoginContinuar:disabled {
+            background: linear-gradient(135deg, #0a8785 0%, #12c6bd 100%) !important;
+            color: #fff !important;
+            opacity: 0.55;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+    </style>
 </head>
 <body th:attr="data-pagamento-auto-sync=${pagamentoService != null and !pagamentoService.modoTestePagamento()}">
 <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
@@ -3415,11 +3573,27 @@
             }
             return;
         }
+        var modalEl = document.getElementById('boasVindasLoginModal');
+        var exigePagamento = modalEl && modalEl.dataset.exigeFormaPagamento === 'true';
+        var pagamentoSelecionado = document.querySelector('input[name="boasVindasPeriodicidade"]:checked');
+        var erroPagamento = document.getElementById('boasVindasPagamentoErro');
+        if (exigePagamento && !pagamentoSelecionado) {
+            if (erroPagamento) {
+                erroPagamento.classList.remove('d-none');
+            }
+            return;
+        }
+        if (erroPagamento) {
+            erroPagamento.classList.add('d-none');
+        }
         var body = new URLSearchParams();
         body.append(csrf.name, csrf.value);
         var checkbox = document.getElementById('boasVindasLoginNaoMostrarHoje');
         if (checkbox && checkbox.checked) {
             body.append('naoMostrarMaisHoje', 'true');
+        }
+        if (pagamentoSelecionado) {
+            body.append('periodicidade', pagamentoSelecionado.value);
         }
         fetch('/conta/boas-vindas-login/pular', {
             method: 'POST',
@@ -3430,6 +3604,44 @@
                 callback();
             }
         });
+    }
+
+    function inicializarBoasVindasPrimeiroLoginPagamento() {
+        var modalEl = document.getElementById('boasVindasLoginModal');
+        if (!modalEl || modalEl.dataset.primeiroLogin !== 'true') {
+            return;
+        }
+        var exigePagamento = modalEl.dataset.exigeFormaPagamento === 'true';
+        var botaoContinuar = document.getElementById('boasVindasLoginContinuar');
+        var descricaoEl = document.getElementById('boasVindasPagamentoDescricao');
+        var radios = document.querySelectorAll('input[name="boasVindasPeriodicidade"]');
+        if (!radios.length) {
+            return;
+        }
+        function atualizarPagamentoSelecionado() {
+            var selecionado = document.querySelector('input[name="boasVindasPeriodicidade"]:checked');
+            if (descricaoEl) {
+                if (selecionado) {
+                    var label = selecionado.closest('.boas-vindas-login-modal__pagamento-btn');
+                    descricaoEl.textContent = label && label.dataset.descricao
+                        ? label.dataset.descricao
+                        : '';
+                } else {
+                    descricaoEl.textContent = 'Selecione uma forma de pagamento acima.';
+                }
+            }
+            if (botaoContinuar && exigePagamento) {
+                botaoContinuar.disabled = !selecionado;
+            }
+            var erroPagamento = document.getElementById('boasVindasPagamentoErro');
+            if (erroPagamento && selecionado) {
+                erroPagamento.classList.add('d-none');
+            }
+        }
+        radios.forEach(function (radio) {
+            radio.addEventListener('change', atualizarPagamentoSelecionado);
+        });
+        atualizarPagamentoSelecionado();
     }
 
     function continuarModaisAposBoasVindas() {
@@ -3477,6 +3689,7 @@
         modalEl.addEventListener('hidden.bs.modal', function () {
             dispensarBoasVindasLoginSessao(continuarModaisAposBoasVindas);
         }, { once: true });
+        inicializarBoasVindasPrimeiroLoginPagamento();
         modal.show();
     }
 
