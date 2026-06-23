@@ -1,0 +1,36 @@
+---
+description: Ao pedir subir/deploy, sempre informar comandos CMD da KingHost
+alwaysApply: true
+---
+
+# Publicar na KingHost (Agenda Afetto)
+
+Quando o usuário pedir **subir**, **publicar**, **deploy**, **colocar no ar**, **mandar pra produção** ou similar:
+
+1. **Sempre** incluir na resposta o bloco CMD pronto para copiar e colar (não só explicar).
+2. Usar os scripts em `scripts/`:
+   - **Completo (GitHub + VPS):** `scripts\publicar-kinghost.cmd`
+   - **Só GitHub:** `scripts\subir-github.cmd`
+   - **Só KingHost (código já no GitHub):** `scripts\deploy-kinghost.cmd`
+3. Sugerir mensagem de commit curta baseada nas alterações da sessão.
+4. Lembrar que `scripts\kinghost.env` deve existir (copiar de `kinghost.env.example` na primeira vez).
+5. Se fizer commit/push pelo agente, **depois** ainda mostrar o CMD de deploy (ou `publicar-kinghost.cmd` se o usuário quiser tudo manual).
+
+## Comando padrão (copiar no CMD)
+
+```cmd
+cd C:\Users\widin\Downloads\aaaaaa-main\aaaaaa-main
+scripts\publicar-kinghost.cmd MENSAGEM_DO_COMMIT
+```
+
+## Só deploy (GitHub já atualizado)
+
+```cmd
+cd C:\Users\widin\Downloads\aaaaaa-main\aaaaaa-main
+scripts\deploy-kinghost.cmd
+```
+
+## Conferir
+
+- Site: `http://IP_DO_VPS:8080/login`
+- Versão no rodapé (`app.site.version` em `application.properties`)
