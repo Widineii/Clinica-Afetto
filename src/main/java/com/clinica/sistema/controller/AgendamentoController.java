@@ -587,14 +587,27 @@ public class AgendamentoController {
                 "pagamentoBloqueioMensagem",
                 pagamentoConsultaService.mensagemBloqueioPagamento(usuarioLogado)
         );
+        model.addAttribute(
+                "resumoBloqueioAgendamento",
+                pagamentoConsultaService.montarResumoBloqueioAgendamento(usuarioLogado)
+        );
+        if (!model.containsAttribute("abrirModalBloqueioAgendamento")) {
+            model.addAttribute("abrirModalBloqueioAgendamento", false);
+        }
         Object resumoAttr = model.getAttribute("resumoPendenciasPagamento");
         int totalPendentes = resumoAttr instanceof com.clinica.sistema.dto.ResumoPendenciasPagamentoView resumo
                 ? resumo.quantidade()
                 : 0;
         model.addAttribute("totalMeusPagamentosPendentes", totalPendentes);
+        boolean exibirPainelPagamentosPendentesAgenda = !isAdmin
+                && !isDonaClinica
+                && !authService.profissionalIgnoraValoresEPagamento(usuarioLogado);
+        model.addAttribute("exibirPainelPagamentosPendentesAgenda", exibirPainelPagamentosPendentesAgenda);
         model.addAttribute(
                 "pagamentosAguardandoQr",
-                pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)
+                exibirPainelPagamentosPendentesAgenda
+                        ? pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, false)
+                        : List.of()
         );
         Object pagamentoFlashId = model.containsAttribute("pagamentoAgendamentoId")
                 ? model.getAttribute("pagamentoAgendamentoId")
@@ -1442,9 +1455,17 @@ public class AgendamentoController {
                 );
             }
         } catch (RuntimeException e) {
+            Usuario usuarioLogado = authService.buscarUsuarioLogado().orElse(null);
+            if (usuarioLogado != null
+                    && pagamentoConsultaService.profissionalBloqueadoPorPendenciaPagamento(usuarioLogado)) {
+                redirectAttributes.addFlashAttribute("erroContexto", "bloqueio-pagamento");
+                redirectAttributes.addFlashAttribute("abrirModalBloqueioAgendamento", true);
+                redirectAttributes.addFlashAttribute("focarNovoAgendamento", true);
+            } else {
+                redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
+                redirectAttributes.addFlashAttribute("abrirModalErroAgendamento", true);
+            }
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
-            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
-            redirectAttributes.addFlashAttribute("abrirModalErroAgendamento", true);
             redirectAttributes.addFlashAttribute("agendamentoForm", agendamentoForm);
         }
         if (continuacaoMensal) {

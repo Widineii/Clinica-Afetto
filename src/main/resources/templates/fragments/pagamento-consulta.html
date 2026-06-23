@@ -72,7 +72,7 @@
          tabindex="-1"
          aria-labelledby="pagamentoConsultaModalTitulo"
          aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 420px;">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 480px;">
             <div class="modal-content">
                 <div class="modal-header px-4 py-3 border-0 pb-0">
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -107,45 +107,128 @@
           th:text="${pagamentoService.rotuloStatusPagamentoResumidoNaGrade(agendamento, usuarioLogado)}">Sala confirmada</span>
 </div>
 
+<style th:fragment="pix-checkout-css">
+    .pix-como-pagar {
+        background: linear-gradient(180deg, #eff6ff 0%, #f0fdf4 100%);
+        border: 1px solid #bfdbfe;
+        border-radius: 1rem;
+        padding: 1rem 1.1rem;
+        text-align: left;
+        margin-bottom: 1.25rem;
+    }
+    .pix-como-pagar__titulo {
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 0.65rem;
+        color: #1e3a8a;
+    }
+    .pix-como-pagar ol {
+        margin: 0;
+        padding-left: 1.25rem;
+        font-size: 0.88rem;
+        line-height: 1.45;
+        color: #334155;
+    }
+    .pix-como-pagar li + li {
+        margin-top: 0.45rem;
+    }
+    .pix-como-pagar strong {
+        color: #0f172a;
+    }
+    .pix-abrir-btn-destaque {
+        display: block;
+        width: 100%;
+        padding: 1rem 1.25rem;
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.25;
+        border: 0;
+        border-radius: 0.9rem;
+        color: #fff !important;
+        text-decoration: none !important;
+        text-align: center;
+        background: linear-gradient(135deg, #047857 0%, #10b981 55%, #059669 100%);
+        box-shadow: 0 10px 28px rgba(5, 150, 105, 0.35);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+    .pix-abrir-btn-destaque:hover,
+    .pix-abrir-btn-destaque:focus {
+        color: #fff !important;
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+        box-shadow: 0 14px 32px rgba(5, 150, 105, 0.42);
+    }
+    .pix-abrir-btn-destaque--sm {
+        padding: 0.55rem 0.85rem;
+        font-size: 0.9rem;
+        border-radius: 0.65rem;
+    }
+    .pix-pos-pagar {
+        font-size: 0.82rem;
+        color: #64748b;
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+    }
+</style>
+
 <div th:fragment="instrucao-checkout-infinitepay"
-     class="alert alert-info small text-start mb-3">
-    Escaneie o <strong>QR abaixo</strong> no celular ou toque em <strong>Abrir pagamento</strong>.
-    Na <strong>InfinitePay</strong>, escolha <strong>PIX</strong> e pague com o QR ou copia e cola que aparecem lá.
+     class="pix-como-pagar">
+    <p class="pix-como-pagar__titulo mb-0">Como pagar com PIX</p>
+    <ol class="mt-2 mb-0">
+        <li>Toque no botão verde <strong>Abrir pagamento PIX</strong> abaixo.</li>
+        <li>Vai abrir o site da <strong>InfinitePay</strong> (pode ser em outra aba do celular).</li>
+        <li>Lá você gera o <strong>QR Code</strong> e paga com PIX no app do banco.</li>
+        <li>Depois de pagar, volte aqui e toque em <strong>Já paguei — verificar pagamento</strong>.</li>
+    </ol>
 </div>
 
 <div th:fragment="bloco-pagamento-qr (agendamento, imgWidth)">
     <th:block th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}">
         <div th:if="${pagamentoService.modoTestePagamento()}"
-             th:replace="~{fragments/pagamento-demo-local :: instrucao-demo-local}"></div>
+             class="alert alert-success small text-start mb-3">
+            <strong>Demonstração local</strong> — toque em <strong>Abrir pagamento PIX</strong> ou use
+            <strong>Simular pagamento (teste)</strong>.
+        </div>
         <div th:if="${!pagamentoService.modoTestePagamento() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
              th:replace="~{fragments/pagamento-consulta :: instrucao-checkout-infinitepay}"></div>
-        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento) and !pagamentoService.modoTestePagamento()}"
+        <a th:if="${!pagamentoService.modoTestePagamento() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
            th:href="${agendamento.pagamentoLink}"
-           th:target="_self"
-           class="btn btn-primary btn-lg w-100 mb-3">
+           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
+           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
+           class="pix-abrir-btn-destaque mb-2">
             Abrir pagamento PIX
         </a>
-        <img th:if="${agendamento.id != null}"
+        <p th:if="${pagamentoService.exibirCheckoutInfinitePay(agendamento) and !pagamentoService.modoTestePagamento()}"
+           class="pix-pos-pagar text-center">
+            O QR Code aparece no site da InfinitePay — não use QR Code desta tela.
+        </p>
+        <a th:if="${pagamentoService.modoTestePagamento() and agendamento.pagamentoLink != null}"
+           th:href="${agendamento.pagamentoLink}"
+           target="_self"
+           class="pix-abrir-btn-destaque mb-2">
+            Abrir pagamento PIX
+        </a>
+        <img th:if="${pagamentoService.modoTestePagamento() and agendamento.id != null}"
              th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
-             alt="QR Code de pagamento"
+             alt="QR Code de demonstração local"
              class="img-fluid rounded border mb-3"
              th:width="${imgWidth != null ? imgWidth : 260}"
              th:height="${imgWidth != null ? imgWidth : 260}">
         <button type="button"
-                th:if="${agendamento.pagamentoLink != null}"
+                th:if="${pagamentoService.modoTestePagamento() and agendamento.pagamentoLink != null}"
                 class="btn btn-outline-primary w-100 copiar-chave-pix-btn mb-2"
                 th:attr="data-pix-chave=${agendamento.pagamentoLink},
                          data-rotulo-original=${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}"
                 th:text="${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}">
-            Copiar link de pagamento
+            Copiar link da demonstração
         </button>
         <form th:if="${agendamento.id != null and !pagamentoService.modoTestePagamento()}"
               th:action="@{/pagamentos/{id}/verificar(id=${agendamento.id})}"
               method="post"
-              class="mb-2">
+              class="mb-2 mt-3">
             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-            <button type="submit" class="btn btn-success w-100">
-                Ja paguei — verificar pagamento
+            <button type="submit" class="btn btn-outline-success w-100">
+                Já paguei — verificar pagamento
             </button>
         </form>
     </th:block>
@@ -158,18 +241,9 @@
         <th:block th:if="${pagamentoService.podeVerPagamento(agendamento, usuarioLogado)}">
         <button type="button"
                 th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
-                class="btn btn-sm btn-primary abrir-pagamento-modal"
+                class="btn btn-sm btn-success abrir-pagamento-modal fw-semibold"
                 th:attr="data-abrir-pagamento-modal=${agendamento.id}">
-            Ver pagamento
-        </button>
-
-        <button type="button"
-                th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.pagamentoLink != null}"
-                class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
-                th:attr="data-pix-chave=${agendamento.pagamentoLink},
-                         data-rotulo-original=${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}"
-                th:text="${pagamentoService.rotuloBotaoCopiarPagamento(agendamento)}">
-            Copiar link
+            Abrir pagamento PIX
         </button>
 
         <form th:if="${agendamento.esperandoConfirmacaoPagamento and agendamento.id != null and !pagamentoService.modoTestePagamento()}"
@@ -177,7 +251,7 @@
               method="post"
               class="d-inline">
             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-            <button type="submit" class="btn btn-sm btn-success">Ja paguei</button>
+            <button type="submit" class="btn btn-sm btn-success">Já paguei</button>
         </form>
 
         <span th:if="${pagamentoService.vagaPreenchidaPorOutroProfissional(agendamento)}"
@@ -236,13 +310,14 @@
                 <span class="badge rounded-pill text-bg-warning">Aguardando PIX</span>
             </h2>
             <p class="small text-muted mb-3">
-                Consultas reservadas aguardando pagamento. Tempo restante:
+                Consultas reservadas aguardando pagamento. Toque em <strong>Abrir pagamento PIX</strong>,
+                pague no site da InfinitePay e volte para verificar. Tempo restante:
                 <span th:text="${pagamentoService.prazoConfirmacaoMinutos() + ' minutos'}">8 minutos</span>
                 — depois o horário é liberado automaticamente.
             </p>
             <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border"
                  th:attr="data-sincronizar-pagamento-id=${item.esperandoConfirmacaoPagamento ? item.id : null}">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <strong th:text="${item.nomeCliente}">Cliente</strong>
                         <span class="small text-muted d-block"
@@ -254,41 +329,7 @@
                           th:attr="data-expira-em=${item.pagamentoExpiraEm != null ? #temporals.format(item.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
                           th:text="${item.tempoRestantePagamentoFormatado}">4:59</span>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                    <img th:if="${item.id != null}"
-                         th:src="@{/pagamentos/{id}/qr.png(id=${item.id})}"
-                         alt="QR Code de pagamento"
-                         class="rounded border flex-shrink-0"
-                         width="120"
-                         height="120">
-                    <div class="d-grid gap-2 flex-grow-1" style="min-width: 180px;">
-                        <a th:if="${pagamentoService.exibirCheckoutInfinitePay(item)}"
-                           th:href="${item.pagamentoLink}"
-                           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
-                           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
-                           class="btn btn-sm btn-primary">Abrir pagamento PIX</a>
-                        <button type="button"
-                                th:if="${item.id != null}"
-                                class="btn btn-sm btn-outline-secondary abrir-pagamento-modal"
-                                th:attr="data-abrir-pagamento-modal=${item.id}">
-                            Ver detalhes
-                        </button>
-                        <button type="button"
-                                th:if="${item.pagamentoLink != null}"
-                                class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
-                                th:attr="data-pix-chave=${item.pagamentoLink},
-                                         data-rotulo-original=${pagamentoService.rotuloBotaoCopiarPagamento(item)}"
-                                th:text="${pagamentoService.rotuloBotaoCopiarPagamento(item)}">
-                            Copiar link
-                        </button>
-                        <form th:if="${item.esperandoConfirmacaoPagamento and item.id != null and !pagamentoService.modoTestePagamento()}"
-                              th:action="@{/pagamentos/{id}/verificar(id=${item.id})}"
-                              method="post">
-                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                            <button type="submit" class="btn btn-sm btn-success w-100">Ja paguei</button>
-                        </form>
-                    </div>
-                </div>
+                <div th:replace="~{fragments/pagamento-consulta :: bloco-pagamento-qr(agendamento=${item}, imgWidth=220)}"></div>
             </div>
         </div>
     </div>
@@ -300,7 +341,7 @@
         <div class="card-body p-4">
             <h2 class="h5 mb-2">Pagar agora</h2>
             <p class="small text-muted mb-3">
-                Gere o QR Code e pague antes do prazo de 1 dia, se quiser adiantar.
+                Toque em <strong>Pagar agora</strong> para abrir o site da InfinitePay e pagar com PIX, se quiser adiantar.
             </p>
             <div th:each="consulta : ${consultas}" class="pagamento-pendente-card mb-2 p-3 rounded border">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -520,7 +561,7 @@
                     botao.textContent = rotuloOriginal;
                 }, 2000);
             }).catch(function () {
-                window.alert('Não foi possível copiar. Toque em Abrir pagamento PIX ou copie manualmente.');
+                window.alert('Não foi possível copiar. Toque em Abrir pagamento PIX.');
             });
         });
     })();

@@ -14,6 +14,7 @@
             color: #0d6efd !important;
         }
     </style>
+    <th:block th:replace="~{fragments/pagamento-consulta :: pix-checkout-css}"></th:block>
 </head>
 <body class="bg-light"
       th:attr="data-pagamento-auto-sync=${!pagamentoService.modoTestePagamento()},

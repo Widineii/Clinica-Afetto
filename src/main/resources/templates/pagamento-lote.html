@@ -11,6 +11,7 @@
             box-shadow: 0 4px 14px rgba(245, 176, 0, 0.25);
         }
     </style>
+    <th:block th:replace="~{fragments/pagamento-consulta :: pix-checkout-css}"></th:block>
 </head>
 <body class="bg-light">
 <div class="container py-5" style="max-width: 640px;">
@@ -65,7 +66,7 @@
                 </div>
 
                 <div th:if="${!agendamento.possuiQrPagamentoAtivo()}" class="alert alert-warning mb-0">
-                    O QR Code expirou. Volte em Meus pagamentos e gere o PIX novamente.
+                    O PIX expirou. Volte em Meus pagamentos e gere o pagamento novamente.
                 </div>
             </div>
 

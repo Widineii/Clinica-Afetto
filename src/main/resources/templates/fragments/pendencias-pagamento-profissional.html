@@ -117,5 +117,80 @@
     </div>
 </div>
 
+<div th:fragment="modal-bloqueio-agendamento"
+     class="modal fade"
+     id="bloqueioAgendamentoModal"
+     tabindex="-1"
+     aria-labelledby="bloqueioAgendamentoModalTitulo"
+     aria-hidden="true"
+     th:if="${pagamentoBloqueioAtivo}">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content pendencias-pagamento-modal">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="pendencias-pagamento-modal__kicker mb-1 text-danger fw-semibold">Agenda bloqueada</p>
+                    <h2 class="modal-title h4 mb-0" id="bloqueioAgendamentoModalTitulo">
+                        Não foi possível marcar o agendamento
+                    </h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body pt-2 text-center text-md-start">
+                <p class="mb-3 pendencias-pagamento-modal__convite"
+                   th:if="${resumoBloqueioAgendamento != null and !#strings.isEmpty(resumoBloqueioAgendamento.mensagemConvite)}"
+                   th:text="${resumoBloqueioAgendamento.mensagemConvite}">
+                    Você tem pendências ativas e não pode reservar novos horários até quitar.
+                </p>
+                <p class="mb-3 pendencias-pagamento-modal__convite"
+                   th:unless="${resumoBloqueioAgendamento != null and !#strings.isEmpty(resumoBloqueioAgendamento.mensagemConvite)}">
+                    Você tem pagamentos em aberto. O agendamento <strong>não foi salvo</strong> — quite as pendências
+                    para voltar a marcar consultas na clínica.
+                </p>
+                <div class="bloqueio-agendamento-passos">
+                    <p class="bloqueio-agendamento-passos__titulo mb-0">O que fazer agora</p>
+                    <ol class="mt-2 mb-0">
+                        <li>Toque em <strong>Ir para Meus pagamentos</strong> abaixo.</li>
+                        <li>Quite o valor em aberto com PIX (botão <strong>Abrir pagamento PIX</strong>).</li>
+                        <li>Depois de pagar, volte aqui e marque o agendamento de novo.</li>
+                    </ol>
+                </div>
+                <div class="row g-3 justify-content-center mb-3"
+                     th:if="${resumoBloqueioAgendamento != null}">
+                    <div class="col-6 col-md-5">
+                        <div class="pendencias-pagamento-modal__stat">
+                            <span class="pendencias-pagamento-modal__stat-label">Itens pendentes</span>
+                            <span class="pendencias-pagamento-modal__stat-numero pendencias-pagamento-modal__stat-numero--qtd"
+                                  th:text="${resumoBloqueioAgendamento.quantidade}">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-5">
+                        <div class="pendencias-pagamento-modal__stat pendencias-pagamento-modal__stat--valor">
+                            <span class="pendencias-pagamento-modal__stat-label">Total em aberto</span>
+                            <span class="pendencias-pagamento-modal__stat-numero pendencias-pagamento-modal__stat-numero--valor"
+                                  th:text="${resumoBloqueioAgendamento.valorTotalFormatado}">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="small text-muted mb-0 text-center"
+                   th:if="${resumoBloqueioAgendamento != null and resumoBloqueioAgendamento.rotuloPeriodo != null and !#strings.isEmpty(resumoBloqueioAgendamento.rotuloPeriodo)}">
+                    Referente a: <strong th:text="${resumoBloqueioAgendamento.rotuloPeriodo}">—</strong>
+                </p>
+            </div>
+            <div class="modal-footer flex-column align-items-stretch gap-2 border-0 pt-0">
+                <a th:href="${resumoBloqueioAgendamento != null ? resumoBloqueioAgendamento.urlMeusPagamentos : '/agendamentos/meus-pagamentos'}"
+                   class="btn btn-danger btn-lg fw-bold w-100"
+                   id="bloqueioAgendamentoModalIrPagar">
+                    Ir para Meus pagamentos — quitar pendências
+                </a>
+                <button type="button"
+                        class="btn btn-outline-secondary w-100"
+                        data-bs-dismiss="modal">
+                    Fechar e corrigir depois
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

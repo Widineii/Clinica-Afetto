@@ -1140,6 +1140,37 @@ public class PagamentoConsultaService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public ResumoPendenciasPagamentoView montarResumoBloqueioAgendamento(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)) {
+            return ResumoPendenciasPagamentoView.vazio();
+        }
+        List<Agendamento> pendencias = listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
+        if (pendencias.isEmpty()) {
+            return ResumoPendenciasPagamentoView.vazio();
+        }
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        int quantidade = pendencias.size();
+        String total = formatarTotalTaxaPix(pendencias);
+        String rotulo = rotuloPeriodoPendencias(periodicidade);
+        String url = urlMeusPagamentosPorPeriodicidade(periodicidade);
+        String mensagemBloqueio = mensagemBloqueioPagamento(usuarioLogado);
+        String mensagemConvite = "Não foi possível marcar o seu agendamento porque você tem pendências ativas. "
+                + mensagemBloqueio;
+        return new ResumoPendenciasPagamentoView(
+                quantidade,
+                total,
+                "Agenda bloqueada",
+                mensagemConvite,
+                mensagemConvite,
+                rotulo,
+                url
+        );
+    }
+
     /**
      * Lista exibida na aba Pagamentos pendentes (diario): inclui PIX aguardando confirmacao,
      * alinhada ao contador do resumo de pendencias.

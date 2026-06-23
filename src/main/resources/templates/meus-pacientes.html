@@ -602,7 +602,7 @@
                             desabilitar(payBtn);
                         } else if (aguardandoQr) {
                             payBtn.href = basePath + 'pagamentos/' + selecionado.value;
-                            payBtn.textContent = 'Ver QR';
+                            payBtn.textContent = 'Abrir pagamento PIX';
                             payBtn.classList.remove('disabled');
                             payBtn.removeAttribute('aria-disabled');
                         } else if (podePagar) {

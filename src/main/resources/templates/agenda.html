@@ -1882,7 +1882,8 @@
             color: #fff !important;
         }
 
-        #pendenciasPagamentoModal .modal-dialog {
+        #pendenciasPagamentoModal .modal-dialog,
+        #bloqueioAgendamentoModal .modal-dialog {
             max-width: min(640px, calc(100% - 1.5rem));
         }
 
@@ -1891,14 +1892,16 @@
             50% { box-shadow: 0 0 0 12px rgba(220, 38, 38, 0); }
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal {
             border: 3px solid #dc2626;
             border-radius: 24px;
             overflow: hidden;
             box-shadow: 0 24px 60px rgba(220, 38, 38, 0.28);
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__kicker {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__kicker,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__kicker {
             font-size: 0.7rem;
             font-weight: 800;
             letter-spacing: 0.08em;
@@ -1906,12 +1909,14 @@
             color: #dc2626;
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__convite {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__convite,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__convite {
             color: #334155;
             font-size: 1rem;
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__stat {
             background: #fff;
             border: 2px solid #fecaca;
             border-radius: 16px;
@@ -1920,12 +1925,14 @@
             text-align: center;
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat--valor {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat--valor,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__stat--valor {
             border-color: #f87171;
             background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-label {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-label,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__stat-label {
             display: block;
             font-size: 0.7rem;
             font-weight: 700;
@@ -1935,19 +1942,50 @@
             margin-bottom: 0.35rem;
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__stat-numero {
             display: block;
             font-weight: 900;
             line-height: 1;
             color: #dc2626;
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero--qtd {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero--qtd,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__stat-numero--qtd {
             font-size: 2.75rem;
         }
 
-        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero--valor {
+        #pendenciasPagamentoModal .pendencias-pagamento-modal__stat-numero--valor,
+        #bloqueioAgendamentoModal .pendencias-pagamento-modal__stat-numero--valor {
             font-size: 2.35rem;
+        }
+
+        .bloqueio-agendamento-passos {
+            background: linear-gradient(180deg, #fff7ed 0%, #fef2f2 100%);
+            border: 1px solid #fecaca;
+            border-radius: 16px;
+            padding: 1rem 1.1rem;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .bloqueio-agendamento-passos__titulo {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #991b1b;
+            margin-bottom: 0.55rem;
+        }
+
+        .bloqueio-agendamento-passos ol {
+            margin: 0;
+            padding-left: 1.2rem;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            color: #334155;
+        }
+
+        .bloqueio-agendamento-passos li + li {
+            margin-top: 0.4rem;
         }
 
         .agenda-quick-nav {
@@ -2246,6 +2284,7 @@
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     }
     </style>
+    <th:block th:replace="~{fragments/pagamento-consulta :: pix-checkout-css}"></th:block>
     <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
     <style>
         .boas-vindas-login-modal__cta,
@@ -2353,7 +2392,7 @@
         <a th:unless="${isAdmin}" href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
         <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary"
            th:text="${isDonaClinica ? 'Acompanhar agendamentos' : 'Agenda do dia'}">Agenda do dia</a>
-        <a th:if="${pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
+        <a th:if="${exibirPainelPagamentosPendentesAgenda and pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
            href="#pagamentos-pendentes"
            class="btn btn-sm btn-warning">Pagamentos pendentes</a>
         <span class="agenda-quick-nav__dica small text-muted ms-1 d-none d-md-inline">
@@ -2455,7 +2494,12 @@
                         Próxima consulta mensal...
                     </div>
 
-                    <form id="formNovoAgendamento" th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
+                    <form id="formNovoAgendamento"
+                          th:action="@{/agendamentos}"
+                          th:object="${agendamentoForm}"
+                          method="post"
+                          class="row g-3"
+                          th:attr="novalidate=${pagamentoBloqueioAtivo} ? 'novalidate' : null">
                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                         <input type="hidden" th:field="*{continuacaoMensal}" id="continuacaoMensalAgenda">
 
@@ -2684,11 +2728,17 @@
                         </div>
 
                         <div class="col-12 d-grid">
-                            <button type="submit"
-                                    class="btn btn-primary btn-lg"
-                                    th:disabled="${pagamentoBloqueioAtivo}">
+                            <button class="btn btn-lg btn-primary"
+                                    id="btnSalvarAgendamento"
+                                    th:attr="type=${pagamentoBloqueioAtivo} ? 'button' : 'submit',
+                                             data-bloqueio-agendamento=${pagamentoBloqueioAtivo} ? 'true' : null">
                                 Salvar agendamento
                             </button>
+                            <p th:if="${pagamentoBloqueioAtivo}"
+                               class="small text-danger text-center mt-2 mb-0">
+                                Sua agenda está bloqueada por pendências. Ao salvar, o sistema avisa e não marca a consulta
+                                até você pagar em Meus pagamentos.
+                            </p>
                         </div>
                     </form>
 
@@ -2712,7 +2762,7 @@
                 </div>
             </div>
 
-            <th:block th:unless="${isDonaClinica}">
+            <th:block th:if="${exibirPainelPagamentosPendentesAgenda}">
                 <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
             </th:block>
 
@@ -3143,9 +3193,9 @@
                                 </form>
                                 <button th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
                                         type="button"
-                                        class="btn btn-sm btn-outline-primary abrir-pagamento-modal"
+                                        class="btn btn-sm btn-success abrir-pagamento-modal fw-semibold"
                                         th:attr="data-abrir-pagamento-modal=${registro.id}">
-                                    Ver QR
+                                    Abrir pagamento PIX
                                 </button>
                             </div>
                         </article>
@@ -3201,9 +3251,9 @@
                                     </form>
                                     <button th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
                                             type="button"
-                                            class="btn btn-sm btn-outline-primary ms-1 abrir-pagamento-modal"
+                                            class="btn btn-sm btn-success ms-1 abrir-pagamento-modal fw-semibold"
                                             th:attr="data-abrir-pagamento-modal=${registro.id}">
-                                        Ver QR
+                                        Abrir pagamento PIX
                                     </button>
                                 </td>
                             </tr>
@@ -3474,6 +3524,8 @@
     </div>
 </div>
 
+<div th:replace="~{fragments/pendencias-pagamento-profissional :: modal-bloqueio-agendamento}"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <th:block th:replace="~{fragments/site-menu-principal :: modais-conta}"></th:block>
 <th:block th:replace="~{fragments/site-menu-principal :: scripts}"></th:block>
@@ -3489,6 +3541,47 @@
     var exibirModalBoasVindasLogin = /*[[${exibirModalBoasVindasLogin}]]*/ false;
     var pendenciasPagamentoDepoisBoasVindas = /*[[${pendenciasPagamentoDepoisBoasVindas}]]*/ false;
     var novidadesDepoisBoasVindas = /*[[${novidadesDepoisBoasVindas}]]*/ false;
+    var pagamentoBloqueioAtivo = /*[[${pagamentoBloqueioAtivo}]]*/ false;
+    var abrirModalBloqueioAgendamento = /*[[${abrirModalBloqueioAgendamento}]]*/ false;
+    var urlMeusPagamentosBloqueio = /*[[${resumoBloqueioAgendamento != null ? resumoBloqueioAgendamento.urlMeusPagamentos() : '/agendamentos/meus-pagamentos'}]]*/ '/agendamentos/meus-pagamentos';
+
+    function abrirModalBloqueioAgendamentoEntrada() {
+        var modalEl = document.getElementById('bloqueioAgendamentoModal');
+        if (!modalEl) {
+            if (urlMeusPagamentosBloqueio) {
+                window.location.href = urlMeusPagamentosBloqueio;
+            }
+            return;
+        }
+        fecharModalPendenciasSeAberto();
+        var avisoErro = document.getElementById('agendamentoErroAviso');
+        if (avisoErro) {
+            avisoErro.hidden = true;
+            document.body.classList.remove('agendamento-erro-aberto');
+        }
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    (function configurarBloqueioSalvarAgendamento() {
+        if (!pagamentoBloqueioAtivo) {
+            return;
+        }
+        function interceptarSalvarComBloqueio(evento) {
+            evento.preventDefault();
+            evento.stopPropagation();
+            evento.stopImmediatePropagation();
+            abrirModalBloqueioAgendamentoEntrada();
+            return false;
+        }
+        var formAgendamentoBloqueio = document.getElementById('formNovoAgendamento');
+        if (formAgendamentoBloqueio) {
+            formAgendamentoBloqueio.addEventListener('submit', interceptarSalvarComBloqueio, true);
+        }
+        var btnSalvarBloqueio = document.getElementById('btnSalvarAgendamento');
+        if (btnSalvarBloqueio) {
+            btnSalvarBloqueio.addEventListener('click', interceptarSalvarComBloqueio, true);
+        }
+    })();
 
     function rolarParaPendenciasDestaque() {
         var destaque = document.getElementById('pendencias-pagamento-destaque');
@@ -4551,6 +4644,8 @@
                     : {};
                 bootstrap.Modal.getOrCreateInstance(modalSenhaEl, opcoesModalSenha).show();
             }
+        } else if (abrirModalBloqueioAgendamento || contextoErroAgendamento === 'bloqueio-pagamento') {
+            abrirModalBloqueioAgendamentoEntrada();
         } else if (mensagemErroAgendamento || (document.getElementById('agendamentoErroAviso') && document.getElementById('agendamentoErroAviso').dataset.erroMsg)) {
             abrirAvisoErroAgendamento();
         }
@@ -4946,7 +5041,7 @@
                             payBtn.removeAttribute('href');
                             payBtn.setAttribute('data-abrir-pagamento-modal', selecionado.value);
                             payBtn.classList.add('abrir-pagamento-modal');
-                            payBtn.textContent = 'Ver QR';
+                            payBtn.textContent = 'Abrir pagamento PIX';
                             payBtn.classList.remove('disabled');
                             payBtn.removeAttribute('aria-disabled');
                         } else if (podePagar) {
@@ -5267,7 +5362,7 @@
                     botao.textContent = textoOriginal;
                 }, 2000);
             }).catch(function () {
-                window.alert('Não foi possível copiar a chave PIX. Copie manualmente o link do pagamento.');
+                window.alert('Não foi possível copiar a chave PIX. Toque em Abrir pagamento PIX.');
             });
         });
 
