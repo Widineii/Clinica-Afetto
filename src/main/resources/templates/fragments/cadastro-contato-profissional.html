@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal"
+     th:if="${exibirModalCadastroContato}"
+     class="modal fade admin-modal"
+     id="cadastroContatoModal"
+     tabindex="-1"
+     aria-labelledby="cadastroContatoModalTitulo"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="cadastroContatoModalTitulo">Complete seus dados de contato</h2>
+                    <p class="text-muted small mb-0"
+                       th:if="${precisaCadastrarEmailNoContato and precisaCadastrarWhatsappNoContato}">
+                        Informe seu e-mail e WhatsApp para avisos da clínica, como pagamentos pendentes.
+                    </p>
+                    <p class="text-muted small mb-0"
+                       th:if="${precisaCadastrarEmailNoContato and !precisaCadastrarWhatsappNoContato}">
+                        Usamos esse e-mail para avisos de pagamento pendente nos horários da sua forma de cobrança.
+                    </p>
+                    <p class="text-muted small mb-0"
+                       th:if="${!precisaCadastrarEmailNoContato and precisaCadastrarWhatsappNoContato}">
+                        A clínica usa esse número para avisos importantes, como pagamentos pendentes.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <div th:if="${erroContato != null}" class="alert alert-danger mb-3" th:text="${erroContato}"></div>
+                <form th:action="@{/conta/contato-profissional}"
+                      th:object="${atualizarTelefoneWhatsappForm}"
+                      method="post"
+                      class="row g-3"
+                      id="formCadastroContatoProfissional">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <div class="col-12" th:if="${precisaCadastrarEmailNoContato}">
+                        <label class="form-label" for="emailProfissionalContato">E-mail pessoal</label>
+                        <input th:field="*{email}"
+                               type="email"
+                               class="form-control"
+                               id="emailProfissionalContato"
+                               maxlength="120"
+                               autocomplete="email"
+                               placeholder="seu.email@gmail.com"
+                               required>
+                        <div class="form-text">Informe um e-mail que você consulta com frequência.</div>
+                    </div>
+                    <div class="col-12" th:if="${precisaCadastrarWhatsappNoContato}">
+                        <label class="form-label" for="telefoneWhatsappProfissionalContato">WhatsApp</label>
+                        <input th:field="*{telefoneWhatsapp}"
+                               type="text"
+                               class="form-control"
+                               id="telefoneWhatsappProfissionalContato"
+                               maxlength="20"
+                               inputmode="numeric"
+                               pattern="[0-9]+"
+                               autocomplete="tel"
+                               placeholder="31999998888"
+                               required>
+                        <div class="form-text">Exemplo: 11987654321 (DDD + número, somente dígitos).</div>
+                    </div>
+                    <div class="col-12 d-grid pt-1">
+                        <button type="submit" class="btn btn-teal">Salvar dados</button>
+                    </div>
+                </form>
+                <form th:action="@{/conta/contato-profissional/pular}" method="post" class="d-grid mt-2">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit" class="btn btn-outline-secondary">Continuar sem cadastrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:if="${exibirModalCadastroContato}">
+    (function () {
+        var inputWhatsapp = document.getElementById('telefoneWhatsappProfissionalContato');
+        if (inputWhatsapp) {
+            function manterSomenteDigitos() {
+                inputWhatsapp.value = inputWhatsapp.value.replace(/\D/g, '');
+            }
+            inputWhatsapp.addEventListener('input', manterSomenteDigitos);
+            inputWhatsapp.addEventListener('paste', function (evento) {
+                evento.preventDefault();
+                var texto = (evento.clipboardData || window.clipboardData).getData('text') || '';
+                inputWhatsapp.value = texto.replace(/\D/g, '').slice(0, inputWhatsapp.maxLength);
+            });
+        }
+        var inputEmail = document.getElementById('emailProfissionalContato');
+        if (inputEmail && !inputEmail.value) {
+            window.setTimeout(function () { inputEmail.focus(); }, 300);
+        } else if (inputWhatsapp && !inputWhatsapp.value) {
+            window.setTimeout(function () { inputWhatsapp.focus(); }, 300);
+        }
+    })();
+</script>
+</body>
+</html>

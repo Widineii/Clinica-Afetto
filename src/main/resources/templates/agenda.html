@@ -1358,6 +1358,73 @@
             font-weight: 700;
         }
 
+        .boas-vindas-login-modal .modal-content {
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 42%);
+        }
+
+        .boas-vindas-login-modal__nome {
+            color: #0d9488;
+        }
+
+        .boas-vindas-login-modal__secao-titulo {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 1rem;
+        }
+
+        .boas-vindas-login-modal__salas {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .boas-vindas-login-modal__sala-bloco {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 0.85rem 1rem 0.75rem;
+        }
+
+        .boas-vindas-login-modal__sala-nome {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f766e;
+            margin-bottom: 0.55rem;
+        }
+
+        .boas-vindas-login-modal__clientes {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .boas-vindas-login-modal__cliente-linha {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.35rem 0;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .boas-vindas-login-modal__cliente-linha:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .boas-vindas-login-modal__cliente-nome {
+            font-weight: 600;
+            color: #0f172a;
+            text-align: left;
+        }
+
+        .boas-vindas-login-modal__cliente-horario {
+            font-size: 0.82rem;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
         #novidadesModal .modal-dialog {
             max-width: min(920px, calc(100vw - 2rem));
             max-height: calc(100vh - 1.5rem);
@@ -2916,9 +2983,12 @@
                                     <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                                     <button type="submit" class="btn btn-sm btn-warning">Pagar agora</button>
                                 </form>
-                                <a th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
-                                   th:href="@{/pagamentos/{id}(id=${registro.id})}"
-                                   class="btn btn-sm btn-outline-primary">Ver QR</a>
+                                <button th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
+                                        type="button"
+                                        class="btn btn-sm btn-outline-primary abrir-pagamento-modal"
+                                        th:attr="data-abrir-pagamento-modal=${registro.id}">
+                                    Ver QR
+                                </button>
                             </div>
                         </article>
                     </div>
@@ -2971,9 +3041,12 @@
                                         <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                                         <button type="submit" class="btn btn-sm btn-warning ms-1">Pagar agora</button>
                                     </form>
-                                    <a th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
-                                       th:href="@{/pagamentos/{id}(id=${registro.id})}"
-                                       class="btn btn-sm btn-outline-primary ms-1">Ver QR</a>
+                                    <button th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
+                                            type="button"
+                                            class="btn btn-sm btn-outline-primary ms-1 abrir-pagamento-modal"
+                                            th:attr="data-abrir-pagamento-modal=${registro.id}">
+                                        Ver QR
+                                    </button>
                                 </td>
                             </tr>
                             </tbody>
@@ -3116,9 +3189,12 @@
     </div>
 </div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pos-agendamento(agendamento=${pagamentoAgendamento})}"></div>
+<div th:replace="~{fragments/pagamento-consulta :: modal-pagamento-consulta-shell}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
-<div th:replace="~{fragments/cadastro-email-profissional :: modal}"></div>
-<div th:replace="~{fragments/cadastro-telefone-whatsapp-profissional :: modal}"></div>
+<div th:replace="~{fragments/cadastro-contato-profissional :: modal}"></div>
+<div th:replace="~{fragments/boas-vindas-login :: modal}"></div>
+<th:block th:replace="~{fragments/pagamento-consulta :: abrir-pagamento-modal-script}"></th:block>
+<th:block th:replace="~{fragments/pagamento-consulta :: copiar-chave-script}"></th:block>
 
 <div th:if="${podeTrocarPropriaSenha}" class="modal fade admin-modal" id="trocarSenhaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -3251,8 +3327,10 @@
     var exibirModalNovidades = /*[[${exibirModalNovidades}]]*/ false;
     var exibirModalPendenciasPagamento = /*[[${exibirModalPendenciasPagamento}]]*/ false;
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
-    var exibirModalEmailNotificacao = /*[[${exibirModalEmailNotificacao}]]*/ false;
-    var exibirModalTelefoneWhatsapp = /*[[${exibirModalTelefoneWhatsapp}]]*/ false;
+    var exibirModalCadastroContato = /*[[${exibirModalCadastroContato}]]*/ false;
+    var exibirModalBoasVindasLogin = /*[[${exibirModalBoasVindasLogin}]]*/ false;
+    var pendenciasPagamentoDepoisBoasVindas = /*[[${pendenciasPagamentoDepoisBoasVindas}]]*/ false;
+    var novidadesDepoisBoasVindas = /*[[${novidadesDepoisBoasVindas}]]*/ false;
 
     function rolarParaPendenciasDestaque() {
         var destaque = document.getElementById('pendencias-pagamento-destaque');
@@ -3262,7 +3340,7 @@
     }
 
     function abrirModalNovidadesEntrada() {
-        if (exibirModalTrocarSenhaObrigatoria || exibirModalEmailNotificacao || exibirModalTelefoneWhatsapp || !exibirModalNovidades) {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalCadastroContato || exibirModalBoasVindasLogin || !exibirModalNovidades) {
             return;
         }
         var novidadesModalEl = document.getElementById('novidadesModal');
@@ -3283,7 +3361,7 @@
     }
 
     function abrirModalPendenciasPagamentoEntrada(abrirNovidadesDepois) {
-        if (exibirModalTrocarSenhaObrigatoria || exibirModalEmailNotificacao || exibirModalTelefoneWhatsapp || !exibirModalPendenciasPagamento) {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalCadastroContato || exibirModalBoasVindasLogin || !exibirModalPendenciasPagamento) {
             if (abrirNovidadesDepois) {
                 abrirModalNovidadesEntrada();
             }
@@ -3329,56 +3407,105 @@
         }
     }
 
-    function abrirModalEmailNotificacaoEntrada(tentativas) {
-        if (!exibirModalEmailNotificacao) {
-            return;
-        }
-        if (typeof bootstrap === 'undefined') {
-            if ((tentativas || 0) < 20) {
-                window.setTimeout(function () {
-                    abrirModalEmailNotificacaoEntrada((tentativas || 0) + 1);
-                }, 50);
+    function dispensarBoasVindasLoginSessao(callback) {
+        var csrf = document.querySelector('input[name="_csrf"]');
+        if (!csrf) {
+            if (callback) {
+                callback();
             }
             return;
         }
-        var modalEmailEl = document.getElementById('emailNotificacaoModal');
-        if (!modalEmailEl) {
-            return;
+        var body = new URLSearchParams();
+        body.append(csrf.name, csrf.value);
+        var checkbox = document.getElementById('boasVindasLoginNaoMostrarHoje');
+        if (checkbox && checkbox.checked) {
+            body.append('naoMostrarMaisHoje', 'true');
         }
-        fecharModalPendenciasSeAberto();
-        bootstrap.Modal.getOrCreateInstance(modalEmailEl, {
-            backdrop: 'static',
-            keyboard: false
-        }).show();
-        var inputEmail = document.getElementById('emailProfissionalNotificacao');
-        if (inputEmail) {
-            window.setTimeout(function () { inputEmail.focus(); }, 250);
-        }
+        fetch('/conta/boas-vindas-login/pular', {
+            method: 'POST',
+            body: body,
+            credentials: 'same-origin'
+        }).finally(function () {
+            if (callback) {
+                callback();
+            }
+        });
     }
 
-    function abrirModalTelefoneWhatsappEntrada(tentativas) {
-        if (!exibirModalTelefoneWhatsapp) {
+    function continuarModaisAposBoasVindas() {
+        exibirModalBoasVindasLogin = false;
+        if (pendenciasPagamentoDepoisBoasVindas) {
+            exibirModalPendenciasPagamento = true;
+            abrirModalPendenciasPagamentoEntrada(novidadesDepoisBoasVindas);
+            return;
+        }
+        if (novidadesDepoisBoasVindas) {
+            exibirModalNovidades = true;
+            abrirModalNovidadesEntrada();
+            return;
+        }
+        window.setTimeout(rolarParaGradeSemanal, 300);
+    }
+
+    function abrirModalBoasVindasLoginEntrada(tentativas) {
+        if (!exibirModalBoasVindasLogin) {
             return;
         }
         if (typeof bootstrap === 'undefined') {
             if ((tentativas || 0) < 20) {
                 window.setTimeout(function () {
-                    abrirModalTelefoneWhatsappEntrada((tentativas || 0) + 1);
+                    abrirModalBoasVindasLoginEntrada((tentativas || 0) + 1);
                 }, 50);
             }
             return;
         }
-        var modalWhatsappEl = document.getElementById('telefoneWhatsappModal');
-        if (!modalWhatsappEl) {
+        var modalEl = document.getElementById('boasVindasLoginModal');
+        if (!modalEl) {
             return;
         }
         fecharModalPendenciasSeAberto();
-        bootstrap.Modal.getOrCreateInstance(modalWhatsappEl, {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        var botaoContinuar = document.getElementById('boasVindasLoginContinuar');
+        if (botaoContinuar) {
+            botaoContinuar.addEventListener('click', function () {
+                modal.hide();
+            }, { once: true });
+        }
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            dispensarBoasVindasLoginSessao(continuarModaisAposBoasVindas);
+        }, { once: true });
+        modal.show();
+    }
+
+    function abrirModalCadastroContatoEntrada(tentativas) {
+        if (!exibirModalCadastroContato) {
+            return;
+        }
+        if (typeof bootstrap === 'undefined') {
+            if ((tentativas || 0) < 20) {
+                window.setTimeout(function () {
+                    abrirModalCadastroContatoEntrada((tentativas || 0) + 1);
+                }, 50);
+            }
+            return;
+        }
+        var modalContatoEl = document.getElementById('cadastroContatoModal');
+        if (!modalContatoEl) {
+            return;
+        }
+        fecharModalPendenciasSeAberto();
+        bootstrap.Modal.getOrCreateInstance(modalContatoEl, {
             backdrop: 'static',
             keyboard: false
         }).show();
-        var inputWhatsapp = document.getElementById('telefoneWhatsappProfissional');
-        if (inputWhatsapp) {
+        var inputEmail = document.getElementById('emailProfissionalContato');
+        var inputWhatsapp = document.getElementById('telefoneWhatsappProfissionalContato');
+        if (inputEmail && !inputEmail.value) {
+            window.setTimeout(function () { inputEmail.focus(); }, 250);
+        } else if (inputWhatsapp && !inputWhatsapp.value) {
             window.setTimeout(function () { inputWhatsapp.focus(); }, 250);
         }
     }
@@ -3387,12 +3514,8 @@
         if (exibirModalTrocarSenhaObrigatoria) {
             return;
         }
-        if (exibirModalEmailNotificacao) {
-            abrirModalEmailNotificacaoEntrada();
-            return;
-        }
-        if (exibirModalTelefoneWhatsapp) {
-            abrirModalTelefoneWhatsappEntrada();
+        if (exibirModalCadastroContato) {
+            abrirModalCadastroContatoEntrada();
             return;
         }
         var pagamentoModalEl = document.getElementById('pagamentoPosAgendamentoModal');
@@ -3404,6 +3527,10 @@
             } else if (pixConfirmadoModalEl) {
                 bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
             }
+            return;
+        }
+        if (exibirModalBoasVindasLogin) {
+            abrirModalBoasVindasLoginEntrada();
             return;
         }
         var temNovidades = exibirModalNovidades && document.getElementById('novidadesModal');
@@ -3424,7 +3551,6 @@
     var secaoMensal = /*[[${secaoMensal}]]*/ false;
     var erroSenhaModal = /*[[${erroSenha != null ? erroSenha : (erro != null and erroContexto == 'senha' ? erro : null)}]]*/ null;
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
-    var exibirModalTelefoneWhatsapp = /*[[${exibirModalTelefoneWhatsapp}]]*/ false;
     var podeEscolherProfissionalAgendamento = /*[[${isAdmin or isDonaClinica}]]*/ false;
     var idsProfissionaisSemValores = /*[[${idsProfissionaisSemValores}]]*/ [];
     var valoresConsultaPorProfissional = {};
@@ -4604,7 +4730,9 @@
                         if (pago) {
                             desabilitarPagamento();
                         } else if (aguardandoQr) {
-                            payBtn.href = basePath + 'pagamentos/' + selecionado.value;
+                            payBtn.removeAttribute('href');
+                            payBtn.setAttribute('data-abrir-pagamento-modal', selecionado.value);
+                            payBtn.classList.add('abrir-pagamento-modal');
                             payBtn.textContent = 'Ver QR';
                             payBtn.classList.remove('disabled');
                             payBtn.removeAttribute('aria-disabled');
@@ -4853,7 +4981,7 @@
             bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
         }
 
-        function atualizarCountdownsPagamento() {
+        window.atualizarCountdownsPagamento = function atualizarCountdownsPagamento() {
             var agora = Date.now();
             document.querySelectorAll('.pagamento-countdown[data-expira-em]').forEach(function (el) {
                 var expira = el.getAttribute('data-expira-em');

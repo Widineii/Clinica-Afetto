@@ -19,6 +19,7 @@ import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
+import com.clinica.sistema.service.BoasVindasLoginService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
 import com.clinica.sistema.service.NovoAgendamentoNotificacaoService;
@@ -95,6 +96,7 @@ public class AgendamentoController {
     private final WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService;
     private final WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService;
     private final AvisoPagamentoEmailService avisoPagamentoEmailService;
+    private final BoasVindasLoginService boasVindasLoginService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -118,7 +120,8 @@ public class AgendamentoController {
             WhatsAppNotificacaoService whatsAppNotificacaoService,
             WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService,
             WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService,
-            AvisoPagamentoEmailService avisoPagamentoEmailService
+            AvisoPagamentoEmailService avisoPagamentoEmailService,
+            BoasVindasLoginService boasVindasLoginService
     ) {
         this.service = service;
         this.authService = authService;
@@ -142,6 +145,7 @@ public class AgendamentoController {
         this.whatsAppMensagemPagamentoService = whatsAppMensagemPagamentoService;
         this.whatsAppAvisoPagamentoService = whatsAppAvisoPagamentoService;
         this.avisoPagamentoEmailService = avisoPagamentoEmailService;
+        this.boasVindasLoginService = boasVindasLoginService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -197,11 +201,23 @@ public class AgendamentoController {
         if (!model.containsAttribute("exibirModalPendenciasPagamento")) {
             model.addAttribute("exibirModalPendenciasPagamento", false);
         }
-        if (!model.containsAttribute("exibirModalTelefoneWhatsapp")) {
-            model.addAttribute("exibirModalTelefoneWhatsapp", false);
+        if (!model.containsAttribute("exibirModalCadastroContato")) {
+            model.addAttribute("exibirModalCadastroContato", false);
         }
-        if (!model.containsAttribute("exibirModalEmailNotificacao")) {
-            model.addAttribute("exibirModalEmailNotificacao", false);
+        if (!model.containsAttribute("precisaCadastrarEmailNoContato")) {
+            model.addAttribute("precisaCadastrarEmailNoContato", false);
+        }
+        if (!model.containsAttribute("precisaCadastrarWhatsappNoContato")) {
+            model.addAttribute("precisaCadastrarWhatsappNoContato", false);
+        }
+        if (!model.containsAttribute("exibirModalBoasVindasLogin")) {
+            model.addAttribute("exibirModalBoasVindasLogin", false);
+        }
+        if (!model.containsAttribute("pendenciasPagamentoDepoisBoasVindas")) {
+            model.addAttribute("pendenciasPagamentoDepoisBoasVindas", false);
+        }
+        if (!model.containsAttribute("novidadesDepoisBoasVindas")) {
+            model.addAttribute("novidadesDepoisBoasVindas", false);
         }
         if (!model.containsAttribute("podeCadastrarEmailNotificacao")) {
             model.addAttribute("podeCadastrarEmailNotificacao", false);
@@ -368,38 +384,43 @@ public class AgendamentoController {
         model.addAttribute("trocaSenhaAindaPendente", trocaSenhaAindaPendente);
         boolean podeCadastrarTelefoneWhatsapp = authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado);
         boolean podeCadastrarEmailNotificacao = authService.podeCadastrarEmailNotificacaoPagamento(usuarioLogado);
-        boolean reabrirModalTelefoneWhatsapp = model.containsAttribute("reabrirModalTelefoneWhatsapp");
-        boolean reabrirModalEmailNotificacao = model.containsAttribute("reabrirModalEmailNotificacao");
-        boolean exibirModalEmailNotificacao = !exibirModalTrocarSenhaObrigatoria
-                && usuarioService.exibirModalEmailNotificacaoEntrada(
+        boolean precisaCadastrarEmailNoContato = usuarioService.precisaCadastrarEmailNotificacao(usuarioLogado);
+        boolean precisaCadastrarWhatsappNoContato = usuarioService.precisaCadastrarTelefoneWhatsapp(usuarioLogado);
+        boolean reabrirModalCadastroContato = model.containsAttribute("reabrirModalCadastroContato");
+        boolean exibirModalCadastroContato = !exibirModalTrocarSenhaObrigatoria
+                && usuarioService.exibirModalCadastroContatoEntrada(
                 session,
-                reabrirModalEmailNotificacao,
+                reabrirModalCadastroContato,
                 usuarioLogado
         );
-        boolean exibirModalTelefoneWhatsapp = !exibirModalTrocarSenhaObrigatoria
-                && !exibirModalEmailNotificacao
-                && usuarioService.exibirModalTelefoneWhatsappEntrada(
-                session,
-                reabrirModalTelefoneWhatsapp,
-                usuarioLogado
-        );
-        if (exibirModalEmailNotificacao || exibirModalTelefoneWhatsapp) {
+        if (exibirModalCadastroContato) {
             model.addAttribute("exibirModalPendenciasPagamento", false);
         }
         model.addAttribute("podeCadastrarEmailNotificacao", podeCadastrarEmailNotificacao);
-        model.addAttribute("exibirModalEmailNotificacao", exibirModalEmailNotificacao);
-        if (podeCadastrarEmailNotificacao && !model.containsAttribute("atualizarEmailProfissionalForm")) {
-            var emailForm = new com.clinica.sistema.dto.AtualizarEmailProfissionalForm();
+        model.addAttribute("exibirModalCadastroContato", exibirModalCadastroContato);
+        model.addAttribute("precisaCadastrarEmailNoContato", precisaCadastrarEmailNoContato);
+        model.addAttribute("precisaCadastrarWhatsappNoContato", precisaCadastrarWhatsappNoContato);
+        if (podeCadastrarTelefoneWhatsapp && !model.containsAttribute("atualizarTelefoneWhatsappForm")) {
+            var contatoForm = new com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm();
             if (usuarioLogado.getEmail() != null && !usuarioLogado.getEmail().isBlank()) {
-                emailForm.setEmail(usuarioLogado.getEmail());
+                contatoForm.setEmail(usuarioLogado.getEmail());
             }
-            model.addAttribute("atualizarEmailProfissionalForm", emailForm);
+            if (usuarioLogado.getTelefoneWhatsappFormulario() != null
+                    && !usuarioLogado.getTelefoneWhatsappFormulario().isBlank()) {
+                contatoForm.setTelefoneWhatsapp(usuarioLogado.getTelefoneWhatsappFormulario());
+            }
+            model.addAttribute("atualizarTelefoneWhatsappForm", contatoForm);
         }
         model.addAttribute("podeCadastrarTelefoneWhatsapp", podeCadastrarTelefoneWhatsapp);
-        model.addAttribute("exibirModalTelefoneWhatsapp", exibirModalTelefoneWhatsapp);
-        if (podeCadastrarTelefoneWhatsapp && !model.containsAttribute("atualizarTelefoneWhatsappForm")) {
-            model.addAttribute("atualizarTelefoneWhatsappForm", new com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm());
+        boolean exibirModalBoasVindasLogin = !exibirModalTrocarSenhaObrigatoria
+                && !exibirModalCadastroContato
+                && boasVindasLoginService.exibirBoasVindasLoginEntrada(session)
+                && boasVindasLoginService.elegivelBoasVindas(usuarioLogado);
+        if (exibirModalBoasVindasLogin) {
+            model.addAttribute("boasVindasLogin", boasVindasLoginService.montar(usuarioLogado));
+            model.addAttribute("exibirModalPendenciasPagamento", false);
         }
+        model.addAttribute("exibirModalBoasVindasLogin", exibirModalBoasVindasLogin);
         model.addAttribute("isDonaClinica", isDonaClinica);
         model.addAttribute("podeEscolherFormaPagamento", authService.podeEscolherFormaPagamento(usuarioLogado));
         model.addAttribute("podeTrocarPropriaSenha", podeTrocarPropriaSenha);
@@ -547,7 +568,7 @@ public class AgendamentoController {
         popularControlePeriodicidadePropria(model, usuarioLogado);
         var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
         pagamentoConsultaService.adicionarResumoPendenciasPagamentoAoModel(model, usuarioLogado, session);
-        if (Boolean.TRUE.equals(model.getAttribute("exibirModalTelefoneWhatsapp"))) {
+        if (Boolean.TRUE.equals(model.getAttribute("exibirModalCadastroContato"))) {
             model.addAttribute("exibirModalPendenciasPagamento", false);
         }
         model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
@@ -582,6 +603,17 @@ public class AgendamentoController {
         aplicarModalPixConfirmadoSeNecessario(model);
         popularNovidades(model, usuarioLogado, session);
         aplicarValorPadraoAgendamentoSeNecessario(model, usuarioLogado, podeGerenciarEquipe);
+        if (Boolean.TRUE.equals(model.getAttribute("exibirModalBoasVindasLogin"))) {
+            boolean pendenciasDepois = Boolean.TRUE.equals(model.getAttribute("exibirModalPendenciasPagamento"));
+            boolean novidadesDepois = Boolean.TRUE.equals(model.getAttribute("exibirModalNovidades"));
+            model.addAttribute("pendenciasPagamentoDepoisBoasVindas", pendenciasDepois);
+            model.addAttribute("novidadesDepoisBoasVindas", novidadesDepois);
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+            model.addAttribute("exibirModalNovidades", false);
+        } else {
+            model.addAttribute("pendenciasPagamentoDepoisBoasVindas", false);
+            model.addAttribute("novidadesDepoisBoasVindas", false);
+        }
         return "agenda";
     }
 

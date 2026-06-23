@@ -53,6 +53,17 @@ public class PagamentoController {
 
     @GetMapping("/{id}")
     public String paginaPagamento(@PathVariable Long id, Model model) {
+        preencherModelPagamentoConsulta(id, model);
+        return "pagamento-consulta";
+    }
+
+    @GetMapping("/{id}/modal")
+    public String modalPagamento(@PathVariable Long id, Model model) {
+        preencherModelPagamentoConsulta(id, model);
+        return "fragments/pagamento-consulta :: corpo-pagamento-consulta";
+    }
+
+    private void preencherModelPagamentoConsulta(Long id, Model model) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         Agendamento agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
@@ -64,7 +75,6 @@ public class PagamentoController {
         model.addAttribute("bloqueado", pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
         model.addAttribute("vagaPreenchida", pagamentoConsultaService.vagaPreenchidaPorOutroProfissional(agendamento));
         model.addAttribute("podeRecuperarVaga", pagamentoConsultaService.podeRecuperarVagaComPagamento(agendamento));
-        return "pagamento-consulta";
     }
 
     @GetMapping("/{id}/qr.png")

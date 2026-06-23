@@ -52,6 +52,9 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             garantirTabelaSenhaRecuperacao();
             adicionarColunaUsuariosSeNecessario("foto_perfil", "VARCHAR(120)");
             adicionarColunaUsuariosSeNecessario("lgpd_consentimento_em", "TIMESTAMP");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_controle_data", "DATE");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_exibicoes_hoje", "INT DEFAULT 0");
+            adicionarColunaUsuariosSeNecessario("boas_vindas_oculto_hoje", "BOOLEAN DEFAULT FALSE");
             adicionarColunaSalasSeNecessario("taxa_clinica", "DECIMAL(10,2)");
             preencherTaxaSala4Padrao();
             adicionarColunaSeNecessario("data_referencia_semana_pagamento", "DATE");

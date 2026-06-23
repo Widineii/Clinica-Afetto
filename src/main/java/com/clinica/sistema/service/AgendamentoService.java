@@ -957,9 +957,15 @@ public class AgendamentoService {
     }
 
     public List<Agendamento> listarAgendamentosDoDia(Usuario usuarioLogado, boolean isAdmin) {
-        LocalDate hoje = LocalDate.now();
-        LocalDateTime inicio = hoje.atStartOfDay();
-        LocalDateTime fim = hoje.plusDays(1).atStartOfDay();
+        return listarAgendamentosDoDia(usuarioLogado, isAdmin, LocalDate.now());
+    }
+
+    public List<Agendamento> listarAgendamentosDoDia(Usuario usuarioLogado, boolean isAdmin, LocalDate dia) {
+        if (dia == null) {
+            return List.of();
+        }
+        LocalDateTime inicio = dia.atStartOfDay();
+        LocalDateTime fim = dia.plusDays(1).atStartOfDay();
 
         if (isAdmin) {
             return repository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(

@@ -7,6 +7,7 @@ import com.clinica.sistema.config.SegurancaProperties;
 import com.clinica.sistema.model.Usuario;
 
 import com.clinica.sistema.repository.UsuarioRepository;
+import com.clinica.sistema.service.BoasVindasLoginService;
 import com.clinica.sistema.service.LgpdConsentimentoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.UsuarioService;
@@ -37,8 +38,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
 
     public static final String SESSION_LOGIN_COM_TROCA_SENHA = "loginComTrocaSenhaPendente";
-    public static final String SESSION_LOGIN_COM_WHATSAPP_PENDENTE = "loginComWhatsappPendente";
-    public static final String SESSION_LOGIN_COM_EMAIL_PENDENTE = "loginComEmailPendente";
+    public static final String SESSION_LOGIN_COM_CONTATO_PENDENTE = "loginComContatoPendente";
+    public static final String SESSION_LOGIN_COM_BOAS_VINDAS = "loginComBoasVindasPendente";
     public static final String SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO = "loginComPendenciasPagamentoPendente";
 
 
@@ -52,6 +53,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     private final PagamentoConsultaService pagamentoConsultaService;
 
     private final LgpdConsentimentoService lgpdConsentimentoService;
+
+    private final BoasVindasLoginService boasVindasLoginService;
 
     private final RequestCache requestCache = new HttpSessionRequestCache();
 
@@ -67,7 +70,9 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
             PagamentoConsultaService pagamentoConsultaService,
 
-            LgpdConsentimentoService lgpdConsentimentoService
+            LgpdConsentimentoService lgpdConsentimentoService,
+
+            BoasVindasLoginService boasVindasLoginService
 
     ) {
 
@@ -80,6 +85,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         this.pagamentoConsultaService = pagamentoConsultaService;
 
         this.lgpdConsentimentoService = lgpdConsentimentoService;
+
+        this.boasVindasLoginService = boasVindasLoginService;
 
     }
 
@@ -98,7 +105,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     ) throws IOException {
 
         marcarTrocaSenhaPendenteNoLogin(request, authentication);
-        marcarEmailNotificacaoPendenteNoLogin(request, authentication);
+        marcarContatoPendenteNoLogin(request, authentication);
+        marcarBoasVindasPendenteNoLogin(request, authentication);
         marcarPendenciasPagamentoNoLogin(request, authentication);
 
         salvarAcessoNoNavegador(request, response, authentication);
@@ -220,7 +228,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
     }
 
-    private void marcarEmailNotificacaoPendenteNoLogin(HttpServletRequest request, Authentication authentication) {
+    private void marcarContatoPendenteNoLogin(HttpServletRequest request, Authentication authentication) {
 
         if (!(authentication.getPrincipal() instanceof ClinicaUserPrincipal principal)) {
 
@@ -238,7 +246,29 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
         HttpSession session = request.getSession(true);
 
-        usuarioService.marcarCadastroEmailNotificacaoPendenteNoLogin(session, usuario);
+        usuarioService.marcarCadastroContatoPendenteNoLogin(session, usuario);
+
+    }
+
+    private void marcarBoasVindasPendenteNoLogin(HttpServletRequest request, Authentication authentication) {
+
+        if (!(authentication.getPrincipal() instanceof ClinicaUserPrincipal principal)) {
+
+            return;
+
+        }
+
+        Usuario usuario = principal.getUsuario();
+
+        if (usuario == null) {
+
+            return;
+
+        }
+
+        HttpSession session = request.getSession(true);
+
+        boasVindasLoginService.marcarBoasVindasPendenteNoLogin(session, usuario);
 
     }
 

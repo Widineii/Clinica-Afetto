@@ -471,6 +471,29 @@
                                aria-readonly="true">
                     </div>
 
+                    <div class="editar-perfil-modal__campo"
+                         th:if="${podeEditarPerfil != null and podeEditarPerfil}">
+                        <label class="editar-perfil-modal__label" for="editarPerfilEmail">
+                            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                            E-mail
+                        </label>
+                        <input th:field="*{email}"
+                               type="email"
+                               class="form-control editar-perfil-modal__input"
+                               id="editarPerfilEmail"
+                               maxlength="120"
+                               autocomplete="email"
+                               placeholder="seuemail@exemplo.com">
+                        <p class="editar-perfil-modal__hint mb-0"
+                           th:if="${podeCadastrarEmailNotificacao != null and podeCadastrarEmailNotificacao}">
+                            E-mail pessoal para avisos de pagamento pendente.
+                        </p>
+                        <p class="editar-perfil-modal__hint mb-0"
+                           th:unless="${podeCadastrarEmailNotificacao != null and podeCadastrarEmailNotificacao}">
+                            Seu e-mail de contato na clínica.
+                        </p>
+                    </div>
+
                     <div class="editar-perfil-modal__campo mb-0">
                         <label class="editar-perfil-modal__label" for="editarPerfilWhatsapp">
                             <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
@@ -482,10 +505,9 @@
                                id="editarPerfilWhatsapp"
                                maxlength="20"
                                inputmode="numeric"
-                               pattern="[0-9]+"
+                               pattern="[0-9]*"
                                autocomplete="tel"
-                               placeholder="31999998888"
-                               required>
+                               placeholder="31999998888">
                         <p class="editar-perfil-modal__hint mb-0">
                             DDD + número, somente dígitos. A clínica usa para avisos importantes.
                         </p>

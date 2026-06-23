@@ -2,6 +2,89 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
 
+<div th:fragment="corpo-pagamento-consulta (agendamento)">
+    <div class="text-center">
+        <h2 class="h5 mb-2">Pagamento da consulta</h2>
+        <p th:if="${pagamentoService.modoTestePagamento()}" class="text-muted small mb-3">
+            Demonstração local — fluxo igual ao da clínica
+        </p>
+        <p th:unless="${pagamentoService.modoTestePagamento()}" class="text-muted small mb-3">
+            InfinitePay · PIX
+        </p>
+
+        <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
+        <p class="small text-muted"
+           th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026</p>
+        <p class="mb-2">Taxa da clínica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
+        <p class="small mb-4">
+            Status:
+            <span class="badge text-bg-secondary" th:text="${rotuloStatus}">Aguardando pagamento</span>
+        </p>
+
+        <div th:if="${agendamento.possuiQrPagamentoAtivo()}">
+            <p class="small text-warning mb-2">
+                Tempo restante:
+                <strong class="pagamento-countdown"
+                        th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                        th:text="${agendamento.tempoRestantePagamentoFormatado}">4:59</strong>
+            </p>
+            <div th:replace="~{fragments/pagamento-consulta :: bloco-pagamento-qr(agendamento=${agendamento}, imgWidth=240)}"></div>
+            <form th:if="${pagamentoService.modoTestePagamento() and agendamento.id != null}"
+                  th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
+                  method="post"
+                  class="d-grid gap-2 mb-3">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-success">Simular pagamento (teste)</button>
+            </form>
+            <th:block th:replace="~{fragments/pagamento-consulta :: aviso-comprovante-polyana}"></th:block>
+        </div>
+
+        <div th:if="${agendamento.pagamentoPago}" class="alert alert-success mb-0">
+            Pagamento confirmado. A sala está liberada para esta consulta.
+        </div>
+
+        <div th:if="${vagaPreenchida}" class="alert alert-danger mb-0">
+            A vaga foi preenchida por outro profissional neste horário.
+            O pagamento não pode ser concluído aqui. Escolha outro horário ou sala na agenda.
+        </div>
+
+        <div th:if="${podeRecuperarVaga and !agendamento.possuiQrPagamentoAtivo() and !agendamento.pagamentoPago}"
+             class="alert alert-warning mb-3">
+            Após a meia-noite do dia da consulta esta vaga ficou liberada na grade para outros profissionais,
+            mas você ainda pode pagar e recuperar o horário enquanto ninguém reservar.
+            <form th:action="@{/pagamentos/{id}/gerar-link(id=${agendamento.id})}"
+                  method="post"
+                  class="d-grid mt-2">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-sm btn-warning">Pagar e recuperar vaga</button>
+            </form>
+        </div>
+
+        <div th:if="${bloqueado and !vagaPreenchida}" class="alert alert-danger mt-3 mb-0">
+            Consulta bloqueada: pagamento não confirmado para usar a sala hoje.
+        </div>
+    </div>
+</div>
+
+<div th:fragment="modal-pagamento-consulta-shell">
+    <div class="modal fade admin-modal"
+         id="pagamentoConsultaModal"
+         tabindex="-1"
+         aria-labelledby="pagamentoConsultaModalTitulo"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 420px;">
+            <div class="modal-content">
+                <div class="modal-header px-4 py-3 border-0 pb-0">
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4 pb-4 pt-2" id="pagamentoConsultaModalCorpo">
+                    <p class="text-muted text-center mb-0">Carregando pagamento...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div th:fragment="aviso-comprovante-polyana"
      class="alert comprovante-polyana-aviso border-2 border-warning mb-3 py-3 px-3 text-center"
      role="status">
@@ -73,19 +156,12 @@
         <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
 
         <th:block th:if="${pagamentoService.podeVerPagamento(agendamento, usuarioLogado)}">
-        <a th:if="${agendamento.possuiQrPagamentoAtivo() and pagamentoService.exibirCheckoutInfinitePay(agendamento)}"
-           th:href="${agendamento.pagamentoLink}"
-           th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
-           th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
-           class="btn btn-sm btn-primary">
-            Abrir pagamento
-        </a>
-
-        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
-           th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
-           class="btn btn-sm btn-primary">
-            Ver QR
-        </a>
+        <button type="button"
+                th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
+                class="btn btn-sm btn-primary abrir-pagamento-modal"
+                th:attr="data-abrir-pagamento-modal=${agendamento.id}">
+            Ver pagamento
+        </button>
 
         <button type="button"
                 th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.pagamentoLink != null}"
@@ -191,9 +267,12 @@
                            th:target="${pagamentoService.abrirCheckoutMesmaAba() ? '_self' : '_blank'}"
                            th:rel="${pagamentoService.abrirCheckoutMesmaAba() ? null : 'noopener noreferrer'}"
                            class="btn btn-sm btn-primary">Abrir pagamento PIX</a>
-                        <a th:if="${item.id != null}"
-                           th:href="@{/pagamentos/{id}(id=${item.id})}"
-                           class="btn btn-sm btn-outline-secondary">Ver detalhes</a>
+                        <button type="button"
+                                th:if="${item.id != null}"
+                                class="btn btn-sm btn-outline-secondary abrir-pagamento-modal"
+                                th:attr="data-abrir-pagamento-modal=${item.id}">
+                            Ver detalhes
+                        </button>
                         <button type="button"
                                 th:if="${item.pagamentoLink != null}"
                                 class="btn btn-sm btn-outline-primary copiar-chave-pix-btn"
@@ -334,6 +413,67 @@
         </div>
     </div>
 </div>
+
+<script th:fragment="abrir-pagamento-modal-script">
+    (function () {
+        if (window.__pagamentoModalBound) {
+            return;
+        }
+        window.__pagamentoModalBound = true;
+
+        function atualizarCountdownsInjetados() {
+            if (typeof window.atualizarCountdownsPagamento === 'function') {
+                window.atualizarCountdownsPagamento();
+                return;
+            }
+            var agora = Date.now();
+            document.querySelectorAll('#pagamentoConsultaModalCorpo .pagamento-countdown[data-expira-em]').forEach(function (el) {
+                var expira = el.getAttribute('data-expira-em');
+                if (!expira) {
+                    return;
+                }
+                var fim = new Date(expira).getTime();
+                var restante = Math.max(0, Math.floor((fim - agora) / 1000));
+                var minutos = Math.floor(restante / 60);
+                var segundos = restante % 60;
+                el.textContent = minutos + ':' + String(segundos).padStart(2, '0');
+            });
+        }
+
+        window.abrirModalPagamentoConsulta = function (id) {
+            var corpo = document.getElementById('pagamentoConsultaModalCorpo');
+            var modalEl = document.getElementById('pagamentoConsultaModal');
+            if (!corpo || !modalEl || !window.bootstrap || !id) {
+                return;
+            }
+            corpo.innerHTML = '<p class="text-center text-muted py-4 mb-0">Carregando pagamento...</p>';
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            fetch('/pagamentos/' + id + '/modal', {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (resposta) {
+                if (!resposta.ok) {
+                    throw new Error('falha');
+                }
+                return resposta.text();
+            }).then(function (html) {
+                corpo.innerHTML = html;
+                atualizarCountdownsInjetados();
+            }).catch(function () {
+                corpo.innerHTML = '<p class="alert alert-danger mb-0">Não foi possível abrir o pagamento. Tente novamente.</p>';
+            });
+        };
+
+        document.addEventListener('click', function (evento) {
+            var botao = evento.target.closest('[data-abrir-pagamento-modal]');
+            if (!botao) {
+                return;
+            }
+            evento.preventDefault();
+            window.abrirModalPagamentoConsulta(botao.getAttribute('data-abrir-pagamento-modal'));
+        });
+    })();
+</script>
 
 <script th:fragment="copiar-chave-script">
     (function () {

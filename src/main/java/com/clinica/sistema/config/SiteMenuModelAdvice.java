@@ -60,6 +60,15 @@ public class SiteMenuModelAdvice {
         if (!model.containsAttribute("reabrirModalEditarPerfil")) {
             model.addAttribute("reabrirModalEditarPerfil", false);
         }
+        if (!model.containsAttribute("exibirModalBoasVindasLogin")) {
+            model.addAttribute("exibirModalBoasVindasLogin", false);
+        }
+        if (!model.containsAttribute("pendenciasPagamentoDepoisBoasVindas")) {
+            model.addAttribute("pendenciasPagamentoDepoisBoasVindas", false);
+        }
+        if (!model.containsAttribute("novidadesDepoisBoasVindas")) {
+            model.addAttribute("novidadesDepoisBoasVindas", false);
+        }
 
         authService.buscarUsuarioLogado().ifPresentOrElse(
                 usuario -> preencherMenuUsuario(model, session, usuario),
@@ -183,9 +192,18 @@ public class SiteMenuModelAdvice {
 
         boolean podeEditarPerfil = authService.podeEditarProprioPerfil(usuario);
         model.addAttribute("podeEditarPerfil", podeEditarPerfil);
+        if (!model.containsAttribute("podeCadastrarEmailNotificacao")) {
+            model.addAttribute(
+                    "podeCadastrarEmailNotificacao",
+                    authService.podeCadastrarEmailNotificacaoPagamento(usuario)
+            );
+        }
         if (podeEditarPerfil && !model.containsAttribute("atualizarTelefoneWhatsappForm")) {
             AtualizarTelefoneWhatsappForm formPerfil = new AtualizarTelefoneWhatsappForm();
             formPerfil.setTelefoneWhatsapp(usuario.getTelefoneWhatsappFormulario());
+            if (usuario.getEmail() != null && !usuario.getEmail().isBlank()) {
+                formPerfil.setEmail(usuario.getEmail());
+            }
             model.addAttribute("atualizarTelefoneWhatsappForm", formPerfil);
         }
 

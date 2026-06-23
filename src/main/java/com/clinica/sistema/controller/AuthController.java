@@ -7,6 +7,7 @@ import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.security.AcessoSalvoCookies;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.BoasVindasLoginService;
 import com.clinica.sistema.service.LgpdConsentimentoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.UsuarioService;
@@ -34,17 +35,20 @@ public class AuthController {
     private final UsuarioService usuarioService;
     private final PagamentoConsultaService pagamentoConsultaService;
     private final LgpdConsentimentoService lgpdConsentimentoService;
+    private final BoasVindasLoginService boasVindasLoginService;
 
     public AuthController(
             AuthService authService,
             UsuarioService usuarioService,
             PagamentoConsultaService pagamentoConsultaService,
-            LgpdConsentimentoService lgpdConsentimentoService
+            LgpdConsentimentoService lgpdConsentimentoService,
+            BoasVindasLoginService boasVindasLoginService
     ) {
         this.authService = authService;
         this.usuarioService = usuarioService;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.lgpdConsentimentoService = lgpdConsentimentoService;
+        this.boasVindasLoginService = boasVindasLoginService;
     }
 
     @ModelAttribute
@@ -173,16 +177,59 @@ public class AuthController {
                     removerFoto,
                     usuarioLogado
             );
-            usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+            Usuario usuarioAtualizado = usuarioService.recarregarUsuario(usuarioLogado);
+            usuarioService.sincronizarCadastroContatoPendenteNaSessao(session, usuarioAtualizado);
             redirectAttributes.addFlashAttribute("sucesso", "Perfil atualizado com sucesso.");
+            if (usuarioService.precisaCadastrarContatoProfissional(usuarioAtualizado)) {
+                redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
+            }
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erroPerfil", e.getMessage());
-            redirectAttributes.addFlashAttribute("erroWhatsapp", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContato", e.getMessage());
             redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", atualizarTelefoneWhatsappForm);
             redirectAttributes.addFlashAttribute("reabrirModalEditarPerfil", true);
-            redirectAttributes.addFlashAttribute("reabrirModalTelefoneWhatsapp", true);
+            redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
         }
         return "redirect:" + normalizarRetornoPerfil(retorno);
+    }
+
+    @PostMapping("/conta/contato-profissional")
+    public String cadastrarContatoProfissional(
+            @ModelAttribute AtualizarTelefoneWhatsappForm atualizarTelefoneWhatsappForm,
+            @org.springframework.web.bind.annotation.RequestParam(name = "retorno", defaultValue = "/agendamentos/dashboard")
+            String retorno,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.atualizarContatoProfissional(atualizarTelefoneWhatsappForm, usuarioLogado);
+            usuarioService.dispensarCadastroContato(session);
+            redirectAttributes.addFlashAttribute("sucesso", "Dados de contato salvos com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erroContato", e.getMessage());
+            redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", atualizarTelefoneWhatsappForm);
+            redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
+        }
+        return "redirect:" + normalizarRetornoPerfil(retorno);
+    }
+
+    @PostMapping("/conta/contato-profissional/pular")
+    public String pularCadastroContatoProfissional(HttpSession session) {
+        authService.buscarUsuarioLogadoObrigatorio();
+        usuarioService.dispensarCadastroContato(session);
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/conta/boas-vindas-login/pular")
+    public String pularBoasVindasLogin(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean naoMostrarMaisHoje,
+            HttpSession session
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        boasVindasLoginService.registrarFechamentoBoasVindas(usuarioLogado, naoMostrarMaisHoje);
+        boasVindasLoginService.dispensarBoasVindasLogin(session);
+        return "redirect:/agendamentos/dashboard";
     }
 
     @PostMapping("/conta/email-profissional")
@@ -196,12 +243,18 @@ public class AuthController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             usuarioService.atualizarEmailNotificacao(atualizarEmailProfissionalForm, usuarioLogado);
-            usuarioService.dispensarCadastroEmailNotificacao(session);
+            Usuario usuarioAtualizado = usuarioService.recarregarUsuario(usuarioLogado);
+            usuarioService.sincronizarCadastroContatoPendenteNaSessao(session, usuarioAtualizado);
             redirectAttributes.addFlashAttribute("sucesso", "E-mail cadastrado com sucesso.");
+            if (usuarioService.precisaCadastrarContatoProfissional(usuarioAtualizado)) {
+                redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
+            }
         } catch (RuntimeException e) {
-            redirectAttributes.addFlashAttribute("erroEmail", e.getMessage());
-            redirectAttributes.addFlashAttribute("atualizarEmailProfissionalForm", atualizarEmailProfissionalForm);
-            redirectAttributes.addFlashAttribute("reabrirModalEmailNotificacao", true);
+            AtualizarTelefoneWhatsappForm form = new AtualizarTelefoneWhatsappForm();
+            form.setEmail(atualizarEmailProfissionalForm != null ? atualizarEmailProfissionalForm.getEmail() : null);
+            redirectAttributes.addFlashAttribute("erroContato", e.getMessage());
+            redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", form);
+            redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
         }
         return "redirect:" + normalizarRetornoPerfil(retorno);
     }
@@ -209,7 +262,7 @@ public class AuthController {
     @PostMapping("/conta/email-profissional/pular")
     public String pularCadastroEmailProfissional(HttpSession session) {
         authService.buscarUsuarioLogadoObrigatorio();
-        usuarioService.dispensarCadastroEmailNotificacao(session);
+        usuarioService.dispensarCadastroContato(session);
         return "redirect:/agendamentos/dashboard";
     }
 
@@ -224,14 +277,16 @@ public class AuthController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             usuarioService.atualizarTelefoneWhatsapp(atualizarTelefoneWhatsappForm, usuarioLogado);
-            usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+            Usuario usuarioAtualizado = usuarioService.recarregarUsuario(usuarioLogado);
+            usuarioService.sincronizarCadastroContatoPendenteNaSessao(session, usuarioAtualizado);
             redirectAttributes.addFlashAttribute("sucesso", "Perfil atualizado com sucesso.");
+            if (usuarioService.precisaCadastrarContatoProfissional(usuarioAtualizado)) {
+                redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
+            }
         } catch (RuntimeException e) {
-            redirectAttributes.addFlashAttribute("erroPerfil", e.getMessage());
-            redirectAttributes.addFlashAttribute("erroWhatsapp", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContato", e.getMessage());
             redirectAttributes.addFlashAttribute("atualizarTelefoneWhatsappForm", atualizarTelefoneWhatsappForm);
-            redirectAttributes.addFlashAttribute("reabrirModalEditarPerfil", true);
-            redirectAttributes.addFlashAttribute("reabrirModalTelefoneWhatsapp", true);
+            redirectAttributes.addFlashAttribute("reabrirModalCadastroContato", true);
         }
         return "redirect:" + normalizarRetornoPerfil(retorno);
     }
@@ -249,7 +304,7 @@ public class AuthController {
     @PostMapping("/conta/telefone-whatsapp/pular")
     public String pularCadastroTelefoneWhatsapp(HttpSession session) {
         authService.buscarUsuarioLogadoObrigatorio();
-        usuarioService.dispensarCadastroTelefoneWhatsapp(session);
+        usuarioService.dispensarCadastroContato(session);
         return "redirect:/agendamentos/dashboard";
     }
 

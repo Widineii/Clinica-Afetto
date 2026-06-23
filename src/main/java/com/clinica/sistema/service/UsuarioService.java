@@ -555,34 +555,8 @@ public class UsuarioService {
         return telefone == null || telefone.isBlank();
     }
 
-    public boolean exibirModalTelefoneWhatsappEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
-        if (!precisaCadastrarTelefoneWhatsapp(usuario)) {
-            return false;
-        }
-        if (reabrirAposErro) {
-            return true;
-        }
-        if (session == null) {
-            return false;
-        }
-        return Boolean.TRUE.equals(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE));
-    }
-
-    public void marcarCadastroTelefoneWhatsappPendenteNoLogin(HttpSession session, Usuario usuario) {
-        if (session == null || !precisaCadastrarTelefoneWhatsapp(usuario)) {
-            return;
-        }
-        session.setAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE, Boolean.TRUE);
-    }
-
-    public void dispensarCadastroTelefoneWhatsapp(HttpSession session) {
-        if (session != null) {
-            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_WHATSAPP_PENDENTE);
-        }
-    }
-
     public boolean precisaCadastrarEmailNotificacao(Usuario usuario) {
-        if (!authService.podeCadastrarEmailNotificacaoPagamento(usuario)) {
+        if (!authService.podeCadastrarProprioTelefoneWhatsapp(usuario)) {
             return false;
         }
         Usuario atualizado = usuarioRepository.findById(usuario.getId()).orElse(usuario);
@@ -590,8 +564,12 @@ public class UsuarioService {
         return email == null || email.isBlank();
     }
 
-    public boolean exibirModalEmailNotificacaoEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
-        if (!precisaCadastrarEmailNotificacao(usuario)) {
+    public boolean precisaCadastrarContatoProfissional(Usuario usuario) {
+        return precisaCadastrarEmailNotificacao(usuario) || precisaCadastrarTelefoneWhatsapp(usuario);
+    }
+
+    public boolean exibirModalCadastroContatoEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
+        if (!precisaCadastrarContatoProfissional(usuario)) {
             return false;
         }
         if (reabrirAposErro) {
@@ -600,20 +578,65 @@ public class UsuarioService {
         if (session == null) {
             return false;
         }
-        return Boolean.TRUE.equals(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_EMAIL_PENDENTE));
+        return Boolean.TRUE.equals(session.getAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_CONTATO_PENDENTE));
+    }
+
+    public void marcarCadastroContatoPendenteNoLogin(HttpSession session, Usuario usuario) {
+        if (session == null || !precisaCadastrarContatoProfissional(usuario)) {
+            return;
+        }
+        session.setAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_CONTATO_PENDENTE, Boolean.TRUE);
+    }
+
+    public void dispensarCadastroContato(HttpSession session) {
+        if (session != null) {
+            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_CONTATO_PENDENTE);
+        }
+    }
+
+    public boolean exibirModalTelefoneWhatsappEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
+        return exibirModalCadastroContatoEntrada(session, reabrirAposErro, usuario)
+                && precisaCadastrarTelefoneWhatsapp(usuario);
+    }
+
+    public void marcarCadastroTelefoneWhatsappPendenteNoLogin(HttpSession session, Usuario usuario) {
+        marcarCadastroContatoPendenteNoLogin(session, usuario);
+    }
+
+    public void dispensarCadastroTelefoneWhatsapp(HttpSession session) {
+        dispensarCadastroContato(session);
+    }
+
+    public boolean exibirModalEmailNotificacaoEntrada(HttpSession session, boolean reabrirAposErro, Usuario usuario) {
+        return exibirModalCadastroContatoEntrada(session, reabrirAposErro, usuario)
+                && precisaCadastrarEmailNotificacao(usuario);
     }
 
     public void marcarCadastroEmailNotificacaoPendenteNoLogin(HttpSession session, Usuario usuario) {
-        if (session == null || !precisaCadastrarEmailNotificacao(usuario)) {
-            return;
-        }
-        session.setAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_EMAIL_PENDENTE, Boolean.TRUE);
+        marcarCadastroContatoPendenteNoLogin(session, usuario);
     }
 
     public void dispensarCadastroEmailNotificacao(HttpSession session) {
-        if (session != null) {
-            session.removeAttribute(ClinicaAuthenticationSuccessHandler.SESSION_LOGIN_COM_EMAIL_PENDENTE);
+        dispensarCadastroContato(session);
+    }
+
+    @Transactional
+    public void atualizarContatoProfissional(AtualizarTelefoneWhatsappForm form, Usuario usuarioLogado) {
+        if (!authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado)) {
+            throw new RuntimeException("Cadastro de contato nao disponivel para este usuario.");
         }
+        Usuario usuario = carregarUsuarioPersistido(usuarioLogado);
+        boolean precisaEmail = precisaCadastrarEmailNotificacao(usuarioLogado);
+        boolean precisaWhatsapp = precisaCadastrarTelefoneWhatsapp(usuarioLogado);
+        if (precisaEmail) {
+            AtualizarEmailProfissionalForm emailForm = new AtualizarEmailProfissionalForm();
+            emailForm.setEmail(form != null ? form.getEmail() : null);
+            aplicarEmailNotificacaoNoUsuario(usuario, emailForm);
+        }
+        if (precisaWhatsapp) {
+            aplicarTelefoneWhatsappNoUsuario(usuario, form);
+        }
+        usuarioRepository.save(usuario);
     }
 
     @Transactional
@@ -625,8 +648,19 @@ public class UsuarioService {
     }
 
     private void validarCadastroEmailNotificacao(Usuario usuarioLogado) {
-        if (!authService.podeCadastrarEmailNotificacaoPagamento(usuarioLogado)) {
+        if (!authService.podeCadastrarProprioTelefoneWhatsapp(usuarioLogado)) {
             throw new RuntimeException("Cadastro de e-mail nao disponivel para este usuario.");
+        }
+    }
+
+    public void sincronizarCadastroContatoPendenteNaSessao(HttpSession session, Usuario usuario) {
+        if (session == null || usuario == null) {
+            return;
+        }
+        if (precisaCadastrarContatoProfissional(usuario)) {
+            marcarCadastroContatoPendenteNoLogin(session, usuario);
+        } else {
+            dispensarCadastroContato(session);
         }
     }
 
@@ -634,11 +668,27 @@ public class UsuarioService {
         if (form == null || form.getEmail() == null || form.getEmail().isBlank()) {
             throw new RuntimeException("Informe seu e-mail pessoal.");
         }
-        String email = form.getEmail().trim().toLowerCase();
-        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+        usuario.setEmail(normalizarEmail(form.getEmail()));
+    }
+
+    private void aplicarEmailPerfilNoUsuario(
+            Usuario usuario,
+            AtualizarTelefoneWhatsappForm form
+    ) {
+        String email = form != null ? form.getEmail() : null;
+        if (email == null || email.isBlank()) {
+            usuario.setEmail(null);
+            return;
+        }
+        usuario.setEmail(normalizarEmail(email));
+    }
+
+    private static String normalizarEmail(String email) {
+        String normalizado = email.trim().toLowerCase();
+        if (!normalizado.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
             throw new RuntimeException("Informe um e-mail valido.");
         }
-        usuario.setEmail(email);
+        return normalizado;
     }
 
     @Transactional
@@ -789,7 +839,8 @@ public class UsuarioService {
     ) {
         validarEdicaoPerfilProfissional(usuarioLogado);
         Usuario usuario = carregarUsuarioPersistido(usuarioLogado);
-        aplicarTelefoneWhatsappNoUsuario(usuario, form);
+        aplicarTelefoneWhatsappPerfilNoUsuario(usuario, form);
+        aplicarEmailPerfilNoUsuario(usuario, form);
         if (removerFoto) {
             perfilFotoService.removerFoto(usuario);
         } else if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
@@ -804,6 +855,10 @@ public class UsuarioService {
         }
     }
 
+    public Usuario recarregarUsuario(Usuario usuarioLogado) {
+        return carregarUsuarioPersistido(usuarioLogado);
+    }
+
     private Usuario carregarUsuarioPersistido(Usuario usuarioLogado) {
         return usuarioRepository.findById(usuarioLogado.getId())
                 .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
@@ -813,11 +868,23 @@ public class UsuarioService {
         if (form == null || form.getTelefoneWhatsapp() == null || form.getTelefoneWhatsapp().isBlank()) {
             throw new RuntimeException("Informe seu WhatsApp com DDD (ex.: 11987654321).");
         }
-        String normalizado = WhatsAppNumeroUtil.normalizarDestinatario(form.getTelefoneWhatsapp())
+        usuario.setTelefoneWhatsapp(normalizarTelefoneWhatsapp(form.getTelefoneWhatsapp()));
+    }
+
+    private void aplicarTelefoneWhatsappPerfilNoUsuario(Usuario usuario, AtualizarTelefoneWhatsappForm form) {
+        String telefone = form != null ? form.getTelefoneWhatsapp() : null;
+        if (telefone == null || telefone.isBlank()) {
+            usuario.setTelefoneWhatsapp(null);
+            return;
+        }
+        usuario.setTelefoneWhatsapp(normalizarTelefoneWhatsapp(telefone));
+    }
+
+    private String normalizarTelefoneWhatsapp(String telefone) {
+        return WhatsAppNumeroUtil.normalizarDestinatario(telefone)
                 .orElseThrow(() -> new RuntimeException(
                         "WhatsApp invalido. Use DDD + numero, somente digitos (ex.: 11987654321)."
                 ));
-        usuario.setTelefoneWhatsapp(normalizado);
     }
 
     @Transactional

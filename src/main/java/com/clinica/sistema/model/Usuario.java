@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -39,6 +40,18 @@ public class Usuario {
     /** Data/hora em que o usuario aceitou o consentimento LGPD do sistema. */
     @Column(name = "lgpd_consentimento_em")
     private LocalDateTime lgpdConsentimentoEm;
+
+    /** Dia de referencia do controle de exibicoes do modal de boas-vindas no login. */
+    @Column(name = "boas_vindas_controle_data")
+    private LocalDate boasVindasControleData;
+
+    /** Quantas vezes o modal de boas-vindas foi fechado hoje (sem marcar ocultar). */
+    @Column(name = "boas_vindas_exibicoes_hoje")
+    private Integer boasVindasExibicoesHoje = 0;
+
+    /** Usuario marcou para nao ver o modal de boas-vindas novamente no dia atual. */
+    @Column(name = "boas_vindas_oculto_hoje")
+    private Boolean boasVindasOcultoHoje = false;
 
     /** Taxa de sala padrao por tipo de agendamento (Central → Valores). Nao e o valor que o cliente paga ao profissional. */
     @Column(name = "valor_consulta_avulso", precision = 10, scale = 2)
