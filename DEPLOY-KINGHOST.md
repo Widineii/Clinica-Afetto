@@ -212,3 +212,40 @@ GitHub → **Actions** → **Deploy KingHost** → **Run workflow**.
 4. Confira a versao no rodape do site (ex.: `2.822`)
 
 Se os secrets nao estiverem configurados, o deploy e ignorado (workflow verde, sem alterar o servidor).
+
+---
+
+## Deploy automatico direto no VPS (recomendado)
+
+Esse modo deixa o VPS sempre na mesma versao da branch `main` do GitHub. A cada 5 minutos o servidor confere se existe commit novo; se existir, ele atualiza o codigo e roda rebuild do Docker.
+
+No VPS:
+
+```bash
+cd /opt/clinica-afetto
+git fetch origin main
+git reset --hard origin/main
+chmod +x scripts/install-auto-deploy-kinghost.sh
+./scripts/install-auto-deploy-kinghost.sh
+```
+
+Conferir se ficou ativo:
+
+```bash
+systemctl status clinica-afetto-auto-deploy.timer
+journalctl -u clinica-afetto-auto-deploy.service -f
+```
+
+Rodar uma atualizacao agora, sem esperar o timer:
+
+```bash
+systemctl start clinica-afetto-auto-deploy.service
+```
+
+Desativar o automatico:
+
+```bash
+cd /opt/clinica-afetto
+chmod +x scripts/uninstall-auto-deploy-kinghost.sh
+./scripts/uninstall-auto-deploy-kinghost.sh
+```
