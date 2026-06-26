@@ -42,28 +42,45 @@ public final class GeradorContratoPdf {
 
     static void gerar(Path destino) throws DocumentException, IOException {
         destino.getParent().toFile().mkdirs();
-        Document doc = new Document(PageSize.A4, 50, 50, 45, 45);
-        PdfWriter.getInstance(doc, java.nio.file.Files.newOutputStream(destino));
-        doc.open();
+        try (var out = java.nio.file.Files.newOutputStream(destino)) {
+            gerar(out);
+        }
+    }
 
+    public static void gerar(java.io.OutputStream out) throws DocumentException, IOException {
+        Document doc = new Document(PageSize.A4, 50, 50, 45, 45);
+        PdfWriter.getInstance(doc, out);
+        doc.open();
+        escreverContrato(doc);
+        doc.close();
+    }
+
+    private static void escreverContrato(Document doc) throws DocumentException {
         Paragraph titulo = new Paragraph("CONTRATO DE LICENCIAMENTO DE SOFTWARE\nE PRESTAÇÃO DE SERVIÇOS DE SUPORTE", TITLE);
         titulo.setAlignment(Element.ALIGN_CENTER);
         titulo.setSpacingAfter(4);
         doc.add(titulo);
 
-        Paragraph sub = new Paragraph("Sistema: Agenda Afetto — Plataforma Web de Gestão Clínica\nVersão entregue: 2.6 | Documento: maio/2026", SUBTITLE);
+        Paragraph sub = new Paragraph("Sistema: Agenda Afetto — Plataforma Web de Gestão Clínica\nVersão entregue: 2.6 | Documento: junho/2026", SUBTITLE);
         sub.setAlignment(Element.ALIGN_CENTER);
         sub.setSpacingAfter(14);
         doc.add(sub);
 
         doc.add(corpo(
-                "Pelo presente instrumento particular, de um lado _______________________________________________, "
-                        + "brasileiro(a), inscrito(a) no CPF sob nº _______________________, residente e domiciliado(a) em "
-                        + "_______________________________________________, doravante denominado(a) CONTRATADO ou DESENVOLVEDOR; "
+                "Pelo presente instrumento particular, de um lado WIDINEI MARTINS DE OLIVEIRA, "
+                        + "brasileiro, inscrito no CPF sob nº 147.786.936-04, RG nº MG-24.207.266, "
+                        + "residente e domiciliado em Rua Francisco Castro Monteiro, nº 94, telefone/WhatsApp "
+                        + "(37) 99855-0994, e-mail widineimartins4@gmail.com, doravante denominado CONTRATADO ou DESENVOLVEDOR; "
                         + "e, de outro lado, _______________________________________________, inscrito(a) no CPF/CNPJ sob nº "
                         + "_______________________, com endereço em _______________________________________________, "
                         + "representado(a) neste ato por _______________________________________________, doravante denominado(a) "
                         + "CONTRATANTE ou CLÍNICA, têm entre si justo e contratado o seguinte:"));
+
+        doc.add(corpo("Histórico de uso e validação. As partes reconhecem que, antes da formalização deste contrato, "
+                + "a CONTRATANTE utilizou o sistema Agenda Afetto por aproximadamente 2 (dois) meses em ambiente "
+                + "operacional real, para testes, monitoramento do uso diário e adequações ao fluxo de trabalho da clínica, "
+                + "incluindo ajustes e alterações solicitadas pela CONTRATANTE conforme a rotina dos profissionais e da "
+                + "administração. Esse período serviu como validação prática do sistema entregue."));
 
         doc.add(secao("CLÁUSULA 1 — DO OBJETO"));
         doc.add(corpo("1.1. O presente contrato tem por objeto a licença de uso exclusiva do software web denominado "
@@ -73,6 +90,16 @@ public final class GeradorContratoPdf {
         doc.add(corpo("1.2. O software é uma aplicação web desenvolvida em Java (Spring Boot), com interface em "
                 + "Thymeleaf/HTML, destinada à gestão operacional, financeira e administrativa de clínica de saúde, "
                 + "incluindo controle de agenda por profissional, sala e paciente."));
+        doc.add(corpo("1.3. A CONTRATANTE declara ter acompanhado o uso do sistema durante o período de aproximadamente "
+                + "2 (dois) meses descrito acima, tendo tido oportunidade de testar as funcionalidades, solicitar ajustes "
+                + "e verificar o funcionamento no dia a dia da clínica. Com a assinatura deste instrumento e o pagamento "
+                + "acordado, considera-se o sistema aceito para fins de entrega, ressalvados apenas defeitos (bugs) "
+                + "corrigíveis no prazo de suporte da Cláusula 6."));
+        doc.add(corpo("1.4. Limitação de finalidade: o Agenda Afetto destina-se à gestão de agenda, financeiro e "
+                + "administrativo da clínica. O sistema não substitui prontuário eletrônico, registro clínico completo "
+                + "do paciente nem qualquer obrigação técnica, ética ou legal dos profissionais de saúde. A responsabilidade "
+                + "pelo atendimento, diagnóstico, conduta clínica e documentação médica/psicológica permanece exclusivamente "
+                + "com os profissionais e com a CONTRATANTE."));
 
         doc.add(secao("CLÁUSULA 2 — DESCRIÇÃO DETALHADA DO SISTEMA ENTREGUE"));
         doc.add(corpo("O CONTRATADO entrega licença de uso do sistema com os módulos e funcionalidades abaixo descritos, "
@@ -132,7 +159,7 @@ public final class GeradorContratoPdf {
                 "Sistema de novidades do site para comunicação de atualizações aos usuários."));
 
         doc.add(modulo("2.9. Infraestrutura e Tecnologia",
-                "Aplicação web em produção na nuvem (Railway) com banco PostgreSQL gerenciado (Neon), conforme Cláusula 3;",
+                "Aplicação web em produção em VPS Linux na KingHost, com banco PostgreSQL no mesmo servidor (Docker), conforme Cláusula 3;",
                 "Ambiente de desenvolvimento local (perfil local com H2);",
                 "Código-fonte completo do projeto entregue via repositório Git ou arquivo compactado;",
                 "Documentação básica de execução (README) e variáveis de ambiente necessárias."));
@@ -142,14 +169,24 @@ public final class GeradorContratoPdf {
         doc.add(secao("CLÁUSULA 4 — DO PREÇO E FORMA DE PAGAMENTO"));
         doc.add(tabelaPrecos());
         doc.add(corpo("4.2. Forma de pagamento: ( ) À vista   ( ) Parcelado em _____ vezes   | Meio: ( ) PIX   ( ) Transferência   ( ) Outro: __________"));
-        doc.add(corpo("4.3. Chave PIX / dados bancários do CONTRATADO: _______________________________________________"));
+        doc.add(corpo("4.3. Chave PIX / dados bancários do CONTRATADO: conferir com o CONTRATADO — widineimartins8@gmail.com"));
         doc.add(corpo("4.4. A entrega definitiva do acesso, credenciais e código-fonte ocorrerá após a confirmação do pagamento integral ou do primeiro pagamento acordado, conforme combinado entre as partes."));
+        doc.add(corpo("4.5. Em caso de atraso no pagamento superior a 15 (quinze) dias do vencimento acordado, o CONTRATADO poderá "
+                + "suspender o suporte técnico e o acesso técnico até a regularização dos valores em aberto."));
 
         doc.add(secao("CLÁUSULA 5 — DA LICENÇA E PROPRIEDADE INTELECTUAL"));
-        doc.add(corpo("5.1. O CONTRATADO concede à CONTRATANTE licença de uso exclusiva e perpetua do sistema Agenda Afetto para operação da clínica contratante, incluindo direito de hospedar, utilizar e manter o software em produção."));
-        doc.add(corpo("5.2. Com o pagamento integral, a CONTRATANTE recebe o código-fonte e passa a ser titular do direito de uso exclusivo na sua operação, não podendo o CONTRATADO revender ou licenciar o mesmo código, customizado para esta clínica, a terceiros concorrentes diretos, salvo acordo em contrário."));
-        doc.add(corpo("5.3. Bibliotecas de terceiros, frameworks open source e serviços externos (InfinitePay, Railway, Neon, PostgreSQL etc.) permanecem regidos por suas respectivas licenças e termos de uso."));
+        doc.add(corpo("5.1. O CONTRATADO concede à CONTRATANTE licença de uso exclusiva e perpétua para a operação desta clínica "
+                + "do sistema Agenda Afetto, incluindo direito de hospedar, utilizar e manter o software em produção."));
+        doc.add(corpo("5.2. Com o pagamento integral, a CONTRATANTE recebe o código-fonte da versão entregue e o direito de uso "
+                + "exclusivo na operação da clínica contratante. O CONTRATADO não revenderá a mesma customização específica desta "
+                + "clínica a concorrentes diretos. Permanece facultado reutilizar componentes genéricos, bibliotecas e know-how em "
+                + "outros projetos, sem reproduzir a customização exclusiva desta CONTRATANTE."));
+        doc.add(corpo("5.3. Bibliotecas de terceiros, frameworks open source e serviços externos (InfinitePay, KingHost, PostgreSQL etc.) permanecem regidos por suas respectivas licenças e termos de uso."));
         doc.add(corpo("5.4. Marcas, logotipos e identidade visual da clínica pertencem à CONTRATANTE. A marca \"Agenda Afetto\" e componentes genéricos reutilizáveis permanecem de titularidade do CONTRATADO, salvo renúncia expressa."));
+        doc.add(corpo("5.5. A CONTRATANTE autoriza o CONTRATADO a utilizar o projeto Agenda Afetto em seu portfólio profissional "
+                + "(site pessoal, LinkedIn, GitHub, currículo, propostas e apresentações), mencionando o desenvolvimento do sistema "
+                + "e, se necessário, o nome da clínica como referência. Não é permitido divulgar dados de pacientes, dados financeiros, "
+                + "credenciais ou capturas com informações sensíveis; imagens devem ser genéricas, mascaradas ou aprovadas pela CONTRATANTE."));
 
         doc.add(secao("CLÁUSULA 6 — DO SUPORTE TÉCNICO (3 MESES)"));
         doc.add(corpo("6.1. O CONTRATADO prestará suporte técnico por 90 (noventa) dias corridos, incluindo:"));
@@ -159,13 +196,19 @@ public final class GeradorContratoPdf {
         doc.add(bullet("Atendimento via WhatsApp e/ou e-mail em horário comercial (segunda a sexta, 9h às 18h)."));
         doc.add(corpo("6.2. Não estão incluídos no suporte (salvo orçamento à parte):"));
         doc.add(bullet("Desenvolvimento de novas funcionalidades ou módulos;"));
+        doc.add(bullet("Integrações novas com WhatsApp, Google Agenda, outros gateways de pagamento, sistemas externos, automações ou APIs de terceiros;"));
+        doc.add(bullet("Criação de novas telas, relatórios, regras de negócio ou mudanças estruturais no funcionamento do sistema;"));
         doc.add(bullet("Redesign completo de telas;"));
         doc.add(bullet("Migração para outro servidor/provedor não acordado;"));
-        doc.add(bullet("Custos de hospedagem (Railway), banco de dados (Neon), domínio e taxas de gateway de pagamento;"));
+        doc.add(bullet("Custos de hospedagem VPS (KingHost), domínio e taxas de gateway de pagamento;"));
         doc.add(bullet("Treinamento presencial ou visitas à clínica;"));
         doc.add(bullet("Problemas causados por mau uso, alteração não autorizada do código por terceiros ou indisponibilidade de serviços externos."));
-        doc.add(corpo("6.3. Prazo de resposta: até 48 (quarenta e oito) horas úteis para demandas normais; urgências operacionais (sistema fora do ar) com prioridade em até 24 horas úteis."));
-        doc.add(corpo("6.4. Após o período de 3 meses, eventuais manutenções poderão ser contratadas separadamente mediante proposta comercial."));
+        doc.add(corpo("6.3. O suporte técnico de 3 (três) meses compreende exclusivamente correção de erros, "
+                + "orientação de uso e ajustes pontuais relacionados às funcionalidades já entregues. Novas funcionalidades, "
+                + "integrações, automações, alterações estruturais ou mudanças de regra de negócio serão objeto de orçamento separado."));
+        doc.add(corpo("6.4. Prazo de resposta: até 48 (quarenta e oito) horas úteis para demandas normais; urgências operacionais (sistema fora do ar) com prioridade em até 24 horas úteis."));
+        doc.add(corpo("6.5. Após o período de 3 meses, o suporte não será prestado automaticamente. Correções, ajustes, "
+                + "integrações ou novas funcionalidades dependerão de contratação à parte, com orçamento prévio."));
 
         doc.add(secao("CLÁUSULA 7 — DAS OBRIGAÇÕES DO CONTRATADO"));
         doc.add(bullet("Entregar o sistema funcional conforme descrito na Cláusula 2;"));
@@ -177,8 +220,8 @@ public final class GeradorContratoPdf {
         doc.add(secao("CLÁUSULA 8 — DAS OBRIGAÇÕES DA CONTRATANTE"));
         doc.add(bullet("Efetuar o pagamento nos prazos acordados;"));
         doc.add(bullet("Fornecer dados, logotipos e informações necessários à operação;"));
-        doc.add(bullet("Manter backup de dados e credenciais de acesso;"));
-        doc.add(bullet("Contratar e pagar hospedagem (Railway), banco de dados (Neon), domínio e serviços de pagamento (InfinitePay etc.), conforme Cláusula 3;"));
+        doc.add(bullet("Manter backup de dados e credenciais, sendo responsável por cópias de segurança no VPS KingHost (Cláusula 3.1.4);"));
+        doc.add(bullet("Contratar e pagar hospedagem VPS (KingHost), domínio e serviços de pagamento (InfinitePay etc.), conforme Cláusula 3;"));
         doc.add(bullet("Utilizar o sistema em conformidade com a LGPD e demais normas aplicáveis à área da saúde;"));
         doc.add(bullet("Não sublicenciar, revender ou distribuir o sistema a terceiros sem autorização."));
 
@@ -191,13 +234,21 @@ public final class GeradorContratoPdf {
         doc.add(corpo("10.1. O CONTRATADO garante que o software, na data da entrega, executa as funcionalidades descritas neste contrato, ressalvadas limitações de serviços de terceiros."));
         doc.add(corpo("10.2. Bugs reportados durante o período de suporte serão corrigidos sem custo adicional, desde que relacionados ao escopo entregue."));
         doc.add(corpo("10.3. O software é entregue \"como está\" após o término do suporte, cabendo à CONTRATANTE contratar manutenção evolutiva se desejar."));
+        doc.add(corpo("10.4. O CONTRATADO não se responsabiliza por decisões clínicas, condutas de atendimento ou obrigações "
+                + "regulatórias de prontuário eletrônico, uma vez que o sistema tem finalidade administrativa e operacional (item 1.4)."));
 
-        doc.add(secao("CLÁUSULA 11 — DA RESCISÃO"));
-        doc.add(corpo("11.1. O descumprimento de obrigações essenciais autoriza a parte prejudicada a rescindir o contrato, mediante notificação escrita com prazo de 10 (dez) dias para saneamento."));
-        doc.add(corpo("11.2. Em caso de rescisão por inadimplência da CONTRATANTE, o CONTRATADO poderá suspender suporte e acesso técnico até regularização."));
-        doc.add(corpo("11.3. Valores já pagos por serviços efetivamente prestados não serão restituídos."));
+        doc.add(secao("CLÁUSULA 11 — DA LIMITAÇÃO DE RESPONSABILIDADE"));
+        doc.add(corpo("11.1. O CONTRATADO não se responsabiliza, na extensão permitida pela lei, por lucros cessantes, perda de "
+                + "receita, danos indiretos, indisponibilidade da KingHost/InfinitePay/internet, erro de uso da equipe da "
+                + "CONTRATANTE ou perda de dados por ausência de backup/cancelamento do VPS."));
+        doc.add(corpo("11.2. A responsabilidade total do CONTRATADO ficará limitada ao valor efetivamente pago pela CONTRATANTE (Cláusula 4)."));
 
-        doc.add(secao("CLÁUSULA 12 — DISPOSIÇÕES GERAIS"));
+        doc.add(secao("CLÁUSULA 12 — DA RESCISÃO"));
+        doc.add(corpo("12.1. O descumprimento de obrigações essenciais autoriza a parte prejudicada a rescindir o contrato, mediante notificação escrita com prazo de 10 (dez) dias para saneamento."));
+        doc.add(corpo("12.2. Em caso de rescisão por inadimplência da CONTRATANTE, o CONTRATADO poderá suspender suporte e acesso técnico até regularização."));
+        doc.add(corpo("12.3. Valores já pagos por serviços efetivamente prestados não serão restituídos."));
+
+        doc.add(secao("CLÁUSULA 13 — DISPOSIÇÕES GERAIS"));
         doc.add(bullet("Este contrato substitui acordos verbais anteriores sobre o mesmo objeto;"));
         doc.add(bullet("Alterações só terão validade se feitas por escrito e assinadas por ambas as partes;"));
         doc.add(bullet("A tolerância de uma parte não implica renúncia de direitos;"));
@@ -208,7 +259,7 @@ public final class GeradorContratoPdf {
         doc.add(corpo("E, por estarem de pleno acordo, assinam o presente instrumento em 2 (duas) vias de igual teor e forma."));
         doc.add(corpo("Local e data: _________________________, _____ de _________________ de 2026."));
         doc.add(espaco(20));
-        doc.add(assinatura("CONTRATADO (Desenvolvedor)", "Nome: _______________________________________", "CPF: ________________________________________"));
+        doc.add(assinatura("CONTRATADO (Desenvolvedor)", "Nome: Widinei Martins de Oliveira", "CPF: 147.786.936-04"));
         doc.add(espaco(15));
         doc.add(assinatura("CONTRATANTE (Clínica)", "Nome/Razão Social: ___________________________", "CPF/CNPJ: ___________________________________"));
         doc.add(espaco(15));
@@ -222,60 +273,43 @@ public final class GeradorContratoPdf {
                 SMALL);
         obs.setSpacingBefore(8);
         doc.add(obs);
-
-        doc.close();
     }
 
     private static void adicionarClausulaInfraestrutura(Document doc) throws DocumentException {
-        doc.add(secao("CLÁUSULA 3 — DA INFRAESTRUTURA EM NUVEM (HOSPEDAGEM E BANCO DE DADOS)"));
-        doc.add(corpo("O sistema Agenda Afetto opera em produção com o site (aplicação web) e o banco de dados em serviços "
-                + "distintos na nuvem. Os dados da clínica ficam no banco; reiniciar ou atualizar o site não apaga "
-                + "agendamentos, relatórios nem cadastros."));
+        doc.add(secao("CLÁUSULA 3 — DA INFRAESTRUTURA (HOSPEDAGEM E BANCO DE DADOS)"));
+        doc.add(corpo("O sistema Agenda Afetto opera em produção em um servidor VPS (KingHost) no Brasil. "
+                + "O site e o banco PostgreSQL rodam no mesmo servidor, em containers Docker. "
+                + "Reiniciar ou atualizar o sistema não apaga agendamentos, relatórios nem cadastros."));
 
-        doc.add(corpo("3.1. Hospedagem do site (aplicação web) — Railway"));
+        doc.add(corpo("3.1. Servidor VPS — KingHost"));
         doc.add(tabelaDoisColunas(
-                "Provedor", "Railway (railway.app) — plataforma de hospedagem em nuvem",
-                "Serviço", "Web Service em container Docker, deploy automático via GitHub",
-                "Nome do projeto", "clinica-agenda",
+                "Provedor", "KingHost (kinghost.com.br) — servidor virtual privado (VPS)",
+                "Plano", "VPS 4 GB LINUX",
+                "Plataforma", "Ubuntu 24.04 LTS com Docker",
+                "Memória RAM", "4,00 GB",
+                "Processadores (vCPU)", "2 processadores",
+                "Espaço em disco", "70,00 GB contratados",
+                "Localização", "Brasil",
                 "Sistema", "Agenda Afetto — Plataforma Web de Gestão Clínica (versão 2.6)",
-                "URL pública", "https://clinica-agenda-production-e992.up.railway.app",
-                "Região", "Estados Unidos (US East), alinhada ao banco Neon",
-                "Recursos", "Memória RAM configurada em 1 GB",
-                "Plano", "Railway Hobby (cobrança mensal conforme uso)",
-                "Custo mensal estimado", "R$ 28,00 a R$ 55,00 (referência em reais; fatura conforme consumo e cotação USD/BRL)",
-                "Pagamento", "CONTRATANTE (Clínica), conforme Cláusula 8"));
-        doc.add(corpo("3.1.1. O Railway mantém o site no ar 24h, executando a aplicação Java (Spring Boot). "
-                + "Atualizações são publicadas por deploy; o acesso é pelo navegador, sem instalar software na clínica."));
-        doc.add(corpo("3.1.2. No plano Hobby pago, o serviço permanece disponível para uso diário. "
-                + "Lentidão pontual pode ocorrer na primeira requisição após longo período sem acesso."));
+                "Domínio / URL", "afetto-agenda.vps-kinghost.net",
+                "Arquitetura", "Containers Docker: aplicação Java (Spring Boot) porta 8080 + PostgreSQL 16",
+                "Banco de dados", "PostgreSQL 16, banco clinica_agenda, volume persistente no disco do VPS",
+                "Custo mensal do VPS", "R$ 48,00 (quarenta e oito reais por mês)",
+                "Pagamento", "CONTRATANTE (Clínica), diretamente à KingHost, conforme Cláusula 8"));
+        doc.add(corpo("3.1.1. O VPS mantém o site no ar 24h. Acesso pelo navegador; atualizações por deploy no servidor."));
+        doc.add(corpo("3.1.2. Banco PostgreSQL no mesmo VPS: dados em volume persistente; redeploy não apaga histórico; "
+                + "painel admin «Uso do banco» acompanha tamanho e percentual de uso."));
+        doc.add(corpo("3.1.3. Vantagens: custo único de R$ 48/mês (site + banco); 4 GB RAM e 70 GB disco com folga; "
+                + "servidor no Brasil; sem limitações de planos gratuitos que dormem ou expiram."));
+        doc.add(corpo("3.1.4. Backup dos dados: a CONTRATANTE é responsável pelo VPS KingHost e por solicitar/manter backups "
+                + "do banco PostgreSQL. O CONTRATADO orienta, mas não garante recuperação se o servidor for apagado, "
+                + "reinstalado ou cancelado sem backup. Não cancelar o VPS sem exportar dados."));
 
-        doc.add(corpo("3.2. Banco de dados — Neon (PostgreSQL)"));
-        doc.add(tabelaDoisColunas(
-                "Provedor", "Neon (neon.tech) — PostgreSQL gerenciado na nuvem (serverless)",
-                "Serviço", "PostgreSQL 16, projeto clinica-agenda, região US East (AWS)",
-                "Plano", "Free (gratuito)",
-                "Custo mensal", "R$ 0,00 (zero reais por mês, na data deste contrato)",
-                "Limite de armazenamento", "512 MB (0,5 GB)",
-                "Uso atual aproximado", "cerca de 30 MB (~6% do limite), medido pelo painel «Uso do banco (Neon)»",
-                "Conexão", "Variáveis PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE=require (SSL)",
-                "Pagamento", "CONTRATANTE — atualmente sem cobrança; upgrade futuro conforme 3.2.4"));
-        doc.add(corpo("3.2.1. Como funciona: agendamentos, usuários, financeiro e relatórios ficam no PostgreSQL do Neon; "
-                + "o banco é independente do site — redeploy ou reinício no Railway não apaga dados; "
-                + "o painel admin exibe tamanho real e percentual do limite (alertas em 60% e 85%)."));
-        doc.add(corpo("3.2.2. Por que Neon free: o volume atual da clínica usa ~30 MB (~6%), muito abaixo do teto de 0,5 GB; "
-                + "PostgreSQL profissional com persistência duradoura; arquitetura site (Railway) + banco (Neon) "
-                + "permite escalar só quando necessário."));
-        doc.add(corpo("3.2.3. Limitações do plano free: instância pode dormir sem consultas; "
-                + "primeira conexão do dia pode demorar alguns segundos; backups com retenção limitada."));
-        doc.add(corpo("3.2.4. Upgrade futuro: se uso ultrapassar ~60% (307 MB) ou crescer muito o histórico, "
-                + "poderá ser necessário plano pago Neon (custo adicional em dólares); CONTRATADO orientará quando "
-                + "o painel indicar atenção/crítico."));
-
-        doc.add(corpo("3.3. Resumo dos custos mensais de infraestrutura (serviços de terceiros):"));
+        doc.add(corpo("3.2. Resumo dos custos mensais de infraestrutura (serviço de terceiro):"));
         doc.add(tabelaInfraestrutura());
-        doc.add(corpo("3.4. Os valores acima não estão incluídos no preço de licenciamento da Cláusula 4 (R$ 3.000,00). "
-                + "São despesas operacionais da CONTRATANTE. Domínio personalizado, se contratado, terá custo à parte."));
-        doc.add(corpo("3.5. Credenciais dos painéis Railway, Neon e administrador do sistema serão entregues à CONTRATANTE "
+        doc.add(corpo("3.3. O valor acima não está incluído no preço da Cláusula 4 (R$ 2.000,00). "
+                + "É despesa operacional da CONTRATANTE, paga à KingHost."));
+        doc.add(corpo("3.4. Credenciais do painel KingHost, servidor (SSH) e administrador do sistema serão entregues "
                 + "conforme combinado na entrega técnica."));
     }
 
@@ -303,9 +337,8 @@ public final class GeradorContratoPdf {
         cabecalho(tabela, "Provedor");
         cabecalho(tabela, "Plano");
         cabecalho(tabela, "Custo mensal (R$)");
-        linhaQuatro(tabela, "Hospedagem do site Agenda Afetto", "Railway", "Hobby", "28,00 a 55,00");
-        linhaQuatro(tabela, "Banco PostgreSQL", "Neon", "Free", "0,00");
-        linhaQuatro(tabela, "Total estimado de infraestrutura", "", "", "28,00 a 55,00/mês");
+        linhaQuatro(tabela, "VPS (site + banco PostgreSQL)", "KingHost", "VPS 4 GB LINUX", "48,00");
+        linhaQuatro(tabela, "Total mensal de infraestrutura", "", "", "48,00/mês");
         return tabela;
     }
 
@@ -355,9 +388,8 @@ public final class GeradorContratoPdf {
         cabecalho(tabela, "Item");
         cabecalho(tabela, "Descrição");
         cabecalho(tabela, "Valor (R$)");
-        linha(tabela, "1", "Licença de uso exclusiva do sistema Agenda Afetto (v2.6) + entrega técnica", "2.500,00");
-        linha(tabela, "2", "Suporte técnico por 3 (três) meses (correções, orientação e ajustes — Cláusula 6)", "500,00");
-        linha(tabela, "", "TOTAL", "3.000,00");
+        linha(tabela, "1", "Licença de uso do sistema Agenda Afetto (v2.6), entrega técnica, implantação na KingHost "
+                + "e suporte por 3 (três) meses para correção de erros (Cláusula 6)", "2.000,00");
         return tabela;
     }
 

@@ -50,6 +50,10 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
             adicionarColunaUsuariosSeNecessario("email", "VARCHAR(120)");
             adicionarColunaUsuariosSeNecessario("telefone_whatsapp", "VARCHAR(20)");
             garantirTabelaSenhaRecuperacao();
+            garantirTabelaContratoLicenciamento();
+            adicionarColunaContratoSeNecessario("contratante_finalizado", "BOOLEAN NOT NULL DEFAULT FALSE");
+            adicionarColunaContratoSeNecessario("contratante_finalizado_em", "TIMESTAMP");
+            adicionarColunaContratoSeNecessario("contratante_finalizado_por_nome", "VARCHAR(120)");
             adicionarColunaUsuariosSeNecessario("foto_perfil", "VARCHAR(120)");
             adicionarColunaUsuariosSeNecessario("lgpd_consentimento_em", "TIMESTAMP");
             adicionarColunaUsuariosSeNecessario("boas_vindas_controle_data", "DATE");
@@ -197,5 +201,40 @@ public class LocalDatabaseSchemaPatch implements ApplicationRunner {
                 )
                 """
         );
+    }
+
+    private void garantirTabelaContratoLicenciamento() {
+        jdbcTemplate.execute(
+                """
+                CREATE TABLE IF NOT EXISTS contrato_licenciamento_rascunho (
+                    id VARCHAR(40) PRIMARY KEY,
+                    dados_json CLOB NOT NULL,
+                    atualizado_em TIMESTAMP,
+                    atualizado_por_usuario_id BIGINT,
+                    atualizado_por_nome VARCHAR(120),
+                    contratante_finalizado BOOLEAN NOT NULL DEFAULT FALSE,
+                    contratante_finalizado_em TIMESTAMP,
+                    contratante_finalizado_por_nome VARCHAR(120)
+                )
+                """
+        );
+    }
+
+    private void adicionarColunaContratoSeNecessario(String coluna, String tipoSql) {
+        Integer existe = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE UPPER(TABLE_NAME) = 'CONTRATO_LICENCIAMENTO_RASCUNHO'
+                  AND UPPER(COLUMN_NAME) = ?
+                """,
+                Integer.class,
+                coluna.toUpperCase()
+        );
+        if (existe != null && existe == 0) {
+            jdbcTemplate.execute(
+                    "ALTER TABLE contrato_licenciamento_rascunho ADD COLUMN " + coluna + " " + tipoSql
+            );
+        }
     }
 }

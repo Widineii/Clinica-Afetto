@@ -219,6 +219,7 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             atualizarCheckStatusPagamento();
             criarTabelaWhatsappMensagemPagamentoSeNecessario();
             criarTabelaSenhaRecuperacaoSeNecessario();
+            criarTabelaContratoLicenciamentoSeNecessario();
             log.info("Schema PostgreSQL: colunas de pagamento, usuarios e status_pagamento verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
@@ -294,5 +295,41 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                 """
         );
         log.info("Schema PostgreSQL: tabela senha_recuperacao verificada.");
+    }
+
+    private void criarTabelaContratoLicenciamentoSeNecessario() {
+        jdbcTemplate.execute(
+                """
+                CREATE TABLE IF NOT EXISTS contrato_licenciamento_rascunho (
+                    id VARCHAR(40) PRIMARY KEY,
+                    dados_json TEXT NOT NULL,
+                    atualizado_em TIMESTAMP,
+                    atualizado_por_usuario_id BIGINT,
+                    atualizado_por_nome VARCHAR(120),
+                    contratante_finalizado BOOLEAN NOT NULL DEFAULT FALSE,
+                    contratante_finalizado_em TIMESTAMP,
+                    contratante_finalizado_por_nome VARCHAR(120)
+                )
+                """
+        );
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE contrato_licenciamento_rascunho
+                ADD COLUMN IF NOT EXISTS contratante_finalizado BOOLEAN NOT NULL DEFAULT FALSE
+                """
+        );
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE contrato_licenciamento_rascunho
+                ADD COLUMN IF NOT EXISTS contratante_finalizado_em TIMESTAMP
+                """
+        );
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE contrato_licenciamento_rascunho
+                ADD COLUMN IF NOT EXISTS contratante_finalizado_por_nome VARCHAR(120)
+                """
+        );
+        log.info("Schema PostgreSQL: tabela contrato_licenciamento_rascunho verificada.");
     }
 }

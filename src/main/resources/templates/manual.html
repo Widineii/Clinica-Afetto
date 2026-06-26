@@ -892,6 +892,7 @@
                         <li><strong>Fechamento do mês anterior</strong> — no <strong>dia 3</strong> o sistema arquiva o mês passado e remove agendamentos avulsos da agenda (sem PDF para download).</li>
                         <li th:if="${podeAcessarGestaoFinanceira}"><strong>Financeiro</strong> — receita PIX por mês, despesas, gráficos e exportação (Polyana e administração).</li>
                         <li th:if="${isAdmin}"><strong>Uso do banco</strong> — monitorar espaço usado no VPS KingHost (limite de 70 GB).</li>
+                        <li th:if="${podeAcessarContratoLicenciamento}"><strong>Contrato</strong> — cada parte preenche seus dados; fica salvo no sistema para os dois.</li>
                     </ul>
                     <div class="manual-nota mb-3">
                         Horários pagos são locação de sala. Cancelamentos são tratados com a profissional;
@@ -901,6 +902,7 @@
                         <a th:if="${podeGerenciarEquipe}" th:href="@{/agendamentos/central-profissionais}" class="btn btn-warning btn-sm">Central</a>
                         <a th:if="${podeAcessarGestaoFinanceira}" th:href="@{/agendamentos/financeiro}" class="btn btn-outline-primary btn-sm">Financeiro</a>
                         <a th:if="${isAdmin}" th:href="@{/agendamentos/admin/uso-banco}" class="btn btn-outline-secondary btn-sm">Uso do banco</a>
+                        <a th:if="${podeAcessarContratoLicenciamento}" th:href="@{/agendamentos/admin/contrato}" class="btn btn-outline-secondary btn-sm">Contrato</a>
                         <a th:href="@{/agendamentos/dashboard}" class="btn btn-outline-secondary btn-sm">Abrir agenda</a>
                     </div>
                 </div>
@@ -996,7 +998,7 @@
     <th:block th:replace="~{fragments/ajuda-suporte :: rodape}"></th:block>
 </div>
 
-<a th:if="${manualWhatsappAtivo}"
+<a th:if="${exibirWhatsappSuporte}"
    class="whatsapp-suporte"
    th:href="${manualWhatsappUrl}"
    target="_blank"
@@ -1005,6 +1007,9 @@
    title="Falar com suporte no WhatsApp">
     <span class="whatsapp-suporte__texto text-end text-secondary">
         <span class="whatsapp-suporte__rotulo">Falar com suporte</span>
+        <span class="badge rounded-pill text-bg-success ms-1"
+              th:if="${suporteContrato != null and suporteContrato.ativo()}"
+              th:text="${suporteContrato.contadorTexto()}">3 meses</span>
     </span>
     <span class="whatsapp-suporte__btn">
         <svg class="whatsapp-suporte__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">

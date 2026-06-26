@@ -79,6 +79,27 @@ public class AuthService {
         return isAdmin(usuario);
     }
 
+    /**
+     * Contrato de licenciamento.
+     * Por enquanto liberado SOMENTE para o admin (desenvolvedor).
+     * Para liberar a dona da clinica (Polyana) depois, troque por:
+     *     return isAdmin(usuario) || isDonaClinica(usuario);
+     */
+    public boolean podeAcessarContratoLicenciamento(Usuario usuario) {
+        return isAdmin(usuario);
+    }
+
+    /** Campos do contrato que cada perfil pode editar. */
+    public String resolverGrupoContratoLicenciamento(Usuario usuario) {
+        if (isAdmin(usuario)) {
+            return "contratado";
+        }
+        if (isDonaClinica(usuario)) {
+            return "contratante";
+        }
+        return "";
+    }
+
     /** Tema claro/escuro — disponível para qualquer usuário autenticado. */
     public boolean podeEscolherTema(Usuario usuario) {
         return usuario != null;

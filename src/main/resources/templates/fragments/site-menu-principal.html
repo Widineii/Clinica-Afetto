@@ -298,7 +298,7 @@
                     </div>
 
                     <div class="afetto-perfil-panel__secao"
-                         th:if="${podeEditarPerfil or (podeTrocarPropriaSenha != null and podeTrocarPropriaSenha)}">
+                         th:if="${(podeGerenciarContaAdmin == null or !podeGerenciarContaAdmin) and (podeEditarPerfil or (podeTrocarPropriaSenha != null and podeTrocarPropriaSenha))}">
                         <p class="afetto-perfil-panel__secao-titulo">Minha conta</p>
                         <ul class="list-unstyled mb-0">
                             <li th:if="${podeEditarPerfil}">
@@ -385,6 +385,19 @@
                                     <i class="fa-solid fa-lock" aria-hidden="true"></i>
                                     Alterar senha
                                 </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="afetto-perfil-panel__secao" th:if="${podeAcessarContratoLicenciamento}">
+                        <p class="afetto-perfil-panel__secao-titulo">Contrato</p>
+                        <ul class="list-unstyled mb-0">
+                            <li>
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/admin/contrato}">
+                                    <i class="fa-solid fa-file-signature" aria-hidden="true"></i>
+                                    Contrato de licenciamento
+                                </a>
                             </li>
                         </ul>
                     </div>
@@ -490,16 +503,19 @@
                                    rel="noopener noreferrer"
                                    th:attr="aria-label=${'Falar com a clinica no WhatsApp ' + manualWhatsappClinicaRotulo}">
                                     <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                                    <span th:text="${manualWhatsappClinicaRotulo}">(31) 8283-5857</span>
+                                    <span>WhatsApp da clínica: </span><span th:text="${manualWhatsappClinicaRotulo}">(31) 8283-5857</span>
                                 </a>
                             </li>
-                            <li th:if="${manualWhatsappAtivo}">
+                            <li th:if="${exibirWhatsappSuporte}">
                                 <a class="dropdown-item afetto-perfil-panel__item afetto-perfil-panel__item--whatsapp"
                                    th:href="${manualWhatsappUrl}"
                                    target="_blank"
                                    rel="noopener noreferrer">
                                     <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                                    Falar com suporte
+                                    <span>Falar com suporte</span>
+                                    <span class="badge rounded-pill text-bg-success ms-1"
+                                          th:if="${suporteContrato != null and suporteContrato.ativo()}"
+                                          th:text="${suporteContrato.contadorTexto()}">3 meses</span>
                                 </a>
                             </li>
                         </ul>

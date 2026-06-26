@@ -2,8 +2,76 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Contrato de Licenciamento e Prestação de Serviços - Agenda Afetto</title>
+    <title>Preencher Contrato — Agenda Afetto</title>
     <style>
+        .instrucoes {
+            background: #ecfdf5;
+            border: 1px solid #0a8785;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+            font-size: 10.5pt;
+        }
+        .instrucoes h2 {
+            margin: 0 0 8px;
+            font-size: 12pt;
+            color: #0a8785;
+            border: none;
+            padding: 0;
+        }
+        .instrucoes p { margin: 4px 0; text-align: left; }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .toolbar button {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            padding: 8px 14px;
+            border: 1px solid #0a8785;
+            background: #0a8785;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .toolbar button.secundario {
+            background: #fff;
+            color: #0a8785;
+        }
+        input.campo, textarea.campo {
+            font-family: inherit;
+            font-size: inherit;
+            border: none;
+            border-bottom: 1px dashed #0a8785;
+            background: #fffbeb;
+            padding: 1px 4px;
+            color: #111;
+            min-width: 120px;
+        }
+        input.campo:focus, textarea.campo:focus {
+            outline: 2px solid #0a8785;
+            background: #fff;
+        }
+        input.campo-largo { min-width: 280px; width: 55%; }
+        input.campo-medio { min-width: 180px; width: 35%; }
+        input.campo-curto { min-width: 80px; width: 100px; }
+        input.campo-foro { min-width: 200px; width: 40%; }
+        .campo-bloco {
+            display: block;
+            width: 100%;
+            margin: 4px 0;
+            min-height: 1.4em;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            input.campo, textarea.campo {
+                border-bottom: none;
+                background: transparent;
+            }
+        }
         @page { size: A4; margin: 2cm 2.2cm; }
         * { box-sizing: border-box; }
         body {
@@ -86,6 +154,19 @@
 </head>
 <body>
 
+<div class="instrucoes no-print">
+    <h2>Como preencher este contrato</h2>
+    <p>1. Preencha os campos <strong>em amarelo</strong> (dados da clínica, pagamento, foro e assinaturas).</p>
+    <p>2. Os dados do desenvolvedor (Widinei) já estão preenchidos.</p>
+    <p>3. Clique em <strong>Salvar PDF</strong> ou use <strong>Ctrl+P</strong> → “Salvar como PDF”.</p>
+    <p>4. Envie o PDF preenchido de volta pelo WhatsApp ou e-mail.</p>
+    <div class="toolbar">
+        <button type="button" onclick="window.print()">Salvar PDF / Imprimir</button>
+        <button type="button" class="secundario" onclick="salvarRascunho()">Salvar rascunho no navegador</button>
+        <button type="button" class="secundario" onclick="carregarRascunho()">Carregar rascunho</button>
+    </div>
+</div>
+
 <div class="header">
     <h1>Contrato de Licenciamento de Software<br>e Prestação de Serviços de Suporte</h1>
     <p><strong>Sistema:</strong> Agenda Afetto — Plataforma Web de Gestão Clínica</p>
@@ -98,10 +179,14 @@
     residente e domiciliado em <strong>Rua Francisco Castro Monteiro, nº 94</strong>, telefone/WhatsApp
     <strong>(37) 99855-0994</strong>, e-mail <strong>widineimartins4@gmail.com</strong>,
     doravante denominado <strong>CONTRATADO</strong>
-    ou <strong>DESENVOLVEDOR</strong>; e, de outro lado, <strong>_______________________________________________</strong>,
-    inscrito(a) no CPF/CNPJ sob nº <strong>_______________________</strong>, com endereço em
-    <strong>_______________________________________________</strong>, representado(a) neste ato por
-    <strong>_______________________________________________</strong>, doravante denominado(a) <strong>CONTRATANTE</strong>
+    ou <strong>DESENVOLVEDOR</strong>; e, de outro lado
+    <input class="campo campo-largo" id="contratante-nome" placeholder="Nome ou razão social da clínica">,
+    inscrito(a) no CPF/CNPJ sob nº
+    <input class="campo campo-medio" id="contratante-doc" placeholder="CPF ou CNPJ">, com endereço em
+    <input class="campo campo-largo" id="contratante-endereco" placeholder="Endereço completo da clínica">,
+    representado(a) neste ato por
+    <input class="campo campo-medio" id="contratante-representante" placeholder="Nome do representante (ex.: Polyana)">,
+    doravante denominado(a) <strong>CONTRATANTE</strong>
     ou <strong>CLÍNICA</strong>, têm entre si justo e contratado o seguinte:
 </p>
 
@@ -348,7 +433,15 @@
             <td><strong>2.000,00</strong></td>
         </tr>
     </table>
-    <p><span class="clause-title">4.2.</span> Forma de pagamento: ☐ À vista &nbsp; ☐ Parcelado em _____ vezes &nbsp; | Meio: ☐ PIX &nbsp; ☐ Transferência &nbsp; ☐ Outro: __________</p>
+    <p><span class="clause-title">4.2.</span> Forma de pagamento:
+        <label><input type="checkbox" id="pag-avista"> À vista</label> &nbsp;
+        <label><input type="checkbox" id="pag-parcelado"> Parcelado em
+        <input class="campo campo-curto" id="pag-parcelas" placeholder="___"> vezes</label> &nbsp; | Meio:
+        <label><input type="checkbox" id="pag-pix" checked> PIX</label> &nbsp;
+        <label><input type="checkbox" id="pag-transferencia"> Transferência</label> &nbsp;
+        <label><input type="checkbox" id="pag-outro"> Outro:</label>
+        <input class="campo campo-medio" id="pag-outro-texto" placeholder="especificar">
+    </p>
     <p><span class="clause-title">4.3.</span> Chave PIX / dados bancários do CONTRATADO: <strong>conferir com o CONTRATADO — widineimartins8@gmail.com</strong></p>
     <p><span class="clause-title">4.4.</span> A entrega definitiva do acesso, credenciais e código-fonte ocorrerá após a confirmação do pagamento integral ou do primeiro pagamento acordado, conforme combinado entre as partes.</p>
     <p><span class="clause-title">4.5.</span> Em caso de <strong>atraso no pagamento</strong> superior a <strong>15 (quinze) dias</strong> do vencimento acordado, o CONTRATADO poderá <strong>suspender o suporte técnico e o acesso técnico</strong> (orientações, correções e acompanhamento) até a regularização dos valores em aberto, sem prejuízo das demais medidas previstas neste contrato.</p>
@@ -447,14 +540,19 @@
     <li>Alterações só terão validade se feitas por escrito e assinadas por ambas as partes;</li>
     <li>A tolerância de uma parte não implica renúncia de direitos;</li>
     <li>O CONTRATADO presta serviços como <strong>pessoa física (CPF)</strong>, emitindo recibo ou nota fiscal conforme legislação aplicável à sua situação;</li>
-    <li>Fica eleito o foro da comarca de <strong>___________________________________</strong>, renunciando-se a qualquer outro, por mais privilegiado que seja.</li>
+    <li>Fica eleito o foro da comarca de <input class="campo campo-foro" id="foro" placeholder="Cidade/UF">, renunciando-se a qualquer outro, por mais privilegiado que seja.</li>
 </ul>
 
 <p style="margin-top: 24px;">
     E, por estarem de pleno acordo, assinam o presente instrumento em 2 (duas) vias de igual teor e forma.
 </p>
 
-<p><strong>Local e data:</strong> _________________________, _____ de _________________ de 2026.</p>
+<p><strong>Local e data:</strong>
+    <input class="campo campo-medio" id="local" placeholder="Cidade">,
+    <input class="campo campo-curto" id="dia" placeholder="dia"> de
+    <input class="campo campo-medio" id="mes" placeholder="mês"> de
+    <input class="campo campo-curto" id="ano" value="2026" placeholder="ano">.
+</p>
 
 <div class="signatures">
     <div class="sign-block">
@@ -467,8 +565,8 @@
     <div class="sign-block" style="margin-left: 6%;">
         <div class="sign-line">
             <strong>CONTRATANTE (Clínica)</strong><br>
-            Nome/Razão Social: ___________________________<br>
-            CPF/CNPJ: ___________________________________
+            Nome/Razão Social: <input class="campo campo-bloco" id="assin-contratante-nome" placeholder="Nome ou razão social"><br>
+            CPF/CNPJ: <input class="campo campo-bloco" id="assin-contratante-doc" placeholder="CPF ou CNPJ">
         </div>
     </div>
 </div>
@@ -477,15 +575,15 @@
     <div class="sign-block">
         <div class="sign-line">
             <strong>Testemunha 1</strong><br>
-            Nome: _______________________________________<br>
-            CPF: ________________________________________
+            Nome: <input class="campo campo-bloco" id="test1-nome" placeholder="Nome completo"><br>
+            CPF: <input class="campo campo-bloco" id="test1-cpf" placeholder="CPF">
         </div>
     </div>
     <div class="sign-block" style="margin-left: 6%;">
         <div class="sign-line">
             <strong>Testemunha 2</strong><br>
-            Nome: _______________________________________<br>
-            CPF: ________________________________________
+            Nome: <input class="campo campo-bloco" id="test2-nome" placeholder="Nome completo"><br>
+            CPF: <input class="campo campo-bloco" id="test2-cpf" placeholder="CPF">
         </div>
     </div>
 </div>
@@ -494,6 +592,62 @@
     <strong>Observação:</strong> Este documento é um modelo contratual. Recomenda-se revisão por advogado antes da assinatura.
     O CONTRATADO atua como pessoa física; não possui CNPJ. Emissão de recibo ou documento fiscal conforme orientação contábil local.
 </div>
+
+<script>
+(function () {
+    var ids = [
+        'contratante-nome', 'contratante-doc', 'contratante-endereco', 'contratante-representante',
+        'pag-parcelas', 'pag-outro-texto', 'foro', 'local', 'dia', 'mes', 'ano',
+        'assin-contratante-nome', 'assin-contratante-doc', 'test1-nome', 'test1-cpf', 'test2-nome', 'test2-cpf'
+    ];
+    var checks = ['pag-avista', 'pag-parcelado', 'pag-pix', 'pag-transferencia', 'pag-outro'];
+    var chave = 'agenda-afetto-contrato-rascunho';
+
+    function syncContratante() {
+        var nome = document.getElementById('contratante-nome');
+        var doc = document.getElementById('contratante-doc');
+        var assinNome = document.getElementById('assin-contratante-nome');
+        var assinDoc = document.getElementById('assin-contratante-doc');
+        if (nome && assinNome && !assinNome.value) assinNome.value = nome.value;
+        if (doc && assinDoc && !assinDoc.value) assinDoc.value = doc.value;
+    }
+
+    document.getElementById('contratante-nome')?.addEventListener('blur', syncContratante);
+    document.getElementById('contratante-doc')?.addEventListener('blur', syncContratante);
+
+    window.salvarRascunho = function () {
+        var dados = {};
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) dados[id] = el.value;
+        });
+        checks.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) dados[id] = el.checked;
+        });
+        localStorage.setItem(chave, JSON.stringify(dados));
+        alert('Rascunho salvo neste navegador.');
+    };
+
+    window.carregarRascunho = function () {
+        var raw = localStorage.getItem(chave);
+        if (!raw) {
+            alert('Nenhum rascunho salvo neste navegador.');
+            return;
+        }
+        var dados = JSON.parse(raw);
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && dados[id] !== undefined) el.value = dados[id];
+        });
+        checks.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && dados[id] !== undefined) el.checked = dados[id];
+        });
+        alert('Rascunho carregado.');
+    };
+})();
+</script>
 
 </body>
 </html>

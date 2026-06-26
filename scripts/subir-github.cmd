@@ -4,7 +4,7 @@ setlocal EnableExtensions
 
 cd /d "%~dp0.."
 
-set "MSG=%~*"
+set "MSG=%*"
 if "%MSG%"=="" set "MSG=Atualizacao Agenda Afetto"
 
 echo.

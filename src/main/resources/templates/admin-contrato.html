@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Contrato de licenciamento - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <th:block th:replace="~{fragments/afetto-paleta :: css}"></th:block>
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(10, 135, 133, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+        }
+        .app-shell {
+            width: min(960px, 100%);
+            margin-inline: auto;
+            padding: 24px 16px 40px;
+        }
+        .hero-band {
+            background: var(--afetto-gradient-hero);
+            color: #fff;
+            border-radius: 24px;
+            padding: clamp(16px, 3vw, 24px);
+        }
+        .shell-card {
+            border: 0;
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .contrato-doc {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.45;
+            color: #111;
+        }
+        .contrato-doc .header {
+            text-align: center;
+            border-bottom: 2px solid #0a8785;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .contrato-doc .header h1 {
+            font-size: 14pt;
+            margin: 0 0 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .contrato-doc .header p { margin: 2px 0; font-size: 10pt; color: #333; }
+        .contrato-doc h2 {
+            font-size: 11.5pt;
+            margin: 18px 0 8px;
+            color: #0a8785;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 3px;
+        }
+        .contrato-doc p, .contrato-doc li { text-align: justify; }
+        .contrato-doc ul { margin: 6px 0 10px 18px; padding: 0; }
+        .contrato-doc li { margin-bottom: 4px; }
+        .contrato-doc .clause { margin-bottom: 10px; }
+        .contrato-doc .clause-title { font-weight: bold; }
+        .contrato-doc table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 14px;
+            font-size: 10pt;
+        }
+        .contrato-doc th, .contrato-doc td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+        .contrato-doc th { background: #f4f8f8; text-align: left; }
+        .contrato-doc .signatures { margin-top: 40px; page-break-inside: avoid; }
+        .contrato-doc .sign-block {
+            display: inline-block;
+            width: 46%;
+            vertical-align: top;
+            margin-top: 30px;
+        }
+        .contrato-doc .sign-line {
+            border-top: 1px solid #000;
+            margin-top: 50px;
+            padding-top: 6px;
+            font-size: 10pt;
+        }
+        .contrato-doc .footer-note {
+            margin-top: 24px;
+            font-size: 9pt;
+            color: #555;
+            border-top: 1px dashed #bbb;
+            padding-top: 10px;
+        }
+        .contrato-doc .highlight-box {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .contrato-doc input.campo, .contrato-doc textarea.campo {
+            font-family: inherit;
+            font-size: inherit;
+            border: none;
+            border-bottom: 1px dashed #0a8785;
+            background: #fffbeb;
+            padding: 1px 4px;
+            color: #111;
+            min-width: 120px;
+        }
+        .contrato-doc.modo-leitura input.campo,
+        .contrato-doc.modo-leitura textarea.campo {
+            border-bottom: 1px solid #cbd5e1;
+            background: transparent;
+            pointer-events: none;
+        }
+        .contrato-doc.modo-leitura input.campo:placeholder-shown,
+        .contrato-doc.modo-leitura textarea.campo:placeholder-shown {
+            color: #94a3b8;
+        }
+        .contrato-doc.modo-leitura label {
+            color: inherit;
+        }
+        .contrato-doc input.campo:focus, .contrato-doc textarea.campo:focus {
+            outline: 2px solid #0a8785;
+            background: #fff;
+        }
+        .contrato-doc.modo-leitura input.campo:focus,
+        .contrato-doc.modo-leitura textarea.campo:focus {
+            outline: none;
+            background: transparent;
+        }
+        .contrato-doc input.campo-largo { min-width: 280px; width: 55%; }
+        .contrato-doc input.campo-medio { min-width: 180px; width: 35%; }
+        .contrato-doc input.campo-curto { min-width: 80px; width: 100px; }
+        .contrato-doc input.campo-foro { min-width: 200px; width: 40%; }
+        .contrato-doc .campo-bloco {
+            display: block;
+            width: 100%;
+            margin: 4px 0;
+            min-height: 1.4em;
+        }
+        .contrato-doc .valor-campo {
+            font-weight: inherit;
+        }
+        .contrato-doc.modo-leitura .campo,
+        .contrato-doc.modo-edicao .campo[data-grupo]:not(.campo-ativo) {
+            display: none !important;
+        }
+        .contrato-doc.modo-leitura .valor-campo,
+        .contrato-doc.modo-edicao .valor-campo {
+            display: inline;
+        }
+        .contrato-doc.modo-edicao .valor-campo[data-grupo].valor-ativo {
+            display: none !important;
+        }
+        .contrato-doc.modo-edicao .campo.campo-ativo {
+            display: inline-block !important;
+        }
+        .contrato-doc.modo-edicao .campo.campo-ativo.campo-bloco {
+            display: block !important;
+        }
+        .contrato-doc.modo-edicao-contratado .bloco-somente-contratante,
+        .contrato-doc.modo-edicao-contratado .grupo-contratante {
+            display: none !important;
+        }
+        .contrato-doc.modo-edicao-contratante .bloco-somente-contratado {
+            display: none !important;
+        }
+        @media print {
+            .contrato-doc .campo.campo-ativo,
+            .contrato-doc .campo { display: none !important; }
+            .contrato-doc .valor-campo { display: inline !important; }
+        }
+        .instrucoes {
+            background: #ecfdf5;
+            border: 1px solid #0a8785;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+        }
+        .instrucoes h2 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #0a8785;
+        }
+        .instrucoes p { margin: 4px 0; }
+        .contrato-status {
+            font-size: 0.9rem;
+            color: #0a8785;
+            min-height: 1.25rem;
+        }
+        .contrato-status.is-erro { color: #dc2626; }
+        @media print {
+            body { background: #fff; }
+            .app-shell { width: 100%; padding: 0; }
+            .hero-band, .no-print { display: none !important; }
+            #contratoDoc { display: block !important; }
+            .shell-card {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 0;
+            }
+            .contrato-doc input.campo, .contrato-doc textarea.campo {
+                border-bottom: none;
+                background: transparent;
+            }
+        }
+        @page { size: A4; margin: 2cm 2.2cm; }
+    </style>
+    <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div class="hero-band mb-4 no-print">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75" th:text="${contratoPerfilContratado} ? 'Desenvolvedor' : 'Clinica'">Contrato</p>
+                <h1 class="h2 mb-2">Contrato de licenciamento</h1>
+                <p class="mb-0 opacity-75" th:if="${contratoPerfilContratado}">
+                    Preencha seus dados como desenvolvedor. Os dados da clinica sao preenchidos pela Polyana.
+                </p>
+                <p class="mb-0 opacity-75" th:unless="${contratoPerfilContratado}">
+                    Preencha os dados da clinica. Os dados do desenvolvedor ja sao preenchidos pelo Widinei.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
+                <form th:action="@{/logout}" method="post">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <button type="submit" class="btn btn-light">Sair</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="shell-card no-print instrucoes mb-4">
+        <h2>Como usar</h2>
+        <p th:if="${contratoPerfilContratado}">1. Clique em <strong>Preencher contrato</strong> e edite <strong>seus dados</strong> direto no documento.</p>
+        <p th:unless="${contratoPerfilContratado}">1. Clique em <strong>Preencher contrato</strong> e edite os <strong>dados da clinica</strong> direto no documento.</p>
+        <p>2. Clique em <strong>Salvar</strong> — fica guardado no sistema para os dois verem.</p>
+        <p th:unless="${contratoPerfilContratado}">3. Depois de salvar, clique em <strong>Iniciar contrato</strong> — comeca o suporte de 3 meses e voce nao podera mais alterar os dados (o desenvolvedor pode liberar se precisar).</p>
+        <p th:if="${contratoPerfilContratado}">3. Depois de salvar, use <strong>Salvar em PDF</strong> para gerar o documento para assinar.</p>
+        <p th:unless="${contratoPerfilContratado}">4. Use <strong>Salvar em PDF</strong> para gerar o documento para assinar.</p>
+        <input type="hidden" id="contratoCsrfToken" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div class="d-flex flex-wrap gap-2 mt-3 align-items-center" id="contratoAcoes">
+            <button type="button" class="btn btn-primary" id="btnPreencherContrato">Preencher contrato</button>
+            <button type="button" class="btn btn-success d-none" id="btnSalvarContrato">Salvar</button>
+            <button type="button" class="btn btn-warning d-none" id="btnFinalizarContrato">Iniciar contrato</button>
+            <button type="button" class="btn btn-outline-secondary d-none" id="btnLiberarContrato">Liberar edicao da clinica</button>
+            <button type="button" class="btn btn-outline-primary d-none" id="btnSalvarPdf">Salvar em PDF</button>
+        </div>
+        <p class="contrato-status mt-2 mb-0" id="contratoStatus" aria-live="polite"></p>
+        <p class="contrato-bloqueio small text-muted mt-2 mb-0 d-none" id="contratoBloqueioMsg"></p>
+    </div>
+
+    <div class="shell-card contrato-doc modo-leitura" id="contratoDoc" th:attr="data-grupo-usuario=${contratoGrupoUsuario}">
+        <div th:replace="~{fragments/contrato-licenciamento-corpo :: corpo}"></div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function () {
+    var grupoUsuario = /*[[${contratoGrupoUsuario}]]*/ 'contratado';
+    var idsContratado = [
+        'contratado-nome', 'contratado-cpf', 'contratado-rg', 'contratado-endereco',
+        'contratado-whatsapp', 'contratado-email', 'contratado-pix',
+        'assin-contratado-nome', 'assin-contratado-cpf'
+    ];
+    var idsContratante = [
+        'contratante-nome', 'contratante-doc', 'contratante-endereco', 'contratante-representante',
+        'pag-parcelas', 'pag-outro-texto', 'foro', 'local', 'dia', 'mes', 'ano',
+        'assin-contratante-nome', 'assin-contratante-doc', 'test1-nome', 'test1-cpf', 'test2-nome', 'test2-cpf'
+    ];
+    var checks = ['pag-avista', 'pag-parcelado', 'pag-pix', 'pag-transferencia', 'pag-outro'];
+    var ids = grupoUsuario === 'contratado' ? idsContratado : idsContratante;
+    var urlDados = '/agendamentos/admin/contrato/dados';
+    var urlFinalizar = '/agendamentos/admin/contrato/finalizar';
+    var urlLiberar = '/agendamentos/admin/contrato/liberar';
+    var docEl = document.getElementById('contratoDoc');
+    var statusEl = document.getElementById('contratoStatus');
+    var bloqueioMsgEl = document.getElementById('contratoBloqueioMsg');
+    var btnPreencher = document.getElementById('btnPreencherContrato');
+    var btnSalvar = document.getElementById('btnSalvarContrato');
+    var btnFinalizar = document.getElementById('btnFinalizarContrato');
+    var btnLiberar = document.getElementById('btnLiberarContrato');
+    var btnSalvarPdf = document.getElementById('btnSalvarPdf');
+    var csrfInput = document.getElementById('contratoCsrfToken');
+    var versaoAtual = 0;
+    var contratoSalvo = false;
+    var contratanteFinalizado = false;
+    var contratanteFinalizadoEm = null;
+    var contratanteFinalizadoPorNome = null;
+    var editando = false;
+    var sincronizando = false;
+    var intervaloSync = null;
+
+    function todosIds() {
+        return idsContratado.concat(idsContratante);
+    }
+
+    function lerDados() {
+        var dados = {};
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) dados[id] = el.value;
+        });
+        if (grupoUsuario === 'contratante') {
+            checks.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) dados[id] = el.checked;
+            });
+        }
+        return dados;
+    }
+
+    function aplicarDados(dados) {
+        if (!dados) return;
+        todosIds().forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && dados[id] !== undefined && dados[id] !== null) {
+                el.value = String(dados[id]);
+            }
+        });
+        checks.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && dados[id] !== undefined) {
+                el.checked = dados[id] === true || dados[id] === 'true';
+            }
+        });
+        atualizarValoresExibidos();
+    }
+
+    function syncAssinaturas() {
+        if (grupoUsuario === 'contratado') {
+            var nome = document.getElementById('contratado-nome');
+            var doc = document.getElementById('contratado-cpf');
+            var assinNome = document.getElementById('assin-contratado-nome');
+            var assinDoc = document.getElementById('assin-contratado-cpf');
+            if (nome && assinNome && !assinNome.value) assinNome.value = nome.value;
+            if (doc && assinDoc && !assinDoc.value) assinDoc.value = doc.value;
+        } else {
+            var nomeC = document.getElementById('contratante-nome');
+            var docC = document.getElementById('contratante-doc');
+            var assinNomeC = document.getElementById('assin-contratante-nome');
+            var assinDocC = document.getElementById('assin-contratante-doc');
+            if (nomeC && assinNomeC && !assinNomeC.value) assinNomeC.value = nomeC.value;
+            if (docC && assinDocC && !assinDocC.value) assinDocC.value = docC.value;
+        }
+    }
+
+    function atualizarValoresExibidos() {
+        document.querySelectorAll('.valor-campo[data-campo]').forEach(function (span) {
+            var campo = span.getAttribute('data-campo');
+            var input = document.getElementById(campo);
+            var texto = input && input.value ? input.value.trim() : '';
+            span.textContent = texto || span.textContent || '_________________________';
+        });
+    }
+
+    function marcarCamposAtivos() {
+        document.querySelectorAll('[data-grupo]').forEach(function (el) {
+            var grupo = el.getAttribute('data-grupo');
+            var ativo = grupo === grupoUsuario;
+            el.classList.toggle('campo-ativo', ativo && el.classList.contains('campo'));
+            el.classList.toggle('valor-ativo', ativo && el.classList.contains('valor-campo'));
+        });
+    }
+
+    function ligarAtualizacaoAoDigitar() {
+        ids.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && !el.dataset.previewLigado) {
+                el.addEventListener('input', atualizarValoresExibidos);
+                el.dataset.previewLigado = '1';
+            }
+        });
+        if (grupoUsuario === 'contratante') {
+            checks.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el && !el.dataset.previewLigado) {
+                    el.addEventListener('change', atualizarValoresExibidos);
+                    el.dataset.previewLigado = '1';
+                }
+            });
+        }
+    }
+
+    function mostrarStatus(msg, erro) {
+        if (!statusEl) return;
+        statusEl.textContent = msg || '';
+        statusEl.classList.toggle('is-erro', !!erro);
+    }
+
+    function contratanteBloqueado() {
+        return grupoUsuario === 'contratante' && contratanteFinalizado;
+    }
+
+    function atualizarMensagemBloqueio() {
+        if (!bloqueioMsgEl) return;
+        if (contratanteBloqueado()) {
+            var msg = 'Contrato finalizado pela clinica.';
+            if (contratanteFinalizadoEm) msg += ' Em ' + contratanteFinalizadoEm;
+            if (contratanteFinalizadoPorNome) msg += ' por ' + contratanteFinalizadoPorNome;
+            msg += ' Voce nao pode mais alterar os dados.';
+            bloqueioMsgEl.textContent = msg;
+            bloqueioMsgEl.classList.remove('d-none');
+        } else if (grupoUsuario === 'contratado' && contratanteFinalizado) {
+            bloqueioMsgEl.textContent = 'A clinica finalizou os dados. Use Liberar edicao da clinica se ela precisar corrigir algo.';
+            bloqueioMsgEl.classList.remove('d-none');
+        } else {
+            bloqueioMsgEl.textContent = '';
+            bloqueioMsgEl.classList.add('d-none');
+        }
+    }
+
+    function atualizarBotoes(estado) {
+        var bloqueado = contratanteBloqueado();
+        var emEdicao = editando && !bloqueado;
+        var jaSalvou = contratoSalvo || versaoAtual > 0;
+
+        btnPreencher.classList.toggle('d-none', emEdicao || bloqueado);
+        btnSalvar.classList.toggle('d-none', !emEdicao);
+        btnSalvarPdf.classList.toggle('d-none', emEdicao || (!jaSalvou && !bloqueado));
+        if (btnFinalizar) {
+            btnFinalizar.classList.toggle(
+                'd-none',
+                grupoUsuario !== 'contratante' || contratanteFinalizado || !jaSalvou || emEdicao
+            );
+        }
+        if (btnLiberar) {
+            btnLiberar.classList.toggle(
+                'd-none',
+                grupoUsuario !== 'contratado' || !contratanteFinalizado
+            );
+        }
+        atualizarMensagemBloqueio();
+    }
+
+    function definirModoEdicao(ativo) {
+        if (ativo && contratanteBloqueado()) {
+            mostrarStatus('Contrato finalizado. Voce nao pode mais alterar os dados.', true);
+            return;
+        }
+        editando = ativo;
+        docEl.classList.remove('modo-edicao-contratado', 'modo-edicao-contratante');
+        if (ativo) {
+            docEl.classList.add('modo-edicao');
+            docEl.classList.remove('modo-leitura');
+            docEl.classList.add(grupoUsuario === 'contratado' ? 'modo-edicao-contratado' : 'modo-edicao-contratante');
+            marcarCamposAtivos();
+            ligarAtualizacaoAoDigitar();
+            ids.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.readOnly = false;
+            });
+            if (grupoUsuario === 'contratante') {
+                checks.forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.disabled = false;
+                });
+            }
+            var primeiro = document.getElementById(ids[0]);
+            if (primeiro) primeiro.focus();
+        } else {
+            docEl.classList.remove('modo-edicao', 'modo-edicao-contratado', 'modo-edicao-contratante');
+            docEl.classList.add('modo-leitura');
+            marcarCamposAtivos();
+            atualizarValoresExibidos();
+        }
+        atualizarBotoes(ativo ? 'editando' : (contratoSalvo || versaoAtual > 0 ? 'salvo' : 'inicial'));
+    }
+
+    function headersJson() {
+        var headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        if (csrfInput && csrfInput.value) {
+            headers['X-CSRF-TOKEN'] = csrfInput.value;
+        }
+        return headers;
+    }
+
+    function mensagemErroResposta(body, padrao) {
+        if (!body) return padrao;
+        return body.message || body.erro || body.error || padrao;
+    }
+
+    function aplicarRespostaServidor(resposta, silencioso) {
+        if (!resposta) return;
+        var novaVersao = resposta.versao || 0;
+        var mudou = novaVersao !== versaoAtual;
+        var mudouFinalizado = resposta.contratanteFinalizado !== contratanteFinalizado;
+        contratanteFinalizado = !!resposta.contratanteFinalizado;
+        contratanteFinalizadoEm = resposta.contratanteFinalizadoEm || null;
+        contratanteFinalizadoPorNome = resposta.contratanteFinalizadoPorNome || null;
+        contratoSalvo = !!resposta.salvo || novaVersao > 0;
+        if (mudou || (!versaoAtual && resposta.salvo) || mudouFinalizado) {
+            aplicarDados(resposta.dados);
+            versaoAtual = novaVersao;
+            if (mudouFinalizado && contratanteBloqueado() && editando) {
+                definirModoEdicao(false);
+            }
+            if (mudou && !silencioso && resposta.atualizadoPorNome) {
+                var msg = 'Contrato atualizado';
+                if (resposta.atualizadoEm) msg += ' em ' + resposta.atualizadoEm;
+                msg += ' por ' + resposta.atualizadoPorNome + '.';
+                mostrarStatus(msg);
+            }
+        }
+        atualizarBotoes(editando ? 'editando' : (resposta.salvo ? 'salvo' : 'inicial'));
+    }
+
+    function postAcaoContrato(url) {
+        return fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: headersJson(),
+            body: '{}'
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    return resp.json().catch(function () { return {}; }).then(function (body) {
+                        throw new Error(mensagemErroResposta(body, 'Nao foi possivel concluir a acao.'));
+                    });
+                }
+                return resp.json();
+            });
+    }
+
+    function carregarDoServidor(silencioso) {
+        if (sincronizando || editando) return Promise.resolve();
+        sincronizando = true;
+        return fetch(urlDados, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('Falha ao carregar contrato.');
+                return resp.json();
+            })
+            .then(function (resposta) {
+                aplicarRespostaServidor(resposta, silencioso);
+                return resposta;
+            })
+            .catch(function () {
+                if (!silencioso) {
+                    mostrarStatus('Nao foi possivel carregar o contrato salvo.', true);
+                }
+            })
+            .finally(function () {
+                sincronizando = false;
+            });
+    }
+
+    function salvarNoServidor() {
+        syncAssinaturas();
+        var dados = lerDados();
+        btnSalvar.disabled = true;
+        return fetch(urlDados, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: headersJson(),
+            body: JSON.stringify(dados)
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    return resp.json().catch(function () { return {}; }).then(function (body) {
+                        throw new Error(mensagemErroResposta(body, 'Falha ao salvar contrato.'));
+                    });
+                }
+                return resp.json();
+            })
+            .then(function (resposta) {
+                versaoAtual = resposta.versao || versaoAtual;
+                contratoSalvo = true;
+                aplicarRespostaServidor(resposta, true);
+                definirModoEdicao(false);
+                if (grupoUsuario === 'contratante') {
+                    mostrarStatus('Salvo! Agora clique em Iniciar contrato para comecar o suporte de 3 meses.');
+                } else {
+                    mostrarStatus('Salvo no sistema. Os dois podem ver o mesmo contrato.');
+                }
+            })
+            .catch(function (err) {
+                mostrarStatus(err.message || 'Nao foi possivel salvar o contrato. Tente novamente.', true);
+            })
+            .finally(function () {
+                btnSalvar.disabled = false;
+            });
+    }
+
+    btnPreencher?.addEventListener('click', function () {
+        definirModoEdicao(true);
+        if (!contratanteBloqueado()) {
+            mostrarStatus('Preencha seus dados no contrato e clique em Salvar.');
+        }
+    });
+
+    btnSalvar?.addEventListener('click', function () {
+        salvarNoServidor();
+    });
+
+    btnFinalizar?.addEventListener('click', function () {
+        if (!confirm('Ao iniciar o contrato, comeca o suporte de 3 meses e voce nao podera mais alterar os dados da clinica. O desenvolvedor precisara liberar para editar novamente. Continuar?')) {
+            return;
+        }
+        btnFinalizar.disabled = true;
+        postAcaoContrato(urlFinalizar)
+            .then(function (resposta) {
+                aplicarRespostaServidor(resposta, true);
+                definirModoEdicao(false);
+                mostrarStatus('Contrato iniciado. Suporte de 3 meses ativo. Seus dados estao bloqueados para edicao.');
+            })
+            .catch(function (err) {
+                mostrarStatus(err.message || 'Nao foi possivel finalizar o contrato.', true);
+            })
+            .finally(function () {
+                btnFinalizar.disabled = false;
+            });
+    });
+
+    btnLiberar?.addEventListener('click', function () {
+        if (!confirm('Liberar a edicao dos dados da clinica? A Polyana podera alterar somente os dados dela.')) {
+            return;
+        }
+        btnLiberar.disabled = true;
+        postAcaoContrato(urlLiberar)
+            .then(function (resposta) {
+                aplicarRespostaServidor(resposta, true);
+                mostrarStatus('Edicao da clinica liberada. Ela pode preencher e salvar novamente.');
+            })
+            .catch(function (err) {
+                mostrarStatus(err.message || 'Nao foi possivel liberar a edicao.', true);
+            })
+            .finally(function () {
+                btnLiberar.disabled = false;
+            });
+    });
+
+    btnSalvarPdf?.addEventListener('click', function () {
+        window.print();
+    });
+
+    marcarCamposAtivos();
+    atualizarValoresExibidos();
+    carregarDoServidor(true).then(function (resposta) {
+        if (resposta && contratanteBloqueado()) {
+            definirModoEdicao(false);
+            mostrarStatus('Contrato iniciado. Voce pode ver o documento e gerar PDF, mas nao pode mais editar.');
+        } else if (resposta && resposta.salvo) {
+            definirModoEdicao(false);
+            if (grupoUsuario === 'contratante' && !contratanteFinalizado) {
+                mostrarStatus('Dados salvos. Clique em Iniciar contrato quando estiver pronta, ou Preencher para alterar.');
+            } else {
+                mostrarStatus('Contrato carregado do sistema. Clique em Preencher para alterar seus dados.');
+            }
+        } else {
+            definirModoEdicao(false);
+            atualizarBotoes('inicial');
+            mostrarStatus('Clique em Preencher contrato para comecar.');
+        }
+    });
+
+    intervaloSync = window.setInterval(function () {
+        carregarDoServidor(true);
+    }, 5000);
+
+    window.addEventListener('beforeunload', function () {
+        if (intervaloSync) window.clearInterval(intervaloSync);
+    });
+})();
+</script>
+<th:block th:replace="~{fragments/afetto-tema :: css-final}"></th:block>
+</body>
+</html>

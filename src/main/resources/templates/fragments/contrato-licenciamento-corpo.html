@@ -1,91 +1,4 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Contrato de Licenciamento e Prestação de Serviços - Agenda Afetto</title>
-    <style>
-        @page { size: A4; margin: 2cm 2.2cm; }
-        * { box-sizing: border-box; }
-        body {
-            font-family: "Times New Roman", Times, serif;
-            font-size: 11pt;
-            line-height: 1.45;
-            color: #111;
-            max-width: 21cm;
-            margin: 0 auto;
-            padding: 1.5cm;
-        }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #0a8785;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            font-size: 14pt;
-            margin: 0 0 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-        .header p { margin: 2px 0; font-size: 10pt; color: #333; }
-        h2 {
-            font-size: 11.5pt;
-            margin: 18px 0 8px;
-            color: #0a8785;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 3px;
-        }
-        p, li { text-align: justify; }
-        ul { margin: 6px 0 10px 18px; padding: 0; }
-        li { margin-bottom: 4px; }
-        .clause { margin-bottom: 10px; }
-        .clause-title { font-weight: bold; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0 14px;
-            font-size: 10pt;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 6px 8px;
-            vertical-align: top;
-        }
-        th { background: #f4f8f8; text-align: left; }
-        .signatures {
-            margin-top: 40px;
-            page-break-inside: avoid;
-        }
-        .sign-block {
-            display: inline-block;
-            width: 46%;
-            vertical-align: top;
-            margin-top: 30px;
-        }
-        .sign-line {
-            border-top: 1px solid #000;
-            margin-top: 50px;
-            padding-top: 6px;
-            font-size: 10pt;
-        }
-        .footer-note {
-            margin-top: 24px;
-            font-size: 9pt;
-            color: #555;
-            border-top: 1px dashed #bbb;
-            padding-top: 10px;
-        }
-        .highlight-box {
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            padding: 10px 12px;
-            margin: 10px 0;
-            border-radius: 4px;
-        }
-    </style>
-</head>
-<body>
-
+﻿<div th:fragment="corpo">
 <div class="header">
     <h1>Contrato de Licenciamento de Software<br>e Prestação de Serviços de Suporte</h1>
     <p><strong>Sistema:</strong> Agenda Afetto — Plataforma Web de Gestão Clínica</p>
@@ -93,15 +6,19 @@
 </div>
 
 <p>
-    Pelo presente instrumento particular, de um lado <strong>WIDINEI MARTINS DE OLIVEIRA</strong>,
-    brasileiro, inscrito no CPF sob nº <strong>147.786.936-04</strong>, RG nº <strong>MG-24.207.266</strong>,
-    residente e domiciliado em <strong>Rua Francisco Castro Monteiro, nº 94</strong>, telefone/WhatsApp
-    <strong>(37) 99855-0994</strong>, e-mail <strong>widineimartins4@gmail.com</strong>,
+    Pelo presente instrumento particular, de um lado <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-nome">WIDINEI MARTINS DE OLIVEIRA</strong><input class="campo campo-largo" data-grupo="contratado" id="contratado-nome" value="WIDINEI MARTINS DE OLIVEIRA" placeholder="Nome completo do desenvolvedor">,
+    brasileiro, inscrito no CPF sob nº <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-cpf">147.786.936-04</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-cpf" value="147.786.936-04" placeholder="CPF">, RG nº <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-rg">MG-24.207.266</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-rg" value="MG-24.207.266" placeholder="RG">,
+    residente e domiciliado em <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-endereco">Rua Francisco Castro Monteiro, nº 94</strong><input class="campo campo-largo" data-grupo="contratado" id="contratado-endereco" value="Rua Francisco Castro Monteiro, nº 94" placeholder="Endereco completo">, telefone/WhatsApp
+    <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-whatsapp">(37) 99855-0994</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-whatsapp" value="(37) 99855-0994" placeholder="WhatsApp">, e-mail <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-email">widineimartins4@gmail.com</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-email" value="widineimartins4@gmail.com" placeholder="E-mail">,
     doravante denominado <strong>CONTRATADO</strong>
-    ou <strong>DESENVOLVEDOR</strong>; e, de outro lado, <strong>_______________________________________________</strong>,
-    inscrito(a) no CPF/CNPJ sob nº <strong>_______________________</strong>, com endereço em
-    <strong>_______________________________________________</strong>, representado(a) neste ato por
-    <strong>_______________________________________________</strong>, doravante denominado(a) <strong>CONTRATANTE</strong>
+    ou <strong>DESENVOLVEDOR</strong>; e, de outro lado
+    <strong class="valor-campo" data-grupo="contratante" data-campo="contratante-nome">_________________________</strong><input class="campo campo-largo" data-grupo="contratante" id="contratante-nome" placeholder="Nome ou razão social da clínica">,
+    inscrito(a) no CPF/CNPJ sob nº
+    <strong class="valor-campo" data-grupo="contratante" data-campo="contratante-doc">_________________________</strong><input class="campo campo-medio" data-grupo="contratante" id="contratante-doc" placeholder="CPF ou CNPJ">, com endereço em
+    <strong class="valor-campo" data-grupo="contratante" data-campo="contratante-endereco">_________________________</strong><input class="campo campo-largo" data-grupo="contratante" id="contratante-endereco" placeholder="Endereço completo da clínica">,
+    representado(a) neste ato por
+    <strong class="valor-campo" data-grupo="contratante" data-campo="contratante-representante">_________________________</strong><input class="campo campo-medio" data-grupo="contratante" id="contratante-representante" placeholder="Nome do representante (ex.: Polyana)">,
+    doravante denominado(a) <strong>CONTRATANTE</strong>
     ou <strong>CLÍNICA</strong>, têm entre si justo e contratado o seguinte:
 </p>
 
@@ -348,8 +265,21 @@
             <td><strong>2.000,00</strong></td>
         </tr>
     </table>
-    <p><span class="clause-title">4.2.</span> Forma de pagamento: ☐ À vista &nbsp; ☐ Parcelado em _____ vezes &nbsp; | Meio: ☐ PIX &nbsp; ☐ Transferência &nbsp; ☐ Outro: __________</p>
-    <p><span class="clause-title">4.3.</span> Chave PIX / dados bancários do CONTRATADO: <strong>conferir com o CONTRATADO — widineimartins8@gmail.com</strong></p>
+    <p><span class="clause-title">4.2.</span> Forma de pagamento:</p>
+    <div class="bloco-somente-contratante">
+    <p>
+        <span class="grupo-contratante" data-grupo="contratante">
+        <label><input type="checkbox" data-grupo="contratante" id="pag-avista"> À vista</label> &nbsp;
+        <label><input type="checkbox" data-grupo="contratante" id="pag-parcelado"> Parcelado em
+        <input class="campo campo-curto" data-grupo="contratante" id="pag-parcelas" placeholder="___"> vezes</label> &nbsp; | Meio:
+        <label><input type="checkbox" data-grupo="contratante" id="pag-pix" checked> PIX</label> &nbsp;
+        <label><input type="checkbox" data-grupo="contratante" id="pag-transferencia"> Transferência</label> &nbsp;
+        <label><input type="checkbox" data-grupo="contratante" id="pag-outro"> Outro:</label>
+        <input class="campo campo-medio" data-grupo="contratante" id="pag-outro-texto" placeholder="especificar">
+        </span>
+    </p>
+    </div>
+    <p class="bloco-somente-contratado"><span class="clause-title">4.3.</span> Chave PIX / dados bancários do CONTRATADO: <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-pix">widineimartins8@gmail.com</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-pix" value="widineimartins8@gmail.com" placeholder="Chave PIX ou dados bancarios"></p>
     <p><span class="clause-title">4.4.</span> A entrega definitiva do acesso, credenciais e código-fonte ocorrerá após a confirmação do pagamento integral ou do primeiro pagamento acordado, conforme combinado entre as partes.</p>
     <p><span class="clause-title">4.5.</span> Em caso de <strong>atraso no pagamento</strong> superior a <strong>15 (quinze) dias</strong> do vencimento acordado, o CONTRATADO poderá <strong>suspender o suporte técnico e o acesso técnico</strong> (orientações, correções e acompanhamento) até a regularização dos valores em aberto, sem prejuízo das demais medidas previstas neste contrato.</p>
 </div>
@@ -447,53 +377,60 @@
     <li>Alterações só terão validade se feitas por escrito e assinadas por ambas as partes;</li>
     <li>A tolerância de uma parte não implica renúncia de direitos;</li>
     <li>O CONTRATADO presta serviços como <strong>pessoa física (CPF)</strong>, emitindo recibo ou nota fiscal conforme legislação aplicável à sua situação;</li>
-    <li>Fica eleito o foro da comarca de <strong>___________________________________</strong>, renunciando-se a qualquer outro, por mais privilegiado que seja.</li>
+</ul>
+<div class="bloco-somente-contratante">
+<ul>
+    <li>Fica eleito o foro da comarca de <strong class="valor-campo" data-grupo="contratante" data-campo="foro">_________________________</strong><input class="campo campo-foro" data-grupo="contratante" id="foro" placeholder="Cidade/UF">, renunciando-se a qualquer outro, por mais privilegiado que seja.</li>
 </ul>
 
 <p style="margin-top: 24px;">
     E, por estarem de pleno acordo, assinam o presente instrumento em 2 (duas) vias de igual teor e forma.
 </p>
 
-<p><strong>Local e data:</strong> _________________________, _____ de _________________ de 2026.</p>
+<p><strong>Local e data:</strong>
+    <strong class="valor-campo" data-grupo="contratante" data-campo="local">_________________________</strong><input class="campo campo-medio" data-grupo="contratante" id="local" placeholder="Cidade">,
+    <strong class="valor-campo" data-grupo="contratante" data-campo="dia">___</strong><input class="campo campo-curto" data-grupo="contratante" id="dia" placeholder="dia"> de
+    <strong class="valor-campo" data-grupo="contratante" data-campo="mes">_________________________</strong><input class="campo campo-medio" data-grupo="contratante" id="mes" placeholder="mês"> de
+    <strong class="valor-campo" data-grupo="contratante" data-campo="ano">2026</strong><input class="campo campo-curto" data-grupo="contratante" id="ano" value="2026" placeholder="ano">.
+</p>
 
 <div class="signatures">
-    <div class="sign-block">
+    <div class="sign-block bloco-somente-contratado">
         <div class="sign-line">
             <strong>CONTRATADO (Desenvolvedor)</strong><br>
-            Nome: Widinei Martins de Oliveira<br>
-            CPF: 147.786.936-04
+            Nome: <strong class="valor-campo" data-grupo="contratado" data-campo="assin-contratado-nome">Widinei Martins de Oliveira</strong><input class="campo campo-bloco" data-grupo="contratado" id="assin-contratado-nome" value="Widinei Martins de Oliveira" placeholder="Nome completo"><br>
+            CPF: <strong class="valor-campo" data-grupo="contratado" data-campo="assin-contratado-cpf">147.786.936-04</strong><input class="campo campo-bloco" data-grupo="contratado" id="assin-contratado-cpf" value="147.786.936-04" placeholder="CPF">
         </div>
     </div>
-    <div class="sign-block" style="margin-left: 6%;">
+    <div class="sign-block bloco-somente-contratante" style="margin-left: 6%;">
         <div class="sign-line">
             <strong>CONTRATANTE (Clínica)</strong><br>
-            Nome/Razão Social: ___________________________<br>
-            CPF/CNPJ: ___________________________________
+            Nome/Razão Social: <strong class="valor-campo" data-grupo="contratante" data-campo="assin-contratante-nome">_________________________</strong><input class="campo campo-bloco" data-grupo="contratante" id="assin-contratante-nome" placeholder="Nome ou razão social"><br>
+            CPF/CNPJ: <strong class="valor-campo" data-grupo="contratante" data-campo="assin-contratante-doc">_________________________</strong><input class="campo campo-bloco" data-grupo="contratante" id="assin-contratante-doc" placeholder="CPF ou CNPJ">
         </div>
     </div>
 </div>
 
-<div class="signatures">
+<div class="signatures bloco-somente-contratante">
     <div class="sign-block">
         <div class="sign-line">
             <strong>Testemunha 1</strong><br>
-            Nome: _______________________________________<br>
-            CPF: ________________________________________
+            Nome: <strong class="valor-campo" data-grupo="contratante" data-campo="test1-nome">_________________________</strong><input class="campo campo-bloco" data-grupo="contratante" id="test1-nome" placeholder="Nome completo"><br>
+            CPF: <strong class="valor-campo" data-grupo="contratante" data-campo="test1-cpf">_________________________</strong><input class="campo campo-bloco" data-grupo="contratante" id="test1-cpf" placeholder="CPF">
         </div>
     </div>
     <div class="sign-block" style="margin-left: 6%;">
         <div class="sign-line">
             <strong>Testemunha 2</strong><br>
-            Nome: _______________________________________<br>
-            CPF: ________________________________________
+            Nome: <strong class="valor-campo" data-grupo="contratante" data-campo="test2-nome">_________________________</strong><input class="campo campo-bloco" data-grupo="contratante" id="test2-nome" placeholder="Nome completo"><br>
+            CPF: <strong class="valor-campo" data-grupo="contratante" data-campo="test2-cpf">_________________________</strong><input class="campo campo-bloco" data-grupo="contratante" id="test2-cpf" placeholder="CPF">
         </div>
     </div>
+</div>
 </div>
 
 <div class="footer-note">
     <strong>Observação:</strong> Este documento é um modelo contratual. Recomenda-se revisão por advogado antes da assinatura.
     O CONTRATADO atua como pessoa física; não possui CNPJ. Emissão de recibo ou documento fiscal conforme orientação contábil local.
 </div>
-
-</body>
-</html>
+</div>

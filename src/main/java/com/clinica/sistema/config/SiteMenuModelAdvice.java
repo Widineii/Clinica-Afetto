@@ -2,11 +2,13 @@ package com.clinica.sistema.config;
 
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
+import com.clinica.sistema.dto.SuporteContratoView;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.ContratoLicenciamentoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.PerfilFotoService;
@@ -30,6 +32,7 @@ public class SiteMenuModelAdvice {
     private final UsuarioRepository usuarioRepository;
     private final PerfilFotoService perfilFotoService;
     private final ManualProperties manualProperties;
+    private final ContratoLicenciamentoService contratoLicenciamentoService;
 
     public SiteMenuModelAdvice(
             AuthService authService,
@@ -38,7 +41,8 @@ public class SiteMenuModelAdvice {
             UsuarioService usuarioService,
             UsuarioRepository usuarioRepository,
             PerfilFotoService perfilFotoService,
-            ManualProperties manualProperties
+            ManualProperties manualProperties,
+            ContratoLicenciamentoService contratoLicenciamentoService
     ) {
         this.authService = authService;
         this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
@@ -47,6 +51,7 @@ public class SiteMenuModelAdvice {
         this.usuarioRepository = usuarioRepository;
         this.perfilFotoService = perfilFotoService;
         this.manualProperties = manualProperties;
+        this.contratoLicenciamentoService = contratoLicenciamentoService;
     }
 
     @ModelAttribute
@@ -56,6 +61,12 @@ public class SiteMenuModelAdvice {
         model.addAttribute("manualWhatsappClinicaAtivo", manualProperties.temWhatsappClinica());
         model.addAttribute("manualWhatsappClinicaUrl", manualProperties.resolverLinkWhatsappClinica());
         model.addAttribute("manualWhatsappClinicaRotulo", manualProperties.resolverRotuloWhatsappClinicaExibicao());
+        if (!model.containsAttribute("suporteContrato")) {
+            model.addAttribute("suporteContrato", SuporteContratoView.inativo());
+        }
+        if (!model.containsAttribute("exibirWhatsappSuporte")) {
+            model.addAttribute("exibirWhatsappSuporte", manualProperties.temWhatsappSuporte());
+        }
         model.addAttribute("retornoPerfilUrl", resolverRetornoPerfil(request));
         if (!model.containsAttribute("reabrirModalEditarPerfil")) {
             model.addAttribute("reabrirModalEditarPerfil", false);
@@ -76,6 +87,8 @@ public class SiteMenuModelAdvice {
                     model.addAttribute("menuQtdAcoesPendentes", 0);
                     model.addAttribute("menuPerfilRotulo", "");
                     model.addAttribute("podeEditarPerfil", false);
+                    model.addAttribute("suporteContrato", SuporteContratoView.inativo());
+                    model.addAttribute("exibirWhatsappSuporte", manualProperties.temWhatsappSuporte());
                 }
         );
     }
@@ -130,6 +143,19 @@ public class SiteMenuModelAdvice {
         if (!model.containsAttribute("podeGerenciarContaAdmin")) {
             model.addAttribute("podeGerenciarContaAdmin", authService.podeGerenciarContaAdmin(usuario));
         }
+        if (!model.containsAttribute("podeAcessarContratoLicenciamento")) {
+            model.addAttribute(
+                    "podeAcessarContratoLicenciamento",
+                    authService.podeAcessarContratoLicenciamento(usuario)
+            );
+        }
+        SuporteContratoView suporteContrato = contratoLicenciamentoService.resolverStatusSuporte();
+        model.addAttribute("suporteContrato", suporteContrato);
+        model.addAttribute(
+                "exibirWhatsappSuporte",
+                manualProperties.temWhatsappSuporte()
+                        && (isAdmin || !suporteContrato.expirado())
+        );
         if (!model.containsAttribute("podeEscolherTema")) {
             model.addAttribute("podeEscolherTema", authService.podeEscolherTema(usuario));
         }
