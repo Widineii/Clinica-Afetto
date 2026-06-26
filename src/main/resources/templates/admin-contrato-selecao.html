@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Contratos de licenciamento - Agenda Afetto</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <th:block th:replace="~{fragments/afetto-paleta :: css}"></th:block>
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(10, 135, 133, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+        }
+        .app-shell {
+            width: min(960px, 100%);
+            margin-inline: auto;
+            padding: 24px 16px 40px;
+        }
+        .hero-band {
+            background: var(--afetto-gradient-hero);
+            color: #fff;
+            border-radius: 24px;
+            padding: clamp(16px, 3vw, 24px);
+            margin-bottom: 24px;
+        }
+        .shell-card {
+            border: 0;
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+        }
+        .modelo-pastas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: stretch;
+        }
+        .modelo-pasta {
+            width: 170px;
+            text-decoration: none;
+            color: #1f2937;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 16px 12px 14px;
+            background: #fff;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        }
+        .modelo-pasta:hover {
+            color: #0f766e;
+            border-color: #0a8785;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+            transform: translateY(-1px);
+        }
+        .modelo-pasta:focus-visible {
+            outline: 2px solid #0a8785;
+            outline-offset: 2px;
+        }
+        .modelo-pasta svg {
+            width: 84px;
+            height: 66px;
+            display: block;
+            margin: 0 auto 10px;
+            filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.18));
+        }
+        .modelo-pasta__nome {
+            display: block;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .modelo-pasta__hint {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+        .justificativa-valor {
+            background: #f8fafc;
+            border: 1px solid #dbe4ea;
+            border-radius: 14px;
+            padding: 16px 18px;
+            font-size: 0.94rem;
+            color: #334155;
+            margin-top: 20px;
+        }
+        .justificativa-valor__titulo {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #0a8785;
+            line-height: 1.35;
+        }
+        .justificativa-valor__intro {
+            margin: 0;
+            line-height: 1.45;
+        }
+        .justificativa-valor__lista {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+        .justificativa-valor__lista li {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .justificativa-valor__nota {
+            font-size: 0.88rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+    </style>
+    <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
+</head>
+<body>
+<div class="container-fluid app-shell">
+    <div class="hero-band">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+                <p class="text-uppercase small mb-2 opacity-75">Proposta comercial</p>
+                <h1 class="h2 mb-2">Contratos</h1>
+                <p class="mb-0 opacity-75"
+                   th:text="${contratoAguardandoInicio == true} ? 'Clique na pasta para ler cada proposta. A Polyana ainda vai escolher qual iniciar.' : 'Clique na pasta para abrir e preencher o contrato.'">
+                    Clique na pasta para abrir e preencher o contrato.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light btn-sm">Voltar para agenda</a>
+            </div>
+        </div>
+    </div>
+
+    <section class="shell-card" aria-label="Modelos de contrato">
+        <div class="mb-3">
+            <h2 class="h5 mb-1" th:text="${contratoAguardandoInicio == true} ? 'Propostas para leitura' : 'Escolha o modelo'">Escolha o modelo</h2>
+            <p class="text-muted mb-0"
+               th:text="${contratoAguardandoInicio == true} ? 'Abra valor bruto ou mensalidade para ler. Depois que a Polyana iniciar, so a escolhida ficara disponivel.' : 'Clique na pasta para abrir valor bruto ou mensalidade.'">
+                Clique na pasta para abrir valor bruto ou mensalidade.
+            </p>
+        </div>
+        <div class="modelo-pastas">
+            <a th:href="@{/agendamentos/admin/contrato/bruto}"
+               class="modelo-pasta"
+               title="Abrir contrato valor bruto">
+                <svg viewBox="0 0 84 66" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 17C6 14.2 8.2 12 11 12H32L39 19H73C75.8 19 78 21.2 78 24V54C78 56.8 75.8 59 73 59H11C8.2 59 6 56.8 6 54V17Z" fill="#F5C542"/>
+                    <path d="M6 25C6 22.2 8.2 20 11 20H73C75.8 20 78 22.2 78 25V54C78 56.8 75.8 59 73 59H11C8.2 59 6 56.8 6 54V25Z" fill="#FFD767"/>
+                    <rect x="29" y="31" width="29" height="21" rx="2" fill="#fff" opacity="0.96"/>
+                    <path d="M33 37H54M33 41H50M33 45H45" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span class="modelo-pasta__nome">Valor bruto</span>
+                <span class="modelo-pasta__hint">Pagamento único · R$ <span th:text="${valorBrutoContrato}">2.000,00</span></span>
+            </a>
+
+            <a th:href="@{/agendamentos/admin/contrato/mensalidade}"
+               class="modelo-pasta"
+               title="Abrir contrato mensalidade">
+                <svg viewBox="0 0 84 66" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 17C6 14.2 8.2 12 11 12H32L39 19H73C75.8 19 78 21.2 78 24V54C78 56.8 75.8 59 73 59H11C8.2 59 6 56.8 6 54V17Z" fill="#F5C542"/>
+                    <path d="M6 25C6 22.2 8.2 20 11 20H73C75.8 20 78 22.2 78 25V54C78 56.8 75.8 59 73 59H11C8.2 59 6 56.8 6 54V25Z" fill="#FFD767"/>
+                    <circle cx="42" cy="41" r="11" fill="#0a8785" opacity="0.92"/>
+                    <text x="42" y="45" text-anchor="middle" fill="#fff" font-size="11" font-family="Arial,sans-serif" font-weight="bold">R$</text>
+                </svg>
+                <span class="modelo-pasta__nome">Mensalidade</span>
+                <span class="modelo-pasta__hint">R$ <span th:text="${valorMensalContrato}">200,00</span>/mês · KingHost à parte</span>
+            </a>
+        </div>
+
+        <div class="justificativa-valor">
+            <h2 class="justificativa-valor__titulo">💰 Pagamento único (R$ <span th:text="${valorBrutoContrato}">2.000,00</span>)</h2>
+            <p class="justificativa-valor__intro mb-3">
+                O valor reflete o desenvolvimento sob medida para a rotina da clínica, com testes em ambiente real e entrega completa dos módulos.
+                Inclui licença, implantação na KingHost, 3 meses de suporte e entrega do código-fonte após quitação. A VPS (R$ 48/mês) é paga à parte pela clínica.
+            </p>
+            <h2 class="justificativa-valor__titulo">🔄 Mensalidade (R$ <span th:text="${valorMensalContrato}">200,00</span>/mês)</h2>
+            <p class="justificativa-valor__intro mb-0">
+                Distribui o custo ao longo do tempo, com licença contínua, manutenção corretiva e suporte recorrente.
+                Reduz o investimento inicial em relação ao pagamento único. KingHost (R$ 48/mês) continua paga diretamente ao provedor.
+            </p>
+        </div>
+    </section>
+</div>
+<th:block th:replace="~{fragments/afetto-tema :: css-final}"></th:block>
+</body>
+</html>

@@ -1,7 +1,8 @@
-﻿<div th:fragment="corpo">
+﻿<div th:fragment="corpo (tipoContrato)">
 <div class="header">
     <h1>Contrato de Licenciamento de Software<br>e Prestação de Serviços de Suporte</h1>
     <p><strong>Sistema:</strong> Agenda Afetto — Plataforma Web de Gestão Clínica</p>
+    <p><strong>Modelo:</strong> <span th:text="${tipoContrato == 'mensalidade'} ? 'Mensalidade recorrente' : 'Valor bruto (pagamento único)'">Valor bruto</span></p>
     <p><strong>Versão entregue:</strong> 2.6 (build 2.856) | Documento gerado em junho/2026</p>
 </div>
 
@@ -255,7 +256,12 @@
 </table>
 <p>
     <span class="clause-title">3.3.</span> O valor acima <strong>não está incluído</strong> no preço de licenciamento da
-    Cláusula Quarta (R$ 2.000,00). É despesa operacional contínua da CONTRATANTE, paga diretamente à KingHost, necessária para
+    Cláusula Quarta
+    <span th:if="${tipoContrato == 'mensalidade'}">(mensalidade de R$
+        <strong class="valor-campo" data-grupo="contratado" data-campo="pag-valor-mensal">200,00</strong>)</span>
+    <span th:unless="${tipoContrato == 'mensalidade'}">(R$
+        <strong class="valor-campo" data-grupo="contratado" data-campo="pag-valor-total">2.000,00</strong>)</span>.
+    É despesa operacional contínua da CONTRATANTE, paga diretamente à KingHost, necessária para
     manter o sistema acessível na internet.
 </p>
 <p>
@@ -268,39 +274,7 @@
     lentidão ou indisponibilidade <strong>não configuram falha do CONTRATADO</strong>, nos termos da Cláusula Décima Primeira.
 </p>
 
-<h2>CLÁUSULA QUARTA – DO PREÇO E FORMA DE PAGAMENTO</h2>
-<div class="clause">
-    <p><span class="clause-title">4.1.</span> Pelo licenciamento do software e pelos serviços descritos neste contrato, a CONTRATANTE pagará ao CONTRATADO o valor total de:</p>
-    <table>
-        <tr>
-            <th>Item</th>
-            <th>Descrição</th>
-            <th>Valor (R$)</th>
-        </tr>
-        <tr>
-            <td>1</td>
-            <td>Licença de uso do sistema Agenda Afetto (versão 2.6), entrega técnica, implantação na KingHost e <strong>suporte por 3 (três) meses para correção de erros</strong> (conforme Cláusula Sexta)</td>
-            <td><strong>2.000,00</strong></td>
-        </tr>
-    </table>
-    <p><span class="clause-title">4.2.</span> Forma de pagamento (marque a opção aplicável):</p>
-    <div class="bloco-somente-contratante">
-    <p>
-        <span class="grupo-contratante" data-grupo="contratante">
-        <label><input type="checkbox" data-grupo="contratante" id="pag-avista"> À vista</label> &nbsp;
-        <label><input type="checkbox" data-grupo="contratante" id="pag-parcelado"> Parcelado em
-        <input class="campo campo-curto" data-grupo="contratante" id="pag-parcelas" placeholder="___"> vezes mensais e sucessivas</label> &nbsp; | Meio:
-        <label><input type="checkbox" data-grupo="contratante" id="pag-pix" checked> PIX</label> &nbsp;
-        <label><input type="checkbox" data-grupo="contratante" id="pag-transferencia"> Transferência</label> &nbsp;
-        <label><input type="checkbox" data-grupo="contratante" id="pag-outro"> Outro:</label>
-        <input class="campo campo-medio" data-grupo="contratante" id="pag-outro-texto" placeholder="especificar">
-        </span>
-    </p>
-    </div>
-    <p class="bloco-somente-contratado"><span class="clause-title">4.3.</span> Chave PIX / dados bancários do CONTRATADO: <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-pix">widineimartins8@gmail.com</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-pix" value="widineimartins8@gmail.com" placeholder="Chave PIX ou dados bancários"></p>
-    <p><span class="clause-title">4.4.</span> A entrega definitiva do acesso, credenciais e código-fonte ocorrerá após a confirmação do pagamento integral ou do primeiro pagamento acordado, conforme combinado entre as partes.</p>
-    <p><span class="clause-title">4.5.</span> Em caso de <strong>atraso no pagamento</strong> superior a <strong>15 (quinze) dias</strong> do vencimento acordado, incidirá <strong>multa de 2% (dois por cento)</strong> sobre o valor em aberto, acrescida de <strong>juros de 1% (um por cento) ao mês</strong>, além da possibilidade de o CONTRATADO <strong>suspender o suporte técnico e o acesso técnico</strong> (orientações, correções e acompanhamento) até a regularização dos valores em aberto, sem prejuízo das demais medidas previstas neste contrato.</p>
-</div>
+<th:block th:replace="${tipoContrato == 'mensalidade'} ? ~{fragments/contrato-licenciamento-pagamento-mensalidade :: secao} : ~{fragments/contrato-licenciamento-pagamento-bruto :: secao}"></th:block>
 
 <h2>CLÁUSULA QUINTA – DA LICENÇA E PROPRIEDADE INTELECTUAL</h2>
 <div class="clause">

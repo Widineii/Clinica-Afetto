@@ -204,7 +204,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
         Usuario usuario = principal.getUsuario();
 
-        if (usuario == null || usuario.getId() == null || "ROLE_ADMIN".equals(usuario.getCargo())) {
+        if (usuario == null || usuario.getId() == null) {
 
             return;
 

@@ -1,0 +1,52 @@
+<div th:fragment="painel (tipoContrato)" xmlns:th="http://www.thymeleaf.org" class="justificativa-valor">
+    <div th:if="${tipoContrato == 'bruto'}">
+        <h2 class="justificativa-valor__titulo">💰 Justificativa técnica do valor de licenciamento — Pagamento único (R$ <span th:text="${valorBrutoContrato} ?: '2.000,00'">2.000,00</span>)</h2>
+        <p class="justificativa-valor__intro">
+            O valor definido para o licenciamento do sistema Agenda Afetto reflete o desenvolvimento sob medida para a rotina da clínica,
+            considerando o período de testes em ambiente real e a entrega completa dos módulos necessários à operação diária.
+            Este não é um sistema genérico de prateleira, mas uma solução personalizada, construída para atender às demandas específicas
+            de gestão clínica, administrativa e financeira.
+        </p>
+        <p class="justificativa-valor__subtitulo mb-2">O valor inclui:</p>
+        <ul class="justificativa-valor__lista">
+            <li>Licença completa do software na versão entregue, com todos os módulos descritos no contrato (agenda, financeiro, relatórios, pagamentos, WhatsApp, LGPD e demais componentes).</li>
+            <li>Implantação técnica no servidor KingHost e configuração do ambiente de produção.</li>
+            <li>Suporte técnico por 3 meses, abrangendo correção de erros (bugs), ajustes e orientações conforme a Cláusula Sexta do contrato.</li>
+            <li>Entrega definitiva do código-fonte e credenciais após quitação integral.</li>
+        </ul>
+        <p class="justificativa-valor__nota mb-2">
+            A infraestrutura KingHost (VPS – R$ 48/mês) é contratada diretamente pela clínica junto ao provedor, garantindo operação contínua e segura.
+        </p>
+        <p class="justificativa-valor__nota mb-2">
+            O pagamento único assegura a propriedade da licença e o direito de uso perpétuo do sistema, conforme as cláusulas de propriedade intelectual.
+        </p>
+        <p class="justificativa-valor__destaque mb-0">
+            ➡️ Esse investimento garante à clínica uma solução definitiva, exclusiva e adaptada às suas necessidades, sem custos adicionais futuros de licenciamento.
+        </p>
+    </div>
+
+    <div th:if="${tipoContrato == 'mensalidade'}">
+        <h2 class="justificativa-valor__titulo">🔄 Justificativa técnica do valor de licenciamento — Mensalidade (R$ <span th:text="${valorMensalContrato} ?: '200,00'">200,00</span>/mês)</h2>
+        <p class="justificativa-valor__intro">
+            O modelo de mensalidade distribui o custo do software ao longo do tempo, mantendo o sistema atualizado e em operação contínua,
+            com licença de uso, suporte técnico e manutenção corretiva enquanto a mensalidade estiver em dia.
+            Essa modalidade é ideal para clínicas que preferem diluir o investimento inicial e garantir acompanhamento técnico permanente.
+        </p>
+        <p class="justificativa-valor__subtitulo mb-2">O valor mensal inclui:</p>
+        <ul class="justificativa-valor__lista">
+            <li>Acesso contínuo a todos os módulos do sistema Agenda Afetto, nas mesmas condições do contrato de valor bruto.</li>
+            <li>Manutenção corretiva, com correção de falhas que impeçam o uso normal do sistema.</li>
+            <li>Suporte técnico recorrente, conforme os prazos e condições da Cláusula Sexta do contrato.</li>
+            <li>Atualizações e ajustes de configuração, garantindo estabilidade e segurança operacional.</li>
+        </ul>
+        <p class="justificativa-valor__nota mb-2">
+            A mensalidade não inclui os custos da infraestrutura KingHost (R$ 48/mês – servidor e banco), que são pagos diretamente pela clínica ao provedor.
+        </p>
+        <p class="justificativa-valor__nota mb-2">
+            Essa opção reduz o investimento inicial — dispensando o pagamento único de R$ <span th:text="${valorBrutoContrato} ?: '2.000,00'">2.000,00</span> — e mantém o sistema em evolução contínua, com suporte ativo e acompanhamento técnico.
+        </p>
+        <p class="justificativa-valor__destaque mb-0">
+            ➡️ Esse modelo assegura acompanhamento contínuo e suporte ativo, mantendo o sistema sempre estável e atualizado.
+        </p>
+    </div>
+</div>

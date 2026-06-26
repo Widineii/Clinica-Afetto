@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 public class ContratoLicenciamentoRascunho {
 
     public static final String ID_PADRAO = "padrao";
+    public static final String ID_BRUTO = "bruto";
+    public static final String ID_MENSALIDADE = "mensalidade";
 
     @Id
     @Column(length = 40)

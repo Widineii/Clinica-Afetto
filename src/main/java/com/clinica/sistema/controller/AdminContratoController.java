@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,7 +46,7 @@ public class AdminContratoController {
     }
 
     @GetMapping("/contrato")
-    public String contrato(Model model, RedirectAttributes redirectAttributes) {
+    public String selecionarContrato(Model model, RedirectAttributes redirectAttributes) {
         var usuario = authService.buscarUsuarioLogadoObrigatorio();
         if (!authService.podeAcessarContratoLicenciamento(usuario)) {
             redirectAttributes.addFlashAttribute(
@@ -58,25 +59,99 @@ public class AdminContratoController {
 
         model.addAttribute("usuarioLogado", usuario);
         model.addAttribute("isAdmin", authService.isAdmin(usuario));
+        model.addAttribute("contratoPerfilContratado", authService.podeEditarContratoComoDesenvolvedor(usuario));
+        model.addAttribute("contratoSomenteLeitura", authService.contratoSomenteLeitura(usuario));
+
+        String tipoFinalizado = contratoLicenciamentoService.buscarTipoContratoFinalizado();
+        if (tipoFinalizado != null) {
+            return "redirect:/agendamentos/admin/contrato/" + tipoFinalizado;
+        }
+        model.addAttribute(
+                "contratoAguardandoInicio",
+                authService.contratoSomenteLeitura(usuario)
+        );
+        model.addAttribute(
+                "valorBrutoContrato",
+                contratoLicenciamentoService.buscarValorCampo("bruto", "pag-valor-total", "2.000,00")
+        );
+        model.addAttribute(
+                "valorMensalContrato",
+                contratoLicenciamentoService.buscarValorCampo("mensalidade", "pag-valor-mensal", "200,00")
+        );
+        return "admin-contrato-selecao";
+    }
+
+    @GetMapping("/contrato/{tipo}")
+    public String contrato(
+            @PathVariable String tipo,
+            Model model,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (!ContratoLicenciamentoService.tipoContratoValido(tipo)) {
+            return "redirect:/agendamentos/admin/contrato";
+        }
+
+        var usuario = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarContratoLicenciamento(usuario)) {
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Somente administracao ou dona da clinica podem acessar o contrato."
+            );
+            redirectAttributes.addFlashAttribute("erroContexto", "contrato");
+            return "redirect:/agendamentos/dashboard";
+        }
+
+        String tipoFinalizado = contratoLicenciamentoService.buscarTipoContratoFinalizado();
+        if (tipoFinalizado != null && !tipoFinalizado.equals(tipo)) {
+            return "redirect:/agendamentos/admin/contrato/" + tipoFinalizado;
+        }
+
+        model.addAttribute("usuarioLogado", usuario);
+        model.addAttribute("isAdmin", authService.isAdmin(usuario));
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuario));
         model.addAttribute("contratoGrupoUsuario", authService.resolverGrupoContratoLicenciamento(usuario));
-        model.addAttribute("contratoPerfilContratado", authService.isAdmin(usuario));
+        model.addAttribute("contratoPerfilContratado", authService.podeEditarContratoComoDesenvolvedor(usuario));
+        model.addAttribute("contratoSomenteLeitura", authService.contratoSomenteLeitura(usuario));
+        model.addAttribute("contratoTipo", tipo);
+        model.addAttribute("contratoTipoRotulo", ContratoLicenciamentoService.rotuloTipoContrato(tipo));
+        model.addAttribute("contratoFinalizadoTipo", tipoFinalizado);
+        model.addAttribute(
+                "contratoFinalizadoTipoRotulo",
+                tipoFinalizado != null ? ContratoLicenciamentoService.rotuloTipoContrato(tipoFinalizado) : null
+        );
+        model.addAttribute(
+                "valorBrutoContrato",
+                contratoLicenciamentoService.buscarValorCampo("bruto", "pag-valor-total", "2.000,00")
+        );
+        model.addAttribute(
+                "valorMensalContrato",
+                contratoLicenciamentoService.buscarValorCampo("mensalidade", "pag-valor-mensal", "200,00")
+        );
         return "admin-contrato";
     }
 
-    @GetMapping("/contrato/dados")
+    @GetMapping("/contrato/{tipo}/dados")
     @ResponseBody
-    public ContratoRascunhoView buscarDados() {
+    public ContratoRascunhoView buscarDados(@PathVariable String tipo) {
+        exigirTipoContrato(tipo);
         exigirAcessoContrato();
-        return contratoLicenciamentoService.buscarRascunho();
+        return contratoLicenciamentoService.buscarRascunho(tipo);
     }
 
-    @PostMapping("/contrato/dados")
+    @PostMapping("/contrato/{tipo}/dados")
     @ResponseBody
-    public ContratoRascunhoView salvarDados(@RequestBody Map<String, Object> dados) {
+    public ContratoRascunhoView salvarDados(
+            @PathVariable String tipo,
+            @RequestBody Map<String, Object> dados
+    ) {
         Usuario usuario = exigirAcessoContrato();
+        exigirTipoContrato(tipo);
+        if (authService.contratoSomenteLeitura(usuario)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este perfil so pode visualizar o contrato.");
+        }
         try {
             return contratoLicenciamentoService.salvarRascunho(
+                    tipo,
                     usuario,
                     dados,
                     authService.resolverGrupoContratoLicenciamento(usuario)
@@ -86,37 +161,37 @@ public class AdminContratoController {
         }
     }
 
-    @PostMapping("/contrato/finalizar")
+    @PostMapping("/contrato/{tipo}/finalizar")
     @ResponseBody
-    public ContratoRascunhoView finalizarContrato() {
+    public ContratoRascunhoView finalizarContrato(@PathVariable String tipo) {
         Usuario usuario = exigirAcessoContrato();
-        if (!ContratoLicenciamentoService.GRUPO_CONTRATANTE.equals(
-                authService.resolverGrupoContratoLicenciamento(usuario)
-        )) {
+        exigirTipoContrato(tipo);
+        if (!authService.podeEditarDadosContratoClinica(usuario)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Somente a clinica pode finalizar o contrato."
             );
         }
         try {
-            return contratoLicenciamentoService.finalizarContratante(usuario);
+            return contratoLicenciamentoService.finalizarContratante(tipo, usuario);
         } catch (IllegalStateException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
     }
 
-    @PostMapping("/contrato/liberar")
+    @PostMapping("/contrato/{tipo}/liberar")
     @ResponseBody
-    public ContratoRascunhoView liberarContrato() {
+    public ContratoRascunhoView liberarContrato(@PathVariable String tipo) {
         Usuario usuario = exigirAcessoContrato();
-        if (!authService.isAdmin(usuario)) {
+        exigirTipoContrato(tipo);
+        if (!authService.podeLiberarEdicaoContratoClinica(usuario)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Somente o desenvolvedor pode liberar a edicao da clinica."
             );
         }
         try {
-            return contratoLicenciamentoService.liberarContratante(usuario);
+            return contratoLicenciamentoService.liberarContratante(tipo, usuario);
         } catch (IllegalStateException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
@@ -141,6 +216,12 @@ public class AdminContratoController {
                 response.reset();
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Nao foi possivel gerar o PDF.");
             }
+        }
+    }
+
+    private void exigirTipoContrato(String tipo) {
+        if (!ContratoLicenciamentoService.tipoContratoValido(tipo)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tipo de contrato invalido.");
         }
     }
 

@@ -147,7 +147,7 @@
         <h1>Sua conta está quase pronta</h1>
         <p>
             Sua conta já foi criada e está <span class="destaque">aguardando a Polyana confirmar o acesso</span>.
-            Assim que ela liberar, você poderá entrar com o login e a senha que escolheu.
+            Assim que ela liberar, você receberá um e-mail e poderá entrar com o login e a senha que escolheu.
         </p>
         <a class="conta-pendente-voltar" th:href="@{/login}">Voltar para o login</a>
     </main>
@@ -171,6 +171,12 @@
 
             <label for="cadastroLogin">Nome do login</label>
             <input th:field="*{login}" id="cadastroLogin" type="text" class="form-control" maxlength="60" required autocomplete="username">
+
+            <label for="cadastroEmail">E-mail</label>
+            <input th:field="*{email}" id="cadastroEmail" type="email" class="form-control" maxlength="120" required autocomplete="email" placeholder="seu.email@gmail.com">
+
+            <label for="cadastroTelefone">WhatsApp</label>
+            <input th:field="*{telefoneWhatsapp}" id="cadastroTelefone" type="text" class="form-control" maxlength="20" required inputmode="numeric" pattern="[0-9]+" autocomplete="tel" placeholder="11987654321">
 
             <label for="cadastroSenha">Senha</label>
             <input th:field="*{senha}" id="cadastroSenha" type="password" class="form-control" maxlength="60" required autocomplete="new-password">

@@ -1,0 +1,35 @@
+<div th:fragment="secao" xmlns:th="http://www.thymeleaf.org">
+<h2>CLÁUSULA QUARTA – DO PREÇO E FORMA DE PAGAMENTO (VALOR BRUTO)</h2>
+<div class="clause">
+    <p><span class="clause-title">4.1.</span> Pelo licenciamento do software e pelos serviços descritos neste contrato, a CONTRATANTE pagará ao CONTRATADO o <strong>valor total único (bruto)</strong> de:</p>
+    <table>
+        <tr>
+            <th>Item</th>
+            <th>Descrição</th>
+            <th>Valor (R$)</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>Licença de uso do sistema Agenda Afetto (versão 2.6), entrega técnica, implantação na KingHost e <strong>suporte por 3 (três) meses para correção de erros</strong> (conforme Cláusula Sexta)</td>
+            <td><strong class="valor-campo" data-grupo="contratado" data-campo="pag-valor-total">2.000,00</strong><input class="campo campo-curto" data-grupo="contratado" id="pag-valor-total" value="2.000,00" placeholder="0,00"></td>
+        </tr>
+    </table>
+    <p><span class="clause-title">4.2.</span> Forma de pagamento (marque a opção aplicável):</p>
+    <div class="bloco-somente-contratante">
+    <p>
+        <span class="grupo-contratante" data-grupo="contratante">
+        <label><input type="checkbox" data-grupo="contratante" id="pag-avista"> À vista</label> &nbsp;
+        <label><input type="checkbox" data-grupo="contratante" id="pag-parcelado"> Parcelado em
+        <input class="campo campo-curto" data-grupo="contratante" id="pag-parcelas" placeholder="___"> vezes mensais e sucessivas</label> &nbsp; | Meio:
+        <label><input type="checkbox" data-grupo="contratante" id="pag-pix" checked> PIX</label> &nbsp;
+        <label><input type="checkbox" data-grupo="contratante" id="pag-transferencia"> Transferência</label> &nbsp;
+        <label><input type="checkbox" data-grupo="contratante" id="pag-outro"> Outro:</label>
+        <input class="campo campo-medio" data-grupo="contratante" id="pag-outro-texto" placeholder="especificar">
+        </span>
+    </p>
+    </div>
+    <p class="bloco-somente-contratado"><span class="clause-title">4.3.</span> Chave PIX / dados bancários do CONTRATADO: <strong class="valor-campo" data-grupo="contratado" data-campo="contratado-pix">widineimartins8@gmail.com</strong><input class="campo campo-medio" data-grupo="contratado" id="contratado-pix" value="widineimartins8@gmail.com" placeholder="Chave PIX ou dados bancários"></p>
+    <p><span class="clause-title">4.4.</span> A entrega definitiva do acesso, credenciais e código-fonte ocorrerá após a confirmação do pagamento integral ou do primeiro pagamento acordado, conforme combinado entre as partes.</p>
+    <p><span class="clause-title">4.5.</span> Em caso de <strong>atraso no pagamento</strong> superior a <strong>15 (quinze) dias</strong> do vencimento acordado, incidirá <strong>multa de 2% (dois por cento)</strong> sobre o valor em aberto, acrescida de <strong>juros de 1% (um por cento) ao mês</strong>, além da possibilidade de o CONTRATADO <strong>suspender o suporte técnico e o acesso técnico</strong> até a regularização dos valores em aberto.</p>
+</div>
+</div>

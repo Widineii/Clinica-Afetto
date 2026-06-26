@@ -10,6 +10,8 @@ public record ContratoRascunhoView(
         long versao,
         boolean contratanteFinalizado,
         String contratanteFinalizadoEm,
-        String contratanteFinalizadoPorNome
+        String contratanteFinalizadoPorNome,
+        String contratoFinalizadoTipo,
+        String contratoFinalizadoTipoRotulo
 ) {
 }

@@ -86,6 +86,21 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-test-user.exigir-troca-senha:#{null}}")
     private Boolean testUserExigirTrocaSenha;
 
+    @Value("${app.seed-lucas-admin.enabled:false}")
+    private boolean seedLucasAdminEnabled;
+
+    @Value("${app.seed-lucas-admin.login:lucas}")
+    private String lucasAdminLogin;
+
+    @Value("${app.seed-lucas-admin.password:297b}")
+    private String lucasAdminPassword;
+
+    @Value("${app.seed-lucas-admin.name:Lucas}")
+    private String lucasAdminName;
+
+    @Value("${app.seed-lucas-admin.reset-password-on-startup:false}")
+    private boolean lucasAdminResetPasswordOnStartup;
+
     @Value("${app.seed-valores-consulta-padrao:false}")
     private boolean seedValoresConsultaPadrao;
 
@@ -115,6 +130,7 @@ public class StartupDataInitializer implements CommandLineRunner {
         }
         garantirAdmin();
         garantirUsuarioTeste();
+        garantirUsuarioLucasAdmin();
         migrarSenhasLegadas();
         if (seedValoresConsultaPadrao) {
             usuarioService.preencherValoresConsultaPadraoOndeAusente();
@@ -137,6 +153,7 @@ public class StartupDataInitializer implements CommandLineRunner {
     public void sincronizarCargaInicialClinica() {
         sincronizarUsuariosPadrao();
         garantirAdmin();
+        garantirUsuarioLucasAdmin();
         if (seedCargaInicialFixos) {
             sincronizarAgendamentosFixosPadrao();
         }
@@ -267,6 +284,41 @@ public class StartupDataInitializer implements CommandLineRunner {
             return novo && testUserExigirTrocaSenha;
         }
         return novo && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso();
+    }
+
+    /**
+     * Segundo administrador (Lucas) — mesmas permissoes do admin principal, com troca de senha no primeiro acesso.
+     */
+    private void garantirUsuarioLucasAdmin() {
+        if (!seedLucasAdminEnabled) {
+            return;
+        }
+        if (lucasAdminLogin == null || lucasAdminLogin.isBlank()
+                || lucasAdminPassword == null || lucasAdminPassword.isBlank()) {
+            return;
+        }
+
+        String login = lucasAdminLogin.trim().toLowerCase(Locale.ROOT);
+        if (adminLogin != null && login.equalsIgnoreCase(adminLogin.trim())) {
+            return;
+        }
+
+        Usuario usuario = usuarioRepository.findByLogin(login).orElseGet(Usuario::new);
+        boolean novo = usuario.getId() == null;
+
+        usuario.setNome(lucasAdminName != null && !lucasAdminName.isBlank() ? lucasAdminName.trim() : "Lucas");
+        usuario.setLogin(login);
+        usuario.setCargo("ROLE_ADMIN");
+        usuario.setDonaClinica(false);
+
+        if (novo || lucasAdminResetPasswordOnStartup) {
+            usuario.setSenha(passwordEncoder.encode(lucasAdminPassword.trim()));
+        }
+        if (novo && segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
+            usuario.setDeveTrocarSenha(true);
+        }
+
+        usuarioRepository.save(usuario);
     }
 
     private void sincronizarUsuariosPadrao() {

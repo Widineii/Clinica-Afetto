@@ -6,6 +6,8 @@ import lombok.Data;
 public class CadastroContaPublicaForm {
     private String nome;
     private String login;
+    private String email;
+    private String telefoneWhatsapp;
     private String senha;
     private String confirmarSenha;
 }

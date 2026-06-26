@@ -189,6 +189,91 @@
             color: #0a8785;
         }
         .instrucoes p { margin: 4px 0; }
+        .modelo-pastas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: stretch;
+        }
+        .modelo-pasta {
+            width: 160px;
+            text-decoration: none;
+            color: #1f2937;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 14px 10px 12px;
+            background: #fff;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        }
+        .modelo-pasta:hover,
+        .modelo-pasta.is-active {
+            color: #0f766e;
+            border-color: #0a8785;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+            transform: translateY(-1px);
+        }
+        .modelo-pasta svg {
+            width: 82px;
+            height: 64px;
+            display: block;
+            margin: 0 auto 8px;
+            filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.18));
+        }
+        .modelo-pasta__nome {
+            display: block;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .modelo-pasta__hint {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 1.25;
+        }
+        .justificativa-valor {
+            background: #f8fafc;
+            border: 1px solid #dbe4ea;
+            border-radius: 14px;
+            padding: 16px 18px;
+            font-size: 0.94rem;
+            color: #334155;
+        }
+        .justificativa-valor__titulo {
+            margin: 0 0 10px;
+            font-size: 1rem;
+            color: #0a8785;
+            line-height: 1.35;
+        }
+        .justificativa-valor__subtitulo {
+            margin: 0;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .justificativa-valor__intro {
+            margin: 0;
+            line-height: 1.45;
+        }
+        .justificativa-valor__lista {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+        .justificativa-valor__lista li {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .justificativa-valor__nota {
+            font-size: 0.88rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .justificativa-valor__destaque {
+            font-size: 0.94rem;
+            font-weight: 600;
+            color: #0f766e;
+            line-height: 1.45;
+        }
         .contrato-status {
             font-size: 0.9rem;
             color: #0a8785;
@@ -219,12 +304,19 @@
     <div class="hero-band mb-4 no-print">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
-                <p class="text-uppercase small mb-2 opacity-75" th:text="${contratoPerfilContratado} ? 'Desenvolvedor' : 'Clinica'">Contrato</p>
-                <h1 class="h2 mb-2">Contrato de licenciamento</h1>
-                <p class="mb-0 opacity-75" th:if="${contratoPerfilContratado}">
+                <p class="text-uppercase small mb-2 opacity-75" th:if="${contratoSomenteLeitura == true}">Visualizacao</p>
+                <p class="text-uppercase small mb-2 opacity-75" th:if="${contratoSomenteLeitura != true}" th:text="${contratoPerfilContratado == true} ? 'Desenvolvedor' : 'Clinica'">Contrato</p>
+                <h1 class="h2 mb-2">Contrato de licenciamento — <span th:text="${contratoTipoRotulo}">Valor bruto</span></h1>
+                <p class="mb-0 opacity-75" th:if="${contratoSomenteLeitura == true and contratoFinalizadoTipo != null}">
+                    Documento aceito pela clinica. Voce pode ler e gerar PDF.
+                </p>
+                <p class="mb-0 opacity-75" th:if="${contratoSomenteLeitura == true and contratoFinalizadoTipo == null}">
+                    Leia as duas propostas. Quando a Polyana iniciar, so a escolhida ficara aqui.
+                </p>
+                <p class="mb-0 opacity-75" th:if="${contratoPerfilContratado == true and contratoSomenteLeitura != true}">
                     Preencha seus dados como desenvolvedor. Os dados da clinica sao preenchidos pela Polyana.
                 </p>
-                <p class="mb-0 opacity-75" th:unless="${contratoPerfilContratado}">
+                <p class="mb-0 opacity-75" th:if="${contratoPerfilContratado != true and contratoSomenteLeitura != true}">
                     Preencha os dados da clinica. Os dados do desenvolvedor ja sao preenchidos pelo Widinei.
                 </p>
             </div>
@@ -238,7 +330,67 @@
         </div>
     </div>
 
-    <div class="shell-card no-print instrucoes mb-4">
+    <div class="shell-card no-print mb-4" th:if="${contratoSomenteLeitura != true || contratoFinalizadoTipo == null}">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1" th:if="${contratoFinalizadoTipo != null}">Modelo escolhido</h2>
+                <h2 class="h5 mb-1" th:if="${contratoFinalizadoTipo == null and contratoSomenteLeitura == true}">Propostas para leitura</h2>
+                <h2 class="h5 mb-1" th:if="${contratoFinalizadoTipo == null and contratoSomenteLeitura != true}">Escolha o modelo</h2>
+                <p class="text-muted mb-0" th:if="${contratoFinalizadoTipo != null}">
+                    Este foi o contrato iniciado pela clinica. A outra opcao fica oculta.
+                </p>
+                <p class="text-muted mb-0" th:if="${contratoFinalizadoTipo == null and contratoSomenteLeitura == true}">
+                    Abra a outra pasta para comparar. Depois do inicio, so a escolhida permanece.
+                </p>
+                <p class="text-muted mb-0" th:if="${contratoFinalizadoTipo == null and contratoSomenteLeitura != true}">
+                    Clique na pasta para abrir valor bruto ou mensalidade.
+                </p>
+            </div>
+        </div>
+        <div class="modelo-pastas" aria-label="Modelos de contrato">
+            <a th:href="@{/agendamentos/admin/contrato/bruto}"
+               class="modelo-pasta"
+               data-contrato-modelo="bruto"
+               th:if="${contratoFinalizadoTipo == null || contratoFinalizadoTipo == 'bruto'}"
+               th:classappend="${contratoTipo == 'bruto'} ? ' is-active' : ''">
+                <svg viewBox="0 0 82 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 16C6 13.2 8.2 11 11 11H31L38 18H71C73.8 18 76 20.2 76 23V53C76 55.8 73.8 58 71 58H11C8.2 58 6 55.8 6 53V16Z" fill="#F5C542"/>
+                    <path d="M6 24C6 21.2 8.2 19 11 19H71C73.8 19 76 21.2 76 24V53C76 55.8 73.8 58 71 58H11C8.2 58 6 55.8 6 53V24Z" fill="#FFD767"/>
+                    <rect x="28" y="30" width="28" height="20" rx="2" fill="#fff" opacity="0.95"/>
+                    <path d="M32 36H52M32 40H48M32 44H44" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span class="modelo-pasta__nome">Valor bruto</span>
+                <span class="modelo-pasta__hint">Pagamento unico</span>
+            </a>
+            <a th:href="@{/agendamentos/admin/contrato/mensalidade}"
+               class="modelo-pasta"
+               data-contrato-modelo="mensalidade"
+               th:if="${contratoFinalizadoTipo == null || contratoFinalizadoTipo == 'mensalidade'}"
+               th:classappend="${contratoTipo == 'mensalidade'} ? ' is-active' : ''">
+                <svg viewBox="0 0 82 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 16C6 13.2 8.2 11 11 11H31L38 18H71C73.8 18 76 20.2 76 23V53C76 55.8 73.8 58 71 58H11C8.2 58 6 55.8 6 53V16Z" fill="#F5C542"/>
+                    <path d="M6 24C6 21.2 8.2 19 11 19H71C73.8 19 76 21.2 76 24V53C76 55.8 73.8 58 71 58H11C8.2 58 6 55.8 6 53V24Z" fill="#FFD767"/>
+                    <circle cx="42" cy="40" r="11" fill="#0a8785" opacity="0.92"/>
+                    <text x="42" y="44" text-anchor="middle" fill="#fff" font-size="11" font-family="Arial,sans-serif" font-weight="bold">R$</text>
+                </svg>
+                <span class="modelo-pasta__nome">Mensalidade</span>
+                <span class="modelo-pasta__hint">R$ 200 por mes</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="shell-card no-print mb-4">
+        <div th:replace="~{fragments/contrato-licenciamento-justificativa-valor :: painel(${contratoTipo})}"></div>
+    </div>
+
+    <div class="shell-card no-print instrucoes mb-4" th:if="${contratoSomenteLeitura == true}">
+        <h2>Visualizacao</h2>
+        <p class="mb-3" th:if="${contratoFinalizadoTipo != null}">Contrato iniciado pela clinica. Voce pode ler o documento e gerar PDF.</p>
+        <p class="mb-3" th:if="${contratoFinalizadoTipo == null}">Modo leitura. Compare as propostas; a Polyana decide qual iniciar.</p>
+        <button type="button" class="btn btn-outline-primary" id="btnSalvarPdfLeitura">Salvar em PDF</button>
+    </div>
+
+    <div class="shell-card no-print instrucoes mb-4" th:if="${contratoSomenteLeitura != true}">
         <h2>Como usar</h2>
         <p th:if="${contratoPerfilContratado}">1. Clique em <strong>Preencher contrato</strong> e edite <strong>seus dados</strong> direto no documento.</p>
         <p th:unless="${contratoPerfilContratado}">1. Clique em <strong>Preencher contrato</strong> e edite os <strong>dados da clinica</strong> direto no documento.</p>
@@ -259,28 +411,34 @@
     </div>
 
     <div class="shell-card contrato-doc modo-leitura" id="contratoDoc" th:attr="data-grupo-usuario=${contratoGrupoUsuario}">
-        <div th:replace="~{fragments/contrato-licenciamento-corpo :: corpo}"></div>
+        <div th:replace="~{fragments/contrato-licenciamento-corpo :: corpo(${contratoTipo})}"></div>
     </div>
 </div>
 
 <script th:inline="javascript">
 (function () {
     var grupoUsuario = /*[[${contratoGrupoUsuario}]]*/ 'contratado';
+    var contratoTipo = /*[[${contratoTipo}]]*/ 'bruto';
+    var contratoFinalizadoTipo = /*[[${contratoFinalizadoTipo}]]*/ null;
+    var somenteLeitura = /*[[${contratoSomenteLeitura == true}]]*/ false;
+    var baseUrlContrato = '/agendamentos/admin/contrato/' + contratoTipo;
     var idsContratado = [
         'contratado-nome', 'contratado-cpf', 'contratado-rg', 'contratado-endereco',
         'contratado-whatsapp', 'contratado-email', 'contratado-pix',
+        'pag-valor-total', 'pag-valor-mensal',
         'assin-contratado-nome', 'assin-contratado-cpf'
     ];
     var idsContratante = [
         'contratante-nome', 'contratante-doc', 'contratante-endereco', 'contratante-representante',
+        'pag-dia-vencimento',
         'pag-parcelas', 'pag-outro-texto', 'foro', 'local', 'dia', 'mes', 'ano',
         'assin-contratante-nome', 'assin-contratante-doc', 'test1-nome', 'test1-cpf', 'test2-nome', 'test2-cpf'
     ];
     var checks = ['pag-avista', 'pag-parcelado', 'pag-pix', 'pag-transferencia', 'pag-outro'];
     var ids = grupoUsuario === 'contratado' ? idsContratado : idsContratante;
-    var urlDados = '/agendamentos/admin/contrato/dados';
-    var urlFinalizar = '/agendamentos/admin/contrato/finalizar';
-    var urlLiberar = '/agendamentos/admin/contrato/liberar';
+    var urlDados = baseUrlContrato + '/dados';
+    var urlFinalizar = baseUrlContrato + '/finalizar';
+    var urlLiberar = baseUrlContrato + '/liberar';
     var docEl = document.getElementById('contratoDoc');
     var statusEl = document.getElementById('contratoStatus');
     var bloqueioMsgEl = document.getElementById('contratoBloqueioMsg');
@@ -418,7 +576,22 @@
         }
     }
 
+    function atualizarPastasPorContratoFinalizado() {
+        document.querySelectorAll('[data-contrato-modelo]').forEach(function (pasta) {
+            var tipoPasta = pasta.getAttribute('data-contrato-modelo');
+            pasta.classList.toggle('d-none', !!contratoFinalizadoTipo && tipoPasta !== contratoFinalizadoTipo);
+        });
+    }
+
     function atualizarBotoes(estado) {
+        if (somenteLeitura) {
+            if (btnPreencher) btnPreencher.classList.add('d-none');
+            if (btnSalvar) btnSalvar.classList.add('d-none');
+            if (btnFinalizar) btnFinalizar.classList.add('d-none');
+            if (btnLiberar) btnLiberar.classList.add('d-none');
+            if (btnSalvarPdf) btnSalvarPdf.classList.remove('d-none');
+            return;
+        }
         var bloqueado = contratanteBloqueado();
         var emEdicao = editando && !bloqueado;
         var jaSalvou = contratoSalvo || versaoAtual > 0;
@@ -471,6 +644,10 @@
             docEl.classList.add('modo-leitura');
             marcarCamposAtivos();
             atualizarValoresExibidos();
+            checks.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
         }
         atualizarBotoes(ativo ? 'editando' : (contratoSalvo || versaoAtual > 0 ? 'salvo' : 'inicial'));
     }
@@ -500,7 +677,9 @@
         contratanteFinalizado = !!resposta.contratanteFinalizado;
         contratanteFinalizadoEm = resposta.contratanteFinalizadoEm || null;
         contratanteFinalizadoPorNome = resposta.contratanteFinalizadoPorNome || null;
+        contratoFinalizadoTipo = resposta.contratoFinalizadoTipo || contratoFinalizadoTipo;
         contratoSalvo = !!resposta.salvo || novaVersao > 0;
+        atualizarPastasPorContratoFinalizado();
         if (mudou || (!versaoAtual && resposta.salvo) || mudouFinalizado) {
             aplicarDados(resposta.dados);
             versaoAtual = novaVersao;
@@ -609,9 +788,6 @@
     });
 
     btnFinalizar?.addEventListener('click', function () {
-        if (!confirm('Ao iniciar o contrato, comeca o suporte de 3 meses e voce nao podera mais alterar os dados da clinica. O desenvolvedor precisara liberar para editar novamente. Continuar?')) {
-            return;
-        }
         btnFinalizar.disabled = true;
         postAcaoContrato(urlFinalizar)
             .then(function (resposta) {
@@ -649,8 +825,28 @@
         window.print();
     });
 
+    document.getElementById('btnSalvarPdfLeitura')?.addEventListener('click', function () {
+        window.print();
+    });
+
     marcarCamposAtivos();
     atualizarValoresExibidos();
+    if (somenteLeitura) {
+        checks.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.disabled = true;
+        });
+        atualizarPastasPorContratoFinalizado();
+        carregarDoServidor(true);
+        intervaloSync = window.setInterval(function () {
+            carregarDoServidor(true);
+        }, 5000);
+        window.addEventListener('beforeunload', function () {
+            if (intervaloSync) window.clearInterval(intervaloSync);
+        });
+        return;
+    }
+    atualizarPastasPorContratoFinalizado();
     carregarDoServidor(true).then(function (resposta) {
         if (resposta && contratanteBloqueado()) {
             definirModoEdicao(false);

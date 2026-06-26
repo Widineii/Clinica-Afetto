@@ -64,6 +64,7 @@ public class UsuarioService {
     private final ValorConsultaService valorConsultaService;
     private final PerfilFotoService perfilFotoService;
     private final AuditoriaService auditoriaService;
+    private final ContaAprovadaEmailService contaAprovadaEmailService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -77,7 +78,8 @@ public class UsuarioService {
             SegurancaProperties segurancaProperties,
             ValorConsultaService valorConsultaService,
             PerfilFotoService perfilFotoService,
-            AuditoriaService auditoriaService
+            AuditoriaService auditoriaService,
+            ContaAprovadaEmailService contaAprovadaEmailService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
@@ -88,6 +90,7 @@ public class UsuarioService {
         this.valorConsultaService = valorConsultaService;
         this.perfilFotoService = perfilFotoService;
         this.auditoriaService = auditoriaService;
+        this.contaAprovadaEmailService = contaAprovadaEmailService;
     }
 
     public List<Usuario> listarProfissionaisDaEquipe() {
@@ -430,12 +433,20 @@ public class UsuarioService {
     public Usuario solicitarContaPublica(CadastroContaPublicaForm form) {
         String nome = form != null && form.getNome() != null ? form.getNome().trim() : "";
         String login = form != null && form.getLogin() != null ? form.getLogin().trim().toLowerCase() : "";
+        String email = form != null && form.getEmail() != null ? form.getEmail().trim() : "";
+        String telefone = form != null && form.getTelefoneWhatsapp() != null ? form.getTelefoneWhatsapp().trim() : "";
         String senha = form != null && form.getSenha() != null ? form.getSenha().trim() : "";
         String confirmarSenha = form != null && form.getConfirmarSenha() != null
                 ? form.getConfirmarSenha().trim()
                 : "";
 
         validarDadosBasicosConta(nome, login, senha);
+        if (email.isBlank()) {
+            throw new RuntimeException("Informe seu e-mail pessoal.");
+        }
+        if (telefone.isBlank()) {
+            throw new RuntimeException("Informe seu WhatsApp com DDD (ex.: 11987654321).");
+        }
         if (!senha.equals(confirmarSenha)) {
             throw new RuntimeException("A confirmação da senha precisa ser igual à senha informada.");
         }
@@ -446,6 +457,8 @@ public class UsuarioService {
         Usuario usuario = new Usuario();
         usuario.setNome(nome);
         usuario.setLogin(login);
+        usuario.setEmail(normalizarEmail(email));
+        usuario.setTelefoneWhatsapp(normalizarTelefoneWhatsapp(telefone));
         usuario.setSenha(passwordEncoder.encode(senha));
         usuario.setCargo("ROLE_PROFISSIONAL");
         usuario.setDonaClinica(false);
@@ -509,6 +522,7 @@ public class UsuarioService {
         alvo.setDeveTrocarSenha(false);
         Usuario salvo = usuarioRepository.save(alvo);
         auditoriaService.registrarContaAprovada(usuarioLogado, salvo);
+        contaAprovadaEmailService.notificarContaLiberada(salvo);
         return salvo;
     }
 
@@ -633,7 +647,7 @@ public class UsuarioService {
     }
 
     private boolean deveTrocarSenha(Usuario usuarioLogado) {
-        if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
+        if (authService.isDonaClinica(usuarioLogado)) {
             return false;
         }
         Usuario atualizado = usuarioRepository.findById(usuarioLogado.getId()).orElse(usuarioLogado);

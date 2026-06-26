@@ -43,7 +43,7 @@ public class UsoBancoService {
     @Value("${app.banco.storage-limit-mb:${app.neon.storage-limit-mb:512}}")
     private int limiteStorageMb;
 
-    @Value("${app.banco.painel-provedor:Neon}")
+    @Value("${app.banco.painel-provedor:KingHost}")
     private String painelProvedor;
 
     public UsoBancoService(
@@ -124,7 +124,7 @@ public class UsoBancoService {
                 bytesBancoReal,
                 bytesBancoReal != null ? formatarBytes(bytesBancoReal) : null,
                 formatarBytes(bytesEstimados),
-                painelProvedor != null ? painelProvedor.trim() : "Neon",
+                painelProvedor != null ? painelProvedor.trim() : "KingHost",
                 formatarLimitePlano(limiteStorageMb),
                 limiteStorageMb,
                 formatarPercentual(percentual),

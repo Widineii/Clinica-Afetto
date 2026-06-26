@@ -1358,6 +1358,8 @@
                         <tr>
                             <th>Nome</th>
                             <th>Login</th>
+                            <th class="d-none d-lg-table-cell">E-mail</th>
+                            <th class="d-none d-lg-table-cell">WhatsApp</th>
                             <th class="d-none d-md-table-cell">Solicitada em</th>
                             <th class="text-end">Ação</th>
                         </tr>
@@ -1373,11 +1375,18 @@
                                     <div>
                                         <div class="prof-name" th:text="${conta.nome}">Nome</div>
                                         <div class="prof-login d-md-none" th:text="${conta.login}">login</div>
+                                        <div class="prof-login d-lg-none" th:if="${conta.email != null}" th:text="${conta.email}">email</div>
                                     </div>
                                 </div>
                             </td>
                             <td class="d-none d-md-table-cell">
                                 <span class="prof-login" th:text="${conta.login}">login</span>
+                            </td>
+                            <td class="d-none d-lg-table-cell">
+                                <span th:text="${conta.email != null ? conta.email : '-'}">email</span>
+                            </td>
+                            <td class="d-none d-lg-table-cell">
+                                <span th:text="${conta.telefoneWhatsappFormulario != null and !#strings.isEmpty(conta.telefoneWhatsappFormulario) ? conta.telefoneWhatsappFormulario : '-'}">11999999999</span>
                             </td>
                             <td class="d-none d-md-table-cell"
                                 th:text="${conta.cadastroSolicitadoEm != null ? #temporals.format(conta.cadastroSolicitadoEm, 'dd/MM/yyyy HH:mm') : '-'}">26/06/2026 08:00</td>

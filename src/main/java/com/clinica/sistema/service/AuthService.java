@@ -22,6 +22,9 @@ public class AuthService {
     @Value("${app.seed-test-user.isento-pagamento:false}")
     private boolean testUserIsentoPagamento;
 
+    @Value("${app.seed-lucas-admin.login:lucas}")
+    private String lucasAdminLogin;
+
     public AuthService(UsuarioRepository usuarioRepository) {
         this.usuarioRepository = usuarioRepository;
     }
@@ -79,22 +82,49 @@ public class AuthService {
         return isAdmin(usuario);
     }
 
-    /**
-     * Contrato de licenciamento.
-     * Por enquanto liberado SOMENTE para o admin (desenvolvedor).
-     * Para liberar a dona da clinica (Polyana) depois, troque por:
-     *     return isAdmin(usuario) || isDonaClinica(usuario);
-     */
+    /** Contrato de licenciamento — administracao principal, apoio da clinica (Lucas) e dona da clinica. */
     public boolean podeAcessarContratoLicenciamento(Usuario usuario) {
-        return isAdmin(usuario);
+        return podeEditarContratoComoDesenvolvedor(usuario)
+                || isAdminApoioClinica(usuario)
+                || isDonaClinica(usuario);
+    }
+
+    /** Admin principal (desenvolvedor) — edita dados do contratado e libera edicao da clinica. */
+    public boolean podeEditarContratoComoDesenvolvedor(Usuario usuario) {
+        return isAdmin(usuario) && !isAdminApoioClinica(usuario);
+    }
+
+    public boolean podeLiberarEdicaoContratoClinica(Usuario usuario) {
+        return podeEditarContratoComoDesenvolvedor(usuario);
+    }
+
+    /** Segundo admin (Lucas) — acompanha o contrato em modo leitura. */
+    public boolean isAdminApoioClinica(Usuario usuario) {
+        if (usuario == null || !isAdmin(usuario)) {
+            return false;
+        }
+        String login = usuario.getLogin();
+        return login != null
+                && lucasAdminLogin != null
+                && lucasAdminLogin.equalsIgnoreCase(login.trim());
+    }
+
+    /** Lucas e demais apoios: apenas visualizam o contrato ja iniciado pela clinica. */
+    public boolean contratoSomenteLeitura(Usuario usuario) {
+        return isAdminApoioClinica(usuario);
+    }
+
+    /** Polyana preenche, salva e inicia o contrato da clinica. */
+    public boolean podeEditarDadosContratoClinica(Usuario usuario) {
+        return isDonaClinica(usuario);
     }
 
     /** Campos do contrato que cada perfil pode editar. */
     public String resolverGrupoContratoLicenciamento(Usuario usuario) {
-        if (isAdmin(usuario)) {
+        if (podeEditarContratoComoDesenvolvedor(usuario)) {
             return "contratado";
         }
-        if (isDonaClinica(usuario)) {
+        if (podeEditarDadosContratoClinica(usuario)) {
             return "contratante";
         }
         return "";

@@ -14,10 +14,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class ContratoLicenciamentoService {
@@ -36,6 +38,8 @@ public class ContratoLicenciamentoService {
             "contratado-whatsapp",
             "contratado-email",
             "contratado-pix",
+            "pag-valor-total",
+            "pag-valor-mensal",
             "assin-contratado-nome",
             "assin-contratado-cpf"
     );
@@ -45,6 +49,7 @@ public class ContratoLicenciamentoService {
             "contratante-doc",
             "contratante-endereco",
             "contratante-representante",
+            "pag-dia-vencimento",
             "pag-parcelas",
             "pag-outro-texto",
             "foro",
@@ -80,43 +85,71 @@ public class ContratoLicenciamentoService {
     }
 
     @Transactional(readOnly = true)
-    public ContratoRascunhoView buscarRascunho() {
-        return repository.findById(ContratoLicenciamentoRascunho.ID_PADRAO)
+    public ContratoRascunhoView buscarRascunho(String tipoContrato) {
+        return repository.findById(resolverIdContrato(tipoContrato))
                 .map(this::paraView)
                 .orElseGet(this::viewVazia);
     }
 
     @Transactional(readOnly = true)
     public SuporteContratoView resolverStatusSuporte() {
-        return repository.findById(ContratoLicenciamentoRascunho.ID_PADRAO)
+        return idsContratosAtivos().stream()
+                .map(repository::findById)
+                .flatMap(Optional::stream)
+                .filter(ContratoLicenciamentoRascunho::isContratanteFinalizado)
                 .map(ContratoLicenciamentoRascunho::getContratanteFinalizadoEm)
                 .filter(inicio -> inicio != null)
+                .findFirst()
                 .map(inicio -> SuporteContratoContador.calcular(inicio, LocalDate.now()))
                 .orElseGet(SuporteContratoView::inativo);
     }
 
+    @Transactional(readOnly = true)
+    public String buscarValorCampo(String tipoContrato, String campo, String valorPadrao) {
+        return repository.findById(resolverIdContrato(tipoContrato))
+                .map(ContratoLicenciamentoRascunho::getDadosJson)
+                .map(this::lerDadosJson)
+                .map(dados -> dados.get(campo))
+                .map(valor -> valor == null ? "" : String.valueOf(valor).trim())
+                .filter(texto -> !texto.isEmpty())
+                .orElse(valorPadrao);
+    }
+
+    @Transactional(readOnly = true)
+    public String buscarTipoContratoFinalizado() {
+        return idsContratosAtivos().stream()
+                .map(repository::findById)
+                .flatMap(Optional::stream)
+                .filter(ContratoLicenciamentoRascunho::isContratanteFinalizado)
+                .map(ContratoLicenciamentoRascunho::getId)
+                .findFirst()
+                .orElse(null);
+    }
+
     @Transactional
-    public ContratoRascunhoView salvarRascunho(Usuario usuario, Map<String, Object> dadosBrutos, String grupo) {
+    public ContratoRascunhoView salvarRascunho(
+            String tipoContrato,
+            Usuario usuario,
+            Map<String, Object> dadosBrutos,
+            String grupo
+    ) {
         if (!GRUPO_CONTRATADO.equals(grupo) && !GRUPO_CONTRATANTE.equals(grupo)) {
             throw new IllegalArgumentException("Grupo de contrato invalido.");
         }
 
-        ContratoLicenciamentoRascunho existente = repository
-                .findById(ContratoLicenciamentoRascunho.ID_PADRAO)
-                .orElse(null);
+        String idContrato = resolverIdContrato(tipoContrato);
+        ContratoLicenciamentoRascunho existente = repository.findById(idContrato).orElse(null);
         if (GRUPO_CONTRATANTE.equals(grupo) && existente != null && existente.isContratanteFinalizado()) {
             throw new IllegalStateException("Os dados da clinica estao finalizados e nao podem ser alterados.");
         }
 
-        Map<String, Object> atual = new LinkedHashMap<>(lerDadosJson(buscarJsonAtual()));
+        Map<String, Object> atual = new LinkedHashMap<>(lerDadosJson(buscarJsonAtual(idContrato)));
         Map<String, Object> novosDados = sanitizarDados(dadosBrutos, grupo);
         for (String campo : camposDoGrupo(grupo)) {
             atual.put(campo, novosDados.get(campo));
         }
 
-        ContratoLicenciamentoRascunho rascunho = repository
-                .findById(ContratoLicenciamentoRascunho.ID_PADRAO)
-                .orElseGet(this::novoRascunho);
+        ContratoLicenciamentoRascunho rascunho = repository.findById(idContrato).orElseGet(() -> novoRascunho(idContrato));
 
         try {
             rascunho.setDadosJson(jsonMapper.writeValueAsString(atual));
@@ -131,9 +164,15 @@ public class ContratoLicenciamentoService {
     }
 
     @Transactional
-    public ContratoRascunhoView finalizarContratante(Usuario usuario) {
-        ContratoLicenciamentoRascunho rascunho = repository
-                .findById(ContratoLicenciamentoRascunho.ID_PADRAO)
+    public ContratoRascunhoView finalizarContratante(String tipoContrato, Usuario usuario) {
+        String idContrato = resolverIdContrato(tipoContrato);
+        String tipoJaFinalizado = buscarTipoContratoFinalizado();
+        if (tipoJaFinalizado != null && !tipoJaFinalizado.equals(idContrato)) {
+            throw new IllegalStateException(
+                    "A clinica ja iniciou o contrato de " + rotuloTipoContrato(tipoJaFinalizado) + "."
+            );
+        }
+        ContratoLicenciamentoRascunho rascunho = repository.findById(idContrato)
                 .orElseThrow(() -> new IllegalStateException("Salve os dados da clinica antes de finalizar o contrato."));
 
         if (rascunho.isContratanteFinalizado()) {
@@ -141,9 +180,7 @@ public class ContratoLicenciamentoService {
         }
 
         Map<String, Object> dados = lerDadosJson(rascunho.getDadosJson());
-        if (!possuiDadosContratante(dados)) {
-            throw new IllegalStateException("Preencha e salve os dados da clinica antes de finalizar.");
-        }
+        validarDadosContratanteParaFinalizar(idContrato, dados);
 
         rascunho.setContratanteFinalizado(true);
         if (rascunho.getContratanteFinalizadoEm() == null) {
@@ -154,10 +191,9 @@ public class ContratoLicenciamentoService {
     }
 
     @Transactional
-    public ContratoRascunhoView liberarContratante(Usuario usuario) {
-        ContratoLicenciamentoRascunho rascunho = repository
-                .findById(ContratoLicenciamentoRascunho.ID_PADRAO)
-                .orElseGet(this::novoRascunho);
+    public ContratoRascunhoView liberarContratante(String tipoContrato, Usuario usuario) {
+        String idContrato = resolverIdContrato(tipoContrato);
+        ContratoLicenciamentoRascunho rascunho = repository.findById(idContrato).orElseGet(() -> novoRascunho(idContrato));
 
         if (!rascunho.isContratanteFinalizado()) {
             throw new IllegalStateException("Os dados da clinica nao estao finalizados.");
@@ -170,6 +206,43 @@ public class ContratoLicenciamentoService {
         return paraView(repository.save(rascunho));
     }
 
+    public static boolean tipoContratoValido(String tipoContrato) {
+        return ContratoLicenciamentoRascunho.ID_BRUTO.equals(tipoContrato)
+                || ContratoLicenciamentoRascunho.ID_MENSALIDADE.equals(tipoContrato);
+    }
+
+    public static String rotuloTipoContrato(String tipoContrato) {
+        if (ContratoLicenciamentoRascunho.ID_MENSALIDADE.equals(tipoContrato)) {
+            return "Mensalidade";
+        }
+        return "Valor bruto";
+    }
+
+    private String resolverIdContrato(String tipoContrato) {
+        if (!tipoContratoValido(tipoContrato)) {
+            throw new IllegalArgumentException("Tipo de contrato invalido.");
+        }
+        return tipoContrato;
+    }
+
+    @Transactional
+    public void migrarRascunhoPadraoSeNecessario() {
+        if (!repository.existsById(ContratoLicenciamentoRascunho.ID_BRUTO)
+                && repository.existsById(ContratoLicenciamentoRascunho.ID_PADRAO)) {
+            repository.findById(ContratoLicenciamentoRascunho.ID_PADRAO).ifPresent(padrao -> {
+                ContratoLicenciamentoRascunho bruto = novoRascunho(ContratoLicenciamentoRascunho.ID_BRUTO);
+                bruto.setDadosJson(padrao.getDadosJson());
+                bruto.setAtualizadoEm(padrao.getAtualizadoEm());
+                bruto.setAtualizadoPorUsuarioId(padrao.getAtualizadoPorUsuarioId());
+                bruto.setAtualizadoPorNome(padrao.getAtualizadoPorNome());
+                bruto.setContratanteFinalizado(padrao.isContratanteFinalizado());
+                bruto.setContratanteFinalizadoEm(padrao.getContratanteFinalizadoEm());
+                bruto.setContratanteFinalizadoPorNome(padrao.getContratanteFinalizadoPorNome());
+                repository.save(bruto);
+            });
+        }
+    }
+
     public List<String> camposDoGrupo(String grupo) {
         if (GRUPO_CONTRATADO.equals(grupo)) {
             return CAMPOS_CONTRATADO;
@@ -180,20 +253,36 @@ public class ContratoLicenciamentoService {
         return List.copyOf(campos.keySet());
     }
 
-    private String buscarJsonAtual() {
-        return repository.findById(ContratoLicenciamentoRascunho.ID_PADRAO)
+    private List<String> idsContratosAtivos() {
+        return List.of(ContratoLicenciamentoRascunho.ID_BRUTO, ContratoLicenciamentoRascunho.ID_MENSALIDADE);
+    }
+
+    private String buscarJsonAtual(String idContrato) {
+        return repository.findById(idContrato)
                 .map(ContratoLicenciamentoRascunho::getDadosJson)
                 .orElse("{}");
     }
 
-    private ContratoLicenciamentoRascunho novoRascunho() {
+    private ContratoLicenciamentoRascunho novoRascunho(String idContrato) {
         ContratoLicenciamentoRascunho rascunho = new ContratoLicenciamentoRascunho();
-        rascunho.setId(ContratoLicenciamentoRascunho.ID_PADRAO);
+        rascunho.setId(idContrato);
         return rascunho;
     }
 
     private ContratoRascunhoView viewVazia() {
-        return new ContratoRascunhoView(Map.of(), false, null, null, 0L, false, null, null);
+        String tipoFinalizado = buscarTipoContratoFinalizado();
+        return new ContratoRascunhoView(
+                Map.of(),
+                false,
+                null,
+                null,
+                0L,
+                false,
+                null,
+                null,
+                tipoFinalizado,
+                tipoFinalizado != null ? rotuloTipoContrato(tipoFinalizado) : null
+        );
     }
 
     private ContratoRascunhoView paraView(ContratoLicenciamentoRascunho rascunho) {
@@ -208,6 +297,7 @@ public class ContratoLicenciamentoService {
         String finalizadoEm = rascunho.getContratanteFinalizadoEm() != null
                 ? ROTULO_DATA.format(rascunho.getContratanteFinalizadoEm())
                 : null;
+        String tipoFinalizado = buscarTipoContratoFinalizado();
         return new ContratoRascunhoView(
                 dados,
                 salvo,
@@ -216,20 +306,52 @@ public class ContratoLicenciamentoService {
                 versao,
                 rascunho.isContratanteFinalizado(),
                 finalizadoEm,
-                rascunho.getContratanteFinalizadoPorNome()
+                rascunho.getContratanteFinalizadoPorNome(),
+                tipoFinalizado,
+                tipoFinalizado != null ? rotuloTipoContrato(tipoFinalizado) : null
         );
     }
 
-    private boolean possuiDadosContratante(Map<String, Object> dados) {
+    private void validarDadosContratanteParaFinalizar(String tipoContrato, Map<String, Object> dados) {
         if (dados == null || dados.isEmpty()) {
-            return false;
+            throw new IllegalStateException("Preencha e salve os dados da clinica antes de iniciar o contrato.");
         }
-        return CAMPOS_CONTRATANTE_TEXTO.stream()
-                .filter(campo -> !"dia".equals(campo) && !"mes".equals(campo) && !"ano".equals(campo))
-                .anyMatch(campo -> {
-                    Object valor = dados.get(campo);
-                    return valor != null && !String.valueOf(valor).trim().isEmpty();
-                });
+
+        List<String> camposObrigatorios = new ArrayList<>(List.of(
+                "contratante-nome",
+                "contratante-doc",
+                "contratante-endereco",
+                "contratante-representante"
+        ));
+        if (ContratoLicenciamentoRascunho.ID_MENSALIDADE.equals(tipoContrato)) {
+            camposObrigatorios.add("pag-valor-mensal");
+            camposObrigatorios.add("pag-dia-vencimento");
+        } else {
+            camposObrigatorios.add("pag-valor-total");
+        }
+
+        List<String> faltando = camposObrigatorios.stream()
+                .filter(campo -> textoVazio(dados.get(campo)))
+                .toList();
+        if (!faltando.isEmpty()) {
+            throw new IllegalStateException("Preencha e salve os dados principais da clinica antes de iniciar o contrato.");
+        }
+
+        boolean temFormaPagamento = Boolean.TRUE.equals(dados.get("pag-pix"))
+                || Boolean.TRUE.equals(dados.get("pag-transferencia"))
+                || Boolean.TRUE.equals(dados.get("pag-outro"))
+                || Boolean.TRUE.equals(dados.get("pag-avista"))
+                || Boolean.TRUE.equals(dados.get("pag-parcelado"));
+        if (!temFormaPagamento) {
+            throw new IllegalStateException("Selecione e salve uma forma de pagamento antes de iniciar o contrato.");
+        }
+
+        if (Boolean.TRUE.equals(dados.get("pag-parcelado")) && textoVazio(dados.get("pag-parcelas"))) {
+            throw new IllegalStateException("Informe e salve a quantidade de parcelas antes de iniciar o contrato.");
+        }
+        if (Boolean.TRUE.equals(dados.get("pag-outro")) && textoVazio(dados.get("pag-outro-texto"))) {
+            throw new IllegalStateException("Informe e salve qual e a outra forma de pagamento antes de iniciar o contrato.");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -273,6 +395,10 @@ public class ContratoLicenciamentoService {
             return texto;
         }
         return texto.substring(0, maximo);
+    }
+
+    private boolean textoVazio(Object valor) {
+        return valor == null || String.valueOf(valor).trim().isEmpty();
     }
 
     private boolean interpretarBooleano(Object valor) {
