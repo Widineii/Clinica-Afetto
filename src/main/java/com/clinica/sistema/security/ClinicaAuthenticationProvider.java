@@ -4,6 +4,7 @@ import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -35,6 +36,9 @@ public class ClinicaAuthenticationProvider implements AuthenticationProvider {
 
         if (!verificarSenha(usuario, senhaInformada)) {
             throw new BadCredentialsException("Login ou senha invalidos.");
+        }
+        if (Boolean.FALSE.equals(usuario.getContaAprovada())) {
+            throw new DisabledException("Conta aguardando aprovacao.");
         }
 
         ClinicaUserPrincipal principal = new ClinicaUserPrincipal(usuario);

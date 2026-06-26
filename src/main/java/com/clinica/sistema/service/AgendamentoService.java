@@ -83,6 +83,7 @@ public class AgendamentoService {
     private final EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository;
     private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
     private final FeriadoBeloHorizonteService feriadoBeloHorizonteService;
+    private final AuditoriaService auditoriaService;
     private final int mesesHistoricoAgenda;
     private final int diasHistoricoGestao;
 
@@ -96,6 +97,7 @@ public class AgendamentoService {
             EncerramentoSerieRegistroRepository encerramentoSerieRegistroRepository,
             NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService,
             FeriadoBeloHorizonteService feriadoBeloHorizonteService,
+            AuditoriaService auditoriaService,
             @Value("${app.agenda.meses-historico:4}") int mesesHistoricoAgenda,
             @Value("${app.agenda.dias-historico-gestao:14}") int diasHistoricoGestao
     ) {
@@ -108,6 +110,7 @@ public class AgendamentoService {
         this.encerramentoSerieRegistroRepository = encerramentoSerieRegistroRepository;
         this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
         this.feriadoBeloHorizonteService = feriadoBeloHorizonteService;
+        this.auditoriaService = auditoriaService;
         this.mesesHistoricoAgenda = Math.max(1, Math.min(mesesHistoricoAgenda, MESES_HISTORICO_AGENDA_PADRAO));
         this.diasHistoricoGestao = Math.max(1, Math.min(diasHistoricoGestao, DIAS_HISTORICO_GESTAO_PADRAO));
     }
@@ -1101,6 +1104,7 @@ public class AgendamentoService {
         }
         repository.saveAll(novosAgendamentos);
         novoAgendamentoNotificacaoService.registrarNovosAgendamentos(novosAgendamentos, usuarioLogado);
+        auditoriaService.registrarAgendamentoCriado(usuarioLogado, novosAgendamentos.get(0));
         return novosAgendamentos.get(0);
     }
 
@@ -1548,16 +1552,18 @@ public class AgendamentoService {
 
         preservarReferenciasCobrancaNaRealocacao(agendamento);
 
-        LocalDate dataAnterior = agendamento.getDataHoraInicio() != null
-                ? agendamento.getDataHoraInicio().toLocalDate()
-                : null;
+        Sala salaAnterior = agendamento.getSala();
+        LocalDateTime inicioAnterior = agendamento.getDataHoraInicio();
+        LocalDate dataAnterior = inicioAnterior != null ? inicioAnterior.toLocalDate() : null;
         agendamento.setSala(novaSala);
         agendamento.setDataHoraInicio(novoInicio);
         agendamento.setDataHoraFim(novoFim);
         if (dataAnterior != null && !dataAnterior.equals(novoInicio.toLocalDate())) {
             agendamento.setWhatsappLembreteEnviadoEm(null);
         }
-        return repository.save(agendamento);
+        Agendamento salvo = repository.save(agendamento);
+        auditoriaService.registrarAgendamentoRealocado(usuarioLogado, salvo, salaAnterior, inicioAnterior);
+        return salvo;
     }
 
     private void preservarReferenciasCobrancaNaRealocacao(Agendamento agendamento) {
@@ -1806,6 +1812,7 @@ public class AgendamentoService {
         Agendamento agendamento = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
         validarPermissaoCancelamento(agendamento, usuarioLogado);
+        auditoriaService.registrarAgendamentoCancelado(usuarioLogado, agendamento);
         repository.deleteById(id);
     }
 
@@ -1855,6 +1862,7 @@ public class AgendamentoService {
         registro.setEncerradoPor(usuarioLogado);
         registro.setQuantidadeHorarios(serieCompleta.size());
         encerramentoSerieRegistroRepository.save(registro);
+        auditoriaService.registrarSerieEncerrada(usuarioLogado, registro);
 
         repository.deleteAll(serieCompleta);
     }

@@ -150,6 +150,88 @@
             display: none !important;
         }
 
+        .auditoria-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .auditoria-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #fff;
+        }
+
+        .auditoria-item__icone {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 999px;
+            background: #ecfeff;
+            color: var(--afetto-teal-dark);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .auditoria-item__texto {
+            color: #0f172a;
+            line-height: 1.45;
+        }
+
+        .auditoria-item__meta {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .auditoria-filtro {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: end;
+            gap: 12px 16px;
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+        .auditoria-filtro__nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .auditoria-filtro__label {
+            display: block;
+            width: 100%;
+            margin-bottom: -4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .auditoria-filtro__data {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 14px;
+            min-width: min(100%, 280px);
+        }
+
+        .auditoria-filtro__data .form-control {
+            max-width: 180px;
+        }
+
+        .auditoria-filtro__resumo {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
         .valores-prof-list {
             display: flex;
             flex-direction: column;
@@ -1033,6 +1115,17 @@
                           class="badge rounded-pill text-bg-warning ms-1"
                           th:text="${totalIndicacoesPendentes}">0</span>
                 </a>
+                <a th:href="@{/agendamentos/central-profissionais(aba='contas')}"
+                   th:class="${abaCentral == 'contas' ? 'central-tab active' : 'central-tab'}"
+                   id="tabContasNovas"
+                   data-aba="contas"
+                   th:attr="aria-current=${abaCentral == 'contas' ? 'page' : null}">
+                    <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                    Conta nova
+                    <span th:if="${totalContasNovasPendentes != null and totalContasNovasPendentes > 0}"
+                          class="badge rounded-pill text-bg-info ms-1"
+                          th:text="${totalContasNovasPendentes}">0</span>
+                </a>
                 <a th:href="@{/agendamentos/central-profissionais(aba='encerramentos')}"
                    th:class="${abaCentral == 'encerramentos' ? 'central-tab active' : 'central-tab'}"
                    id="tabEncerramentos"
@@ -1066,6 +1159,15 @@
                    th:attr="aria-current=${abaCentral == 'mensagem' ? 'page' : null}">
                     <i class="fa-solid fa-envelope" aria-hidden="true"></i>
                     E-mail
+                </a>
+                <a th:if="${podeVerAuditoria == true}"
+                   th:href="@{/agendamentos/central-profissionais(aba='auditoria')}"
+                   th:class="${abaCentral == 'auditoria' ? 'central-tab active' : 'central-tab'}"
+                   id="tabAuditoria"
+                   data-aba="auditoria"
+                   th:attr="aria-current=${abaCentral == 'auditoria' ? 'page' : null}">
+                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                    Auditoria
                 </a>
             </nav>
 
@@ -1233,6 +1335,83 @@
             </section>
 
             <section class="central-pane"
+                     id="central-pane-contas"
+                     role="tabpanel"
+                     aria-labelledby="tabContasNovas"
+                     th:hidden="${abaCentral != 'contas'}">
+                <div class="central-panel__head">
+                    <div>
+                        <h2 class="central-panel__title">Contas novas aguardando confirmação</h2>
+                        <p class="central-panel__hint">
+                            Profissionais que criaram o próprio login entram aqui. Ao aceitar, a pessoa acessa com a senha que ela escolheu.
+                        </p>
+                    </div>
+                    <div class="central-stat" th:if="${!#lists.isEmpty(contasNovasPendentes)}">
+                        <span class="central-stat__num" th:text="${#lists.size(contasNovasPendentes)}">0</span>
+                        <span th:text="${#lists.size(contasNovasPendentes) == 1 ? 'conta pendente' : 'contas pendentes'}">contas pendentes</span>
+                    </div>
+                </div>
+
+                <div class="prof-table-wrap" th:if="${!#lists.isEmpty(contasNovasPendentes)}">
+                    <table class="table prof-table align-middle">
+                        <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Login</th>
+                            <th class="d-none d-md-table-cell">Solicitada em</th>
+                            <th class="text-end">Ação</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="conta : ${contasNovasPendentes}">
+                            <td>
+                                <div class="prof-identity">
+                                    <span class="prof-avatar">
+                                        <span class="prof-avatar__iniciais"
+                                              th:text="${#strings.toUpperCase(#strings.substring(conta.nome, 0, 1))}">A</span>
+                                    </span>
+                                    <div>
+                                        <div class="prof-name" th:text="${conta.nome}">Nome</div>
+                                        <div class="prof-login d-md-none" th:text="${conta.login}">login</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <span class="prof-login" th:text="${conta.login}">login</span>
+                            </td>
+                            <td class="d-none d-md-table-cell"
+                                th:text="${conta.cadastroSolicitadoEm != null ? #temporals.format(conta.cadastroSolicitadoEm, 'dd/MM/yyyy HH:mm') : '-'}">26/06/2026 08:00</td>
+                            <td>
+                                <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                    <form th:action="@{/agendamentos/central-profissionais/contas-novas/aprovar}"
+                                          method="post"
+                                          class="d-inline">
+                                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                        <input type="hidden" name="usuarioId" th:value="${conta.id}">
+                                        <button type="submit" class="btn btn-sm btn-teal">Aceitar</button>
+                                    </form>
+                                    <form th:action="@{/agendamentos/central-profissionais/contas-novas/recusar}"
+                                          method="post"
+                                          class="d-inline">
+                                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                        <input type="hidden" name="usuarioId" th:value="${conta.id}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger btn-pill-outline">Recusar</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:if="${#lists.isEmpty(contasNovasPendentes)}" class="central-empty">
+                    <div class="central-empty__icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div>
+                    <h3 class="h5 mb-2">Nenhuma conta nova pendente</h3>
+                    <p class="text-muted mb-0">Quando alguém criar conta pela tela de login, a solicitação aparecerá aqui para confirmação.</p>
+                </div>
+            </section>
+
+            <section class="central-pane"
                      id="central-pane-configuracao"
                      role="tabpanel"
                      aria-labelledby="tabConfiguracao"
@@ -1280,6 +1459,16 @@
                  th:replace="~{fragments/central-valores-profissionais-painel :: painel(profissionais=${profissionaisValoresConsulta}, abaCentral=${abaCentral})}"></div>
 
             <div th:replace="~{fragments/central-mensagem-painel :: painel(abaCentral=${abaCentral}, whatsappMetaAtivo=${whatsappMetaAtivo})}"></div>
+
+            <div th:if="${podeVerAuditoria == true}"
+                 th:replace="~{fragments/central-auditoria-painel :: painel(
+                    abaCentral=${abaCentral},
+                    eventosAuditoria=${eventosAuditoria},
+                    diaAuditoria=${diaAuditoria},
+                    diaAuditoriaAnterior=${diaAuditoriaAnterior},
+                    diaAuditoriaProximo=${diaAuditoriaProximo},
+                    auditoriaEhHoje=${auditoriaEhHoje}
+                 )}"></div>
 
             <section class="central-pane"
                      id="central-pane-uso-site"
@@ -1641,11 +1830,13 @@
         var centralPanes = {
             equipe: document.getElementById('central-pane-equipe'),
             configuracao: document.getElementById('central-pane-configuracao'),
+            contas: document.getElementById('central-pane-contas'),
             indicacoes: document.getElementById('central-pane-indicacoes'),
             encerramentos: document.getElementById('central-pane-encerramentos'),
             valores: document.getElementById('central-pane-valores'),
             'uso-site': document.getElementById('central-pane-uso-site'),
-            mensagem: document.getElementById('central-pane-mensagem')
+            mensagem: document.getElementById('central-pane-mensagem'),
+            auditoria: document.getElementById('central-pane-auditoria')
         };
 
         function ativarAbaCentral(aba) {
@@ -1672,7 +1863,7 @@
                 if (!aba) {
                     return;
                 }
-                if (aba === 'mensagem') {
+                if (aba === 'mensagem' || aba === 'auditoria') {
                     return;
                 }
                 evento.preventDefault();

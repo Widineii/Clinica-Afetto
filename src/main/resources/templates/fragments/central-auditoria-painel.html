@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="painel (abaCentral, eventosAuditoria, diaAuditoria, diaAuditoriaAnterior, diaAuditoriaProximo, auditoriaEhHoje)"
+         class="central-pane"
+         id="central-pane-auditoria"
+         role="tabpanel"
+         aria-labelledby="tabAuditoria"
+         th:hidden="${abaCentral != 'auditoria'}">
+    <div class="central-panel__head">
+        <div>
+            <h2 class="central-panel__title">Auditoria do sistema</h2>
+        </div>
+        <div class="central-stat" th:if="${eventosAuditoria != null and !#lists.isEmpty(eventosAuditoria)}">
+            <span class="central-stat__num" th:text="${#lists.size(eventosAuditoria)}">0</span>
+            <span th:text="${#lists.size(eventosAuditoria) == 1 ? 'registro' : 'registros'}">registros</span>
+        </div>
+    </div>
+
+    <form class="auditoria-filtro"
+          method="get"
+          th:action="@{/agendamentos/central-profissionais}">
+        <input type="hidden" name="aba" value="auditoria">
+        <div class="auditoria-filtro__nav">
+            <a class="btn btn-sm btn-outline-secondary btn-pill-outline"
+               th:href="@{/agendamentos/central-profissionais(aba='auditoria', dataAuditoria=${diaAuditoriaAnterior})}">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                Dia anterior
+            </a>
+            <a class="btn btn-sm btn-outline-secondary btn-pill-outline"
+               th:if="${diaAuditoriaProximo != null}"
+               th:href="@{/agendamentos/central-profissionais(aba='auditoria', dataAuditoria=${diaAuditoriaProximo})}">
+                Próximo dia
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </a>
+        </div>
+        <label class="auditoria-filtro__label" for="dataAuditoria">Data</label>
+        <div class="auditoria-filtro__data">
+            <input id="dataAuditoria"
+                   class="form-control"
+                   type="date"
+                   name="dataAuditoria"
+                   th:value="${diaAuditoria}"
+                   th:max="${dataAuditoriaMaxima}"
+                   onchange="this.form.submit()">
+            <span class="auditoria-filtro__resumo"
+                  th:text="${auditoriaEhHoje ? 'Mostrando hoje' : 'Mostrando ' + #temporals.format(diaAuditoria, 'dd/MM/yyyy')}">
+                Mostrando hoje
+            </span>
+        </div>
+    </form>
+
+    <div class="auditoria-lista" th:if="${eventosAuditoria != null and !#lists.isEmpty(eventosAuditoria)}">
+        <article class="auditoria-item" th:each="evento : ${eventosAuditoria}">
+            <div class="auditoria-item__icone" aria-hidden="true">
+                <i th:class="${evento.tipo == 'AGENDAMENTO_CRIADO' ? 'fa-solid fa-calendar-plus'
+                    : evento.tipo == 'AGENDAMENTO_CANCELADO' ? 'fa-solid fa-calendar-xmark'
+                    : evento.tipo == 'AGENDAMENTO_REALOCADO' ? 'fa-solid fa-arrows-rotate'
+                    : evento.tipo == 'SENHA_ALTERADA' ? 'fa-solid fa-key'
+                    : evento.tipo == 'CONTA_APROVADA' ? 'fa-solid fa-user-check'
+                    : evento.tipo == 'CONTA_RECUSADA' ? 'fa-solid fa-user-xmark'
+                    : evento.tipo == 'SERIE_ENCERRADA' ? 'fa-solid fa-clipboard-list'
+                    : evento.tipo == 'PROFISSIONAL_EDITADO' ? 'fa-solid fa-user-pen'
+                    : evento.tipo == 'PROFISSIONAL_EXCLUIDO' ? 'fa-solid fa-user-minus'
+                    : evento.tipo == 'PERIODICIDADE_ALTERADA' ? 'fa-solid fa-rotate'
+                    : evento.tipo == 'VALORES_CONSULTA_ALTERADOS' ? 'fa-solid fa-coins'
+                    : evento.tipo == 'TAXA_INDICACAO_ALTERADA' ? 'fa-solid fa-percent'
+                    : 'fa-solid fa-circle-info'}"></i>
+            </div>
+            <div class="auditoria-item__corpo">
+                <p class="auditoria-item__texto mb-1" th:text="${evento.descricao}">Descricao</p>
+                <p class="auditoria-item__meta mb-0"
+                   th:text="${evento.criadoEm != null ? #temporals.format(evento.criadoEm, 'HH:mm') : '-'}">
+                    08:00
+                </p>
+            </div>
+        </article>
+    </div>
+
+    <div th:if="${eventosAuditoria == null or #lists.isEmpty(eventosAuditoria)}" class="central-empty">
+        <div class="central-empty__icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
+        <h3 class="h5 mb-2"
+            th:text="${auditoriaEhHoje ? 'Nenhuma acao registrada hoje' : 'Nenhuma acao neste dia'}">
+            Nenhuma acao registrada hoje
+        </h3>
+        <p class="text-muted mb-0"
+           th:text="${auditoriaEhHoje
+                ? 'Quando alguem agendar, cancelar, realocar ou trocar senha, o registro aparecera aqui.'
+                : 'Escolha outro dia no calendario para consultar o historico.'}">
+            Quando alguem agendar, cancelar, realocar ou trocar senha, o registro aparecera aqui.
+        </p>
+    </div>
+</section>
+</body>
+</html>

@@ -78,6 +78,9 @@ class AgendamentoServiceTest {
     private NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
 
     @Mock
+    private AuditoriaService auditoriaService;
+
+    @Mock
     private AuthService authService;
 
     @Mock
@@ -112,6 +115,7 @@ class AgendamentoServiceTest {
                 encerramentoSerieRegistroRepository,
                 novoAgendamentoNotificacaoService,
                 feriadoBeloHorizonteService,
+                auditoriaService,
                 4,
                 14
         );

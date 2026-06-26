@@ -86,7 +86,7 @@ public class GlobalControllerExceptionHandler {
         if (uri == null) {
             return "/agendamentos/dashboard";
         }
-        if (uri.startsWith("/login") || uri.startsWith("/logout")) {
+        if (uri.startsWith("/login") || uri.startsWith("/logout") || uri.startsWith("/primeiro-acesso")) {
             return "/login";
         }
         if (uri.startsWith("/senha")) {
@@ -109,7 +109,7 @@ public class GlobalControllerExceptionHandler {
         if (uri.startsWith("/relatorios")) {
             return "relatorio";
         }
-        if (uri.startsWith("/senha")) {
+        if (uri.startsWith("/senha") || uri.startsWith("/primeiro-acesso")) {
             return "senha";
         }
         if (uri.contains("/central-profissionais")) {

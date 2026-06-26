@@ -33,6 +33,21 @@ public class Usuario {
     @Column(name = "deve_trocar_senha")
     private Boolean deveTrocarSenha = false;
 
+    @Column(name = "conta_aprovada")
+    private Boolean contaAprovada = true;
+
+    @Column(name = "origem_cadastro", length = 20)
+    private String origemCadastro = "GESTOR";
+
+    @Column(name = "cadastro_solicitado_em")
+    private LocalDateTime cadastroSolicitadoEm;
+
+    @Column(name = "cadastro_aprovado_em")
+    private LocalDateTime cadastroAprovadoEm;
+
+    @Column(name = "cadastro_aprovado_por_nome", length = 120)
+    private String cadastroAprovadoPorNome;
+
     /** Ultimo login bem-sucedido no sistema. */
     @Column(name = "ultimo_acesso_em")
     private LocalDateTime ultimoAcessoEm;

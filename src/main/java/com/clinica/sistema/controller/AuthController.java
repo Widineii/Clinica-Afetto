@@ -1,6 +1,7 @@
 package com.clinica.sistema.controller;
 
 import com.clinica.sistema.dto.LoginForm;
+import com.clinica.sistema.dto.CadastroContaPublicaForm;
 import com.clinica.sistema.dto.AtualizarEmailProfissionalForm;
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
@@ -21,6 +22,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.http.MediaType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +35,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final AuthService authService;
     private final UsuarioService usuarioService;
     private final PagamentoConsultaService pagamentoConsultaService;
@@ -69,6 +74,9 @@ public class AuthController {
         if (!model.containsAttribute("loginForm")) {
             model.addAttribute("loginForm", new LoginForm());
         }
+        if (!model.containsAttribute("cadastroContaPublicaForm")) {
+            model.addAttribute("cadastroContaPublicaForm", new CadastroContaPublicaForm());
+        }
     }
 
     @GetMapping({"/", "/login"})
@@ -78,6 +86,8 @@ public class AuthController {
             HttpServletRequest request,
             HttpServletResponse response,
             @RequestParam(required = false) String erro,
+            @RequestParam(required = false) String pendente,
+            @RequestParam(required = false) String contaCriada,
             @RequestParam(required = false) String logout,
             @RequestParam(required = false) String senhaAlterada,
             @org.springframework.web.bind.annotation.CookieValue(name = AcessoSalvoCookies.COOKIE_LOGIN, required = false) String loginSalvo,
@@ -91,6 +101,7 @@ public class AuthController {
             model.addAttribute("senhaPreenchida", false);
             model.addAttribute("acessoProntoParaEntrar", false);
             model.addAttribute("lembrarAcessoMarcado", false);
+            garantirCadastroContaPublicaForm(model);
             return "login";
         }
 
@@ -126,10 +137,53 @@ public class AuthController {
         if (erro != null) {
             model.addAttribute("erro", "Login ou senha inválidos.");
         }
+        if (pendente != null || contaCriada != null) {
+            model.addAttribute("mostrarContaPendente", true);
+        }
         if (logout != null) {
             model.addAttribute("sucesso", "Você saiu do sistema. Seus dados continuam neste aparelho — toque em Entrar.");
         }
+        garantirCadastroContaPublicaForm(model);
         return "login";
+    }
+
+    private void garantirCadastroContaPublicaForm(Model model) {
+        if (!model.containsAttribute("cadastroContaPublicaForm")) {
+            model.addAttribute("cadastroContaPublicaForm", new CadastroContaPublicaForm());
+        }
+    }
+
+    @PostMapping("/primeiro-acesso")
+    public String solicitarContaPublica(
+            @ModelAttribute CadastroContaPublicaForm cadastroContaPublicaForm,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            usuarioService.solicitarContaPublica(cadastroContaPublicaForm);
+            return "redirect:/login?contaCriada=1";
+        } catch (Exception e) {
+            log.warn("Falha ao solicitar conta publica: {}", e.getMessage(), e);
+            if (cadastroContaPublicaForm != null) {
+                cadastroContaPublicaForm.setSenha(null);
+                cadastroContaPublicaForm.setConfirmarSenha(null);
+            }
+            redirectAttributes.addFlashAttribute("erroCadastroConta", mensagemErroCadastroConta(e));
+            redirectAttributes.addFlashAttribute("cadastroContaPublicaForm", cadastroContaPublicaForm);
+            redirectAttributes.addFlashAttribute("abrirCadastroConta", true);
+        }
+        return "redirect:/login";
+    }
+
+    private String mensagemErroCadastroConta(Exception e) {
+        if (e.getMessage() != null && !e.getMessage().isBlank()) {
+            String mensagem = e.getMessage();
+            if (!mensagem.toLowerCase().contains("exception")
+                    && !mensagem.toLowerCase().contains("sql")
+                    && !mensagem.toLowerCase().contains("jdbc")) {
+                return mensagem;
+            }
+        }
+        return "Nao foi possivel criar sua conta agora. Tente novamente em instantes.";
     }
 
     @PostMapping("/conta/trocar-senha")

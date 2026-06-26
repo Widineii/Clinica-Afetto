@@ -19,6 +19,7 @@ import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
+import com.clinica.sistema.service.AuditoriaService;
 import com.clinica.sistema.service.BoasVindasLoginService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.EncerramentoSerieNotificacaoService;
@@ -48,6 +49,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -97,6 +99,7 @@ public class AgendamentoController {
     private final WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService;
     private final AvisoPagamentoEmailService avisoPagamentoEmailService;
     private final BoasVindasLoginService boasVindasLoginService;
+    private final AuditoriaService auditoriaService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -121,7 +124,8 @@ public class AgendamentoController {
             WhatsAppMensagemPagamentoService whatsAppMensagemPagamentoService,
             WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService,
             AvisoPagamentoEmailService avisoPagamentoEmailService,
-            BoasVindasLoginService boasVindasLoginService
+            BoasVindasLoginService boasVindasLoginService,
+            AuditoriaService auditoriaService
     ) {
         this.service = service;
         this.authService = authService;
@@ -146,6 +150,7 @@ public class AgendamentoController {
         this.whatsAppAvisoPagamentoService = whatsAppAvisoPagamentoService;
         this.avisoPagamentoEmailService = avisoPagamentoEmailService;
         this.boasVindasLoginService = boasVindasLoginService;
+        this.auditoriaService = auditoriaService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -732,6 +737,8 @@ public class AgendamentoController {
     @GetMapping("/central-profissionais")
     public String abrirCentralProfissionais(
             @RequestParam(name = "aba", required = false, defaultValue = "equipe") String aba,
+            @RequestParam(name = "dataAuditoria", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataAuditoria,
             @RequestParam(name = "viaNotificacaoEncerramento", required = false, defaultValue = "false")
             boolean viaNotificacaoEncerramento,
             Model model,
@@ -756,14 +763,21 @@ public class AgendamentoController {
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         List<Usuario> profissionais = usuarioService.listarProfissionaisDaEquipe();
+        List<Usuario> contasNovasPendentes = usuarioService.listarContasNovasPendentes(usuarioLogado);
         model.addAttribute("profissionais", profissionais);
+        model.addAttribute("contasNovasPendentes", contasNovasPendentes);
+        model.addAttribute("totalContasNovasPendentes", contasNovasPendentes.size());
         model.addAttribute("fotosPerfilEquipe", usuarioService.mapaFotosPerfil(profissionais));
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
         model.addAttribute("periodicidadesPagamento", PeriodicidadePagamento.values());
         boolean podeVerRelatorioUsoSite = authService.podeVerRelatorioUsoSite(usuarioLogado);
+        boolean podeVerAuditoria = auditoriaService.podeVerAuditoria(usuarioLogado);
         boolean podeGerenciarValoresConsulta = authService.podeGerenciarValoresConsultaProfissionais(usuarioLogado);
         String abaSolicitada = aba != null ? aba.toLowerCase() : "equipe";
         if ("uso-site".equals(abaSolicitada) && !podeVerRelatorioUsoSite) {
+            abaSolicitada = "equipe";
+        }
+        if ("auditoria".equals(abaSolicitada) && !podeVerAuditoria) {
             abaSolicitada = "equipe";
         }
         if ("valores".equals(abaSolicitada) && !podeGerenciarValoresConsulta) {
@@ -771,9 +785,11 @@ public class AgendamentoController {
         }
         String abaAtiva = switch (abaSolicitada) {
             case "configuracao" -> "configuracao";
+            case "contas" -> "contas";
             case "encerramentos" -> "encerramentos";
             case "indicacoes" -> "indicacoes";
             case "mensagem" -> "mensagem";
+            case "auditoria" -> "auditoria";
             case "uso-site" -> "uso-site";
             case "valores" -> "valores";
             default -> "equipe";
@@ -783,6 +799,22 @@ public class AgendamentoController {
         }
         model.addAttribute("abaAtiva", abaAtiva);
         model.addAttribute("podeVerRelatorioUsoSite", podeVerRelatorioUsoSite);
+        model.addAttribute("podeVerAuditoria", podeVerAuditoria);
+        if (podeVerAuditoria) {
+            LocalDate diaAuditoria = dataAuditoria != null ? dataAuditoria : LocalDate.now();
+            if (diaAuditoria.isAfter(LocalDate.now())) {
+                diaAuditoria = LocalDate.now();
+            }
+            model.addAttribute("diaAuditoria", diaAuditoria);
+            model.addAttribute("diaAuditoriaAnterior", diaAuditoria.minusDays(1));
+            model.addAttribute(
+                    "diaAuditoriaProximo",
+                    diaAuditoria.isBefore(LocalDate.now()) ? diaAuditoria.plusDays(1) : null
+            );
+            model.addAttribute("auditoriaEhHoje", diaAuditoria.equals(LocalDate.now()));
+            model.addAttribute("dataAuditoriaMaxima", LocalDate.now());
+            model.addAttribute("eventosAuditoria", auditoriaService.listarPorDia(diaAuditoria));
+        }
         model.addAttribute("podeGerenciarValoresConsulta", podeGerenciarValoresConsulta);
         model.addAttribute("whatsappMetaAtivo", whatsAppNotificacaoService.ativo());
         var secoesAvisoWhatsapp = avisoPagamentoEmailService.montarPainelCentral();
@@ -1304,6 +1336,36 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("abrirModalCadastro", true);
         }
         return "redirect:/agendamentos/central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/contas-novas/aprovar")
+    public String aprovarContaNova(
+            @RequestParam Long usuarioId,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            Usuario aprovado = usuarioService.aprovarContaNova(usuarioId, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Conta liberada para " + aprovado.getNome() + ".");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais?aba=contas";
+    }
+
+    @PostMapping("/central-profissionais/contas-novas/recusar")
+    public String recusarContaNova(
+            @RequestParam Long usuarioId,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.recusarContaNova(usuarioId, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Solicitacao de conta removida.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais?aba=contas";
     }
 
     @PostMapping("/central-profissionais/trocar-senha")

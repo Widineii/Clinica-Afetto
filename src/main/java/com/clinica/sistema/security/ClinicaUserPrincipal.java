@@ -52,6 +52,6 @@ public class ClinicaUserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return !Boolean.FALSE.equals(usuario.getContaAprovada());
     }
 }

@@ -3,6 +3,7 @@ package com.clinica.sistema.repository;
 import com.clinica.sistema.model.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,6 +14,17 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByLogin(String login);
 
     List<Usuario> findByCargoOrderByNomeAsc(String cargo);
+
+    @Query("""
+            SELECT u
+            FROM Usuario u
+            WHERE u.cargo = :cargo
+              AND (u.contaAprovada IS NULL OR u.contaAprovada = true)
+            ORDER BY u.nome ASC
+            """)
+    List<Usuario> findAprovadosByCargoOrderByNomeAsc(@Param("cargo") String cargo);
+
+    List<Usuario> findByContaAprovadaFalseOrderByCadastroSolicitadoEmAsc();
 
     @Query("""
             SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END

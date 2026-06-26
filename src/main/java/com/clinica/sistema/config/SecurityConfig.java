@@ -5,6 +5,7 @@ import com.clinica.sistema.security.ClinicaAuthenticationProvider;
 import com.clinica.sistema.security.ClinicaUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,7 +27,7 @@ public class SecurityConfig {
         http
                 .authenticationProvider(clinicaAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/senha/**", "/error", "/actuator/health", "/actuator/health/**", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/", "/login", "/primeiro-acesso", "/senha/**", "/error", "/actuator/health", "/actuator/health/**", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/uploads/perfis/**").authenticated()
                         .requestMatchers("/api/webhooks/**").permitAll()
                         .requestMatchers("/agendamentos/**", "/conta/**", "/pagamentos/**", "/indicacoes/**").authenticated()
@@ -46,7 +47,12 @@ public class SecurityConfig {
                         .usernameParameter("login")
                         .passwordParameter("senha")
                         .successHandler(authenticationSuccessHandler)
-                        .failureUrl("/login?erro=1")
+                        .failureHandler((request, response, exception) -> {
+                            String destino = exception instanceof DisabledException
+                                    ? "/login?pendente=1"
+                                    : "/login?erro=1";
+                            response.sendRedirect(destino);
+                        })
                         .permitAll()
                 )
                 .logout(logout -> logout

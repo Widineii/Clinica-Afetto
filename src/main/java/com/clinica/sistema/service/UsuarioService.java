@@ -9,6 +9,7 @@ import com.clinica.sistema.dto.ResultadoAtualizacaoValoresConsulta;
 import com.clinica.sistema.dto.AtualizarEmailProfissionalForm;
 import com.clinica.sistema.dto.AtualizarTelefoneWhatsappForm;
 import com.clinica.sistema.dto.AtualizarValoresConsultaProfissionalForm;
+import com.clinica.sistema.dto.CadastroContaPublicaForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.EditarProfissionalForm;
 import com.clinica.sistema.dto.ProfissionalValoresConsultaLinhaView;
@@ -48,6 +49,8 @@ import java.util.stream.Collectors;
 @Service
 public class UsuarioService {
     private static final Logger log = LoggerFactory.getLogger(UsuarioService.class);
+    private static final String MSG_LOGIN_JA_EM_USO =
+            "Esse nome de login já está sendo usado. Use outro.";
     private static final Duration BLOQUEIO_ALTERACAO_PERIODICIDADE = Duration.ofHours(24);
     private static final DateTimeFormatter FORMATO_PROXIMA_ALTERACAO =
             DateTimeFormatter.ofPattern("dd/MM 'as' HH:mm");
@@ -60,6 +63,7 @@ public class UsuarioService {
     private final SegurancaProperties segurancaProperties;
     private final ValorConsultaService valorConsultaService;
     private final PerfilFotoService perfilFotoService;
+    private final AuditoriaService auditoriaService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -72,7 +76,8 @@ public class UsuarioService {
             PagamentoConsultaService pagamentoConsultaService,
             SegurancaProperties segurancaProperties,
             ValorConsultaService valorConsultaService,
-            PerfilFotoService perfilFotoService
+            PerfilFotoService perfilFotoService,
+            AuditoriaService auditoriaService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
@@ -82,10 +87,11 @@ public class UsuarioService {
         this.segurancaProperties = segurancaProperties;
         this.valorConsultaService = valorConsultaService;
         this.perfilFotoService = perfilFotoService;
+        this.auditoriaService = auditoriaService;
     }
 
     public List<Usuario> listarProfissionaisDaEquipe() {
-        return usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL");
+        return usuarioRepository.findAprovadosByCargoOrderByNomeAsc("ROLE_PROFISSIONAL");
     }
 
     public Map<Long, String> mapaFotosPerfil(List<Usuario> usuarios) {
@@ -255,7 +261,9 @@ public class UsuarioService {
         }
         aplicarValoresConsultaNoProfissional(profissional, form);
         usuarioRepository.save(profissional);
-        return propagarValoresConsultaParaAgendamentosExistentes(profissional);
+        int consultasAtualizadas = propagarValoresConsultaParaAgendamentosExistentes(profissional);
+        auditoriaService.registrarValoresConsultaAlterados(usuarioLogado, profissional, consultasAtualizadas);
+        return consultasAtualizadas;
     }
 
     @Transactional
@@ -288,6 +296,11 @@ public class UsuarioService {
                 "Valores alterados em lote para {} profissional(is) ({} excluido(s)); {} consulta(s) ajustada(s).",
                 profissionais.size(),
                 excluidos.size(),
+                consultasAtualizadas
+        );
+        auditoriaService.registrarValoresConsultaLoteAlterados(
+                usuarioLogado,
+                profissionais.size(),
                 consultasAtualizadas
         );
         return new ResultadoAtualizacaoValoresConsulta(
@@ -378,7 +391,9 @@ public class UsuarioService {
         }
         profissional.setPercentualTaxaIndicacao(normalizarPercentualOpcional(form.getPercentualTaxaIndicacao()));
         usuarioRepository.save(profissional);
-        return propagarValoresConsultaParaAgendamentosExistentes(profissional);
+        int consultasAtualizadas = propagarValoresConsultaParaAgendamentosExistentes(profissional);
+        auditoriaService.registrarTaxaIndicacaoAlterada(usuarioLogado, profissional, consultasAtualizadas);
+        return consultasAtualizadas;
     }
 
     private BigDecimal normalizarPercentualOpcional(BigDecimal percentual) {
@@ -406,8 +421,43 @@ public class UsuarioService {
 
     public List<Usuario> listarUsuariosParaTrocaSenha() {
         return usuarioRepository.findAll().stream()
+                .filter(usuario -> !Boolean.FALSE.equals(usuario.getContaAprovada()))
                 .sorted((a, b) -> a.getNome().compareToIgnoreCase(b.getNome()))
                 .toList();
+    }
+
+    @Transactional
+    public Usuario solicitarContaPublica(CadastroContaPublicaForm form) {
+        String nome = form != null && form.getNome() != null ? form.getNome().trim() : "";
+        String login = form != null && form.getLogin() != null ? form.getLogin().trim().toLowerCase() : "";
+        String senha = form != null && form.getSenha() != null ? form.getSenha().trim() : "";
+        String confirmarSenha = form != null && form.getConfirmarSenha() != null
+                ? form.getConfirmarSenha().trim()
+                : "";
+
+        validarDadosBasicosConta(nome, login, senha);
+        if (!senha.equals(confirmarSenha)) {
+            throw new RuntimeException("A confirmação da senha precisa ser igual à senha informada.");
+        }
+        if (loginJaEmUso(login)) {
+            throw new RuntimeException(MSG_LOGIN_JA_EM_USO);
+        }
+
+        Usuario usuario = new Usuario();
+        usuario.setNome(nome);
+        usuario.setLogin(login);
+        usuario.setSenha(passwordEncoder.encode(senha));
+        usuario.setCargo("ROLE_PROFISSIONAL");
+        usuario.setDonaClinica(false);
+        usuario.setPeriodicidadePagamento(PeriodicidadePagamento.DIARIO);
+        usuario.setDeveTrocarSenha(false);
+        usuario.setContaAprovada(false);
+        usuario.setOrigemCadastro("PUBLICO");
+        usuario.setCadastroSolicitadoEm(LocalDateTime.now());
+        usuario.setBoasVindasPrimeiroLoginConcluido(false);
+        usuario.setBoasVindasApenasApresentacao(false);
+        usuario.setBoasVindasApresentacaoExibida(false);
+        return usuarioRepository.save(usuario);
     }
 
     public Usuario cadastrarProfissional(CadastroProfissionalForm form, Usuario usuarioLogado) {
@@ -417,20 +467,9 @@ public class UsuarioService {
         String login = form.getLogin() != null ? form.getLogin().trim().toLowerCase() : "";
         String senha = form.getSenha() != null ? form.getSenha().trim() : "";
 
-        if (nome.isBlank()) {
-            throw new RuntimeException("Informe o nome do profissional.");
-        }
-        if (login.isBlank()) {
-            throw new RuntimeException("Informe o login do profissional.");
-        }
-        if (senha.isBlank()) {
-            throw new RuntimeException("Informe a senha do profissional.");
-        }
-        if (senha.length() < 4) {
-            throw new RuntimeException("A senha do profissional precisa ter pelo menos 4 caracteres.");
-        }
-        if (usuarioRepository.findByLogin(login).isPresent()) {
-            throw new RuntimeException("Ja existe um usuario com esse login.");
+        validarDadosBasicosConta(nome, login, senha);
+        if (loginJaEmUso(login)) {
+            throw new RuntimeException(MSG_LOGIN_JA_EM_USO);
         }
 
         Usuario usuario = new Usuario();
@@ -445,10 +484,77 @@ public class UsuarioService {
         if (segurancaProperties.isExigirTrocaSenhaPrimeiroAcesso()) {
             usuario.setDeveTrocarSenha(true);
         }
+        usuario.setContaAprovada(true);
+        usuario.setOrigemCadastro("GESTOR");
+        usuario.setCadastroAprovadoEm(LocalDateTime.now());
+        usuario.setCadastroAprovadoPorNome(usuarioLogado.getNome());
         usuario.setBoasVindasPrimeiroLoginConcluido(false);
         usuario.setBoasVindasApenasApresentacao(false);
         usuario.setBoasVindasApresentacaoExibida(false);
         return usuarioRepository.save(usuario);
+    }
+
+    public List<Usuario> listarContasNovasPendentes(Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+        return usuarioRepository.findByContaAprovadaFalseOrderByCadastroSolicitadoEmAsc();
+    }
+
+    @Transactional
+    public Usuario aprovarContaNova(Long usuarioId, Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+        Usuario alvo = buscarContaPendente(usuarioId);
+        alvo.setContaAprovada(true);
+        alvo.setCadastroAprovadoEm(LocalDateTime.now());
+        alvo.setCadastroAprovadoPorNome(usuarioLogado.getNome());
+        alvo.setDeveTrocarSenha(false);
+        Usuario salvo = usuarioRepository.save(alvo);
+        auditoriaService.registrarContaAprovada(usuarioLogado, salvo);
+        return salvo;
+    }
+
+    @Transactional
+    public void recusarContaNova(Long usuarioId, Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+        Usuario alvo = buscarContaPendente(usuarioId);
+        auditoriaService.registrarContaRecusada(usuarioLogado, alvo);
+        usuarioRepository.delete(alvo);
+    }
+
+    private Usuario buscarContaPendente(Long usuarioId) {
+        if (usuarioId == null) {
+            throw new RuntimeException("Selecione uma conta nova.");
+        }
+        Usuario alvo = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Conta nova não encontrada."));
+        if (!Boolean.FALSE.equals(alvo.getContaAprovada())) {
+            throw new RuntimeException("Esta conta já foi liberada.");
+        }
+        if (!"ROLE_PROFISSIONAL".equals(alvo.getCargo())) {
+            throw new RuntimeException("Somente contas de profissionais podem ser aprovadas por aqui.");
+        }
+        return alvo;
+    }
+
+    private boolean loginJaEmUso(String login) {
+        return usuarioRepository.findByLogin(login).isPresent();
+    }
+
+    private void validarDadosBasicosConta(String nome, String login, String senha) {
+        if (nome.isBlank()) {
+            throw new RuntimeException("Informe o nome do profissional.");
+        }
+        if (login.isBlank()) {
+            throw new RuntimeException("Informe o login do profissional.");
+        }
+        if (!login.matches("^[a-z0-9._-]{3,60}$")) {
+            throw new RuntimeException("O login deve ter 3 a 60 caracteres e usar letras, numeros, ponto, hifen ou underline.");
+        }
+        if (senha.isBlank()) {
+            throw new RuntimeException("Informe a senha do profissional.");
+        }
+        if (senha.length() < 4) {
+            throw new RuntimeException("A senha do profissional precisa ter pelo menos 4 caracteres.");
+        }
     }
 
     @Transactional
@@ -479,10 +585,12 @@ public class UsuarioService {
             throw new RuntimeException("Informe o login do profissional.");
         }
 
-        if (!login.equals(alvo.getLogin()) && usuarioRepository.findByLogin(login).isPresent()) {
-            throw new RuntimeException("Ja existe um usuario com esse login.");
+        if (!login.equals(alvo.getLogin()) && loginJaEmUso(login)) {
+            throw new RuntimeException(MSG_LOGIN_JA_EM_USO);
         }
 
+        String nomeAnterior = alvo.getNome();
+        String loginAnterior = alvo.getLogin();
         alvo.setNome(nome);
         alvo.setLogin(login);
 
@@ -510,7 +618,9 @@ public class UsuarioService {
             alvo.setEmail(email);
         }
 
-        return usuarioRepository.save(alvo);
+        Usuario salvo = usuarioRepository.save(alvo);
+        auditoriaService.registrarProfissionalEditado(usuarioLogado, salvo, nomeAnterior, loginAnterior);
+        return salvo;
     }
 
     public boolean usuarioLogadoDeveTrocarSenha() {
@@ -717,7 +827,11 @@ public class UsuarioService {
 
         PeriodicidadePagamento anterior = pagamentoConsultaService.resolverPeriodicidade(alvo);
         PeriodicidadePagamento nova = form.getPeriodicidade();
-        return aplicarAlteracaoPeriodicidade(alvo, anterior, nova, false);
+        int migrados = aplicarAlteracaoPeriodicidade(alvo, anterior, nova, false);
+        if (nova != anterior) {
+            auditoriaService.registrarPeriodicidadeAlterada(usuarioLogado, alvo, anterior, nova, migrados);
+        }
+        return migrados;
     }
 
     public boolean podeAlterarPeriodicidadePropria(Usuario profissional) {
@@ -757,7 +871,9 @@ public class UsuarioService {
             );
         }
 
-        return aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
+        int migrados = aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
+        auditoriaService.registrarPeriodicidadeAlterada(profissionalLogado, alvo, atual, nova, migrados);
+        return migrados;
     }
 
     @Transactional
@@ -774,7 +890,9 @@ public class UsuarioService {
             usuarioRepository.save(alvo);
             return 0;
         }
-        return aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
+        int migrados = aplicarAlteracaoPeriodicidade(alvo, atual, nova, true);
+        auditoriaService.registrarPeriodicidadeAlterada(profissionalLogado, alvo, atual, nova, migrados);
+        return migrados;
     }
 
     private int aplicarAlteracaoPeriodicidade(
@@ -840,6 +958,7 @@ public class UsuarioService {
         aplicarNovaSenha(usuario, novaSenha, confirmarSenha, true, senhaAtual);
         usuario.setDeveTrocarSenha(false);
         usuarioRepository.save(usuario);
+        auditoriaService.registrarSenhaAlterada(usuarioLogado, usuario, false);
     }
 
     @Transactional
@@ -925,6 +1044,7 @@ public class UsuarioService {
             alvo.setDeveTrocarSenha(true);
         }
         usuarioRepository.save(alvo);
+        auditoriaService.registrarSenhaAlterada(usuarioLogado, alvo, true);
     }
 
     @Transactional
@@ -955,6 +1075,7 @@ public class UsuarioService {
         }
 
         agendamentoRepository.deleteByProfissionalIdIn(List.of(usuarioId));
+        auditoriaService.registrarProfissionalExcluido(usuarioLogado, alvo);
         usuarioRepository.delete(alvo);
     }
 

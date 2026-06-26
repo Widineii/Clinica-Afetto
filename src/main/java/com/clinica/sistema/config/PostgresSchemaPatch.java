@@ -96,6 +96,36 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             jdbcTemplate.execute(
                     """
                     ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS conta_aprovada BOOLEAN DEFAULT TRUE
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS origem_cadastro VARCHAR(20) DEFAULT 'GESTOR'
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS cadastro_solicitado_em TIMESTAMP
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS cadastro_aprovado_em TIMESTAMP
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN IF NOT EXISTS cadastro_aprovado_por_nome VARCHAR(120)
+                    """
+            );
+            jdbcTemplate.execute(
+                    """
+                    ALTER TABLE usuarios
                     ADD COLUMN IF NOT EXISTS foto_perfil VARCHAR(120)
                     """
             );
@@ -220,6 +250,7 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             criarTabelaWhatsappMensagemPagamentoSeNecessario();
             criarTabelaSenhaRecuperacaoSeNecessario();
             criarTabelaContratoLicenciamentoSeNecessario();
+            criarTabelaAuditoriaEventosSeNecessario();
             log.info("Schema PostgreSQL: colunas de pagamento, usuarios e status_pagamento verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
@@ -331,5 +362,21 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                 """
         );
         log.info("Schema PostgreSQL: tabela contrato_licenciamento_rascunho verificada.");
+    }
+
+    private void criarTabelaAuditoriaEventosSeNecessario() {
+        jdbcTemplate.execute(
+                """
+                CREATE TABLE IF NOT EXISTS auditoria_eventos (
+                    id BIGSERIAL PRIMARY KEY,
+                    criado_em TIMESTAMP NOT NULL,
+                    autor_id BIGINT,
+                    autor_nome VARCHAR(120),
+                    tipo VARCHAR(40) NOT NULL,
+                    descricao VARCHAR(500) NOT NULL
+                )
+                """
+        );
+        log.info("Schema PostgreSQL: tabela auditoria_eventos verificada.");
     }
 }
