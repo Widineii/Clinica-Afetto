@@ -5,6 +5,7 @@ import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.dto.LinkPagamentoGerado;
 import com.clinica.sistema.dto.PagamentoProfissionalNotificacaoView;
 import com.clinica.sistema.dto.PendenciasPagamentoWhatsappAgrupadasView;
+import com.clinica.sistema.dto.ProfissionalBloqueioPagamentoEmailView;
 import com.clinica.sistema.dto.ProfissionalBloqueioPagamentoView;
 import com.clinica.sistema.dto.ProfissionalPendenciaPagamentoWhatsappView;
 import com.clinica.sistema.dto.ResumoPendenciasPagamentoView;
@@ -1366,6 +1367,32 @@ public class PagamentoConsultaService {
                         listarPendenciasObrigatoriasParaBloqueio(profissional).size()
                 ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProfissionalBloqueioPagamentoEmailView> listarProfissionaisBloqueadosParaAvisoEmail() {
+        return usuarioRepository.findByCargoOrderByNomeAsc(CARGO_PROFISSIONAL).stream()
+                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
+                .filter(this::profissionalBloqueadoPorPendenciaPagamento)
+                .map(this::montarLinhaBloqueioPagamentoEmail)
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    private Optional<ProfissionalBloqueioPagamentoEmailView> montarLinhaBloqueioPagamentoEmail(Usuario profissional) {
+        String email = profissional.getEmail() != null ? profissional.getEmail().trim().toLowerCase() : "";
+        if (email.isBlank() || !email.contains("@")) {
+            return Optional.empty();
+        }
+        ResumoPendenciasPagamentoView resumo = montarResumoPendenciasPagamento(profissional);
+        return Optional.of(new ProfissionalBloqueioPagamentoEmailView(
+                profissional.getId(),
+                profissional.getNome(),
+                email,
+                mensagemBloqueioPagamento(profissional),
+                resumo.valorTotalFormatado(),
+                resumo.quantidade()
+        ));
     }
 
     @Transactional(readOnly = true)

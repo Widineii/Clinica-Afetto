@@ -154,6 +154,22 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            max-height: 460px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .auditoria-lista::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .auditoria-lista::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+
+        .auditoria-lista::-webkit-scrollbar-track {
+            background: transparent;
         }
 
         .auditoria-item {
