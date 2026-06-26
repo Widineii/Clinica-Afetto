@@ -110,6 +110,37 @@
             color: #64748b;
             line-height: 1.4;
         }
+        .contrato-como-funciona__titulo {
+            margin: 0 0 10px;
+            font-size: 1.05rem;
+            color: #0a8785;
+        }
+        .contrato-como-funciona__intro,
+        .contrato-como-funciona__nota,
+        .contrato-como-funciona__papel,
+        .contrato-como-funciona__item-texto {
+            font-size: 0.94rem;
+            line-height: 1.5;
+            color: #334155;
+        }
+        .contrato-como-funciona__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .contrato-como-funciona__item {
+            background: #f8fafc;
+            border: 1px solid #dbe4ea;
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+        .contrato-como-funciona__item-titulo {
+            margin: 0 0 6px;
+            font-weight: 700;
+            color: #0f766e;
+            font-size: 0.92rem;
+        }
     </style>
     <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
 </head>
@@ -130,6 +161,10 @@
             </div>
         </div>
     </div>
+
+    <section class="shell-card mb-4" aria-label="Como funciona o contrato">
+        <div th:replace="~{fragments/contrato-licenciamento-como-funciona :: painel}"></div>
+    </section>
 
     <section class="shell-card" aria-label="Modelos de contrato">
         <div class="mb-3">

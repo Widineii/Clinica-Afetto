@@ -1,0 +1,45 @@
+<div th:fragment="painel" xmlns:th="http://www.thymeleaf.org" class="contrato-como-funciona">
+    <h2 class="contrato-como-funciona__titulo">Como funciona</h2>
+    <p class="contrato-como-funciona__intro mb-3">
+        Aqui aparecem <strong>duas propostas</strong> para contratar o <strong>mesmo sistema</strong> (Agenda Afetto).
+        A clínica escolhe <strong>apenas uma</strong> — não paga as duas.
+    </p>
+
+    <div class="contrato-como-funciona__grid">
+        <div class="contrato-como-funciona__item">
+            <p class="contrato-como-funciona__item-titulo">Valor bruto (pagamento único)</p>
+            <p class="contrato-como-funciona__item-texto mb-0">
+                Valor total do <strong>licenciamento completo</strong>: desenvolvimento, implantação na KingHost,
+                3 meses de suporte e entrega do código-fonte após quitação.
+                Não é só mão de obra — é o pacote do software.
+            </p>
+        </div>
+        <div class="contrato-como-funciona__item">
+            <p class="contrato-como-funciona__item-titulo">Mensalidade</p>
+            <p class="contrato-como-funciona__item-texto mb-0">
+                O mesmo sistema, pago <strong>por mês</strong>, com licença contínua, manutenção corretiva e suporte.
+                Reduz o investimento inicial em relação ao pagamento único.
+            </p>
+        </div>
+    </div>
+
+    <p class="contrato-como-funciona__nota mb-3">
+        <strong>KingHost (VPS ~R$ 48/mês):</strong> fica <strong>à parte</strong>, pago pela clínica direto ao provedor.
+        Não entra nos valores de valor bruto nem de mensalidade.
+    </p>
+
+    <p class="contrato-como-funciona__papel mb-2" th:if="${contratoSomenteLeitura == true and contratoFinalizadoTipo == null}">
+        <strong>Seu acesso:</strong> leia e compare as duas propostas. A Polyana decide qual modelo iniciar.
+    </p>
+    <p class="contrato-como-funciona__papel mb-2" th:if="${contratoSomenteLeitura == true and contratoFinalizadoTipo != null}">
+        <strong>Seu acesso:</strong> visualização do contrato aceito pela clínica. Você pode ler e gerar PDF.
+    </p>
+    <p class="contrato-como-funciona__papel mb-2" th:if="${contratoSomenteLeitura != true and contratoPerfilContratado == true}">
+        <strong>Desenvolvedor:</strong> preencha seus dados, ajuste os valores se houver negociação e salve.
+        A Polyana preenche os dados da clínica e inicia o contrato escolhido.
+    </p>
+    <p class="contrato-como-funciona__papel mb-0" th:if="${contratoSomenteLeitura != true and contratoPerfilContratado != true}">
+        <strong>Clínica:</strong> abra a proposta desejada, preencha os dados, salve e clique em <strong>Iniciar contrato</strong>.
+        Depois disso, só o modelo escolhido permanece ativo.
+    </p>
+</div>
