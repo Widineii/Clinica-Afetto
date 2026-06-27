@@ -361,6 +361,13 @@
                                     Uso do site
                                 </a>
                             </li>
+                            <li th:if="${podeAcessarArquivoSistema != null and podeAcessarArquivoSistema}">
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/admin/arquivo-sistema}">
+                                    <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+                                    Arquivo do sistema
+                                </a>
+                            </li>
                         </ul>
                     </div>
 
@@ -444,6 +451,13 @@
                                    th:href="@{/agendamentos/manual}">
                                     <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                                     Manual do sistema
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item afetto-perfil-panel__item"
+                                   th:href="@{/agendamentos/admin/arquivo-sistema}">
+                                    <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+                                    Arquivo do sistema
                                 </a>
                             </li>
                         </ul>

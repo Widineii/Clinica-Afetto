@@ -113,6 +113,9 @@ public class SiteMenuModelAdvice {
         if (!model.containsAttribute("podeGerenciarEquipe")) {
             model.addAttribute("podeGerenciarEquipe", authService.podeGerenciarEquipe(usuario));
         }
+        if (!model.containsAttribute("podeAcessarArquivoSistema")) {
+            model.addAttribute("podeAcessarArquivoSistema", authService.podeAcessarArquivoSistema(usuario));
+        }
         if (!model.containsAttribute("podeGerenciarValoresConsulta")) {
             model.addAttribute(
                     "podeGerenciarValoresConsulta",

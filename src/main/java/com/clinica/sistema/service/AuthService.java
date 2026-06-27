@@ -158,6 +158,11 @@ public class AuthService {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }
 
+    /** Arquivo do sistema (codigo no GitHub): administracao principal, apoio (Lucas) e dona da clinica (Polyana). */
+    public boolean podeAcessarArquivoSistema(Usuario usuario) {
+        return isAdmin(usuario) || isDonaClinica(usuario);
+    }
+
     /**
      * Ve status de pagamento (pago / aguardando pagamento) de todos os profissionais na grade.
      * Profissionais comuns nao veem esse status — apenas ADM, dona da clinica e usuario de teste.

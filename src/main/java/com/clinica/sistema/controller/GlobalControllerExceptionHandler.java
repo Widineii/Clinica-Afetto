@@ -103,8 +103,11 @@ public class GlobalControllerExceptionHandler {
         if (uri == null) {
             return "agendamento";
         }
-        if (uri.startsWith("/admin/uso-banco")) {
+        if (uri.contains("/admin/uso-banco")) {
             return "uso-banco";
+        }
+        if (uri.contains("/admin/arquivo-sistema")) {
+            return "arquivo-sistema";
         }
         if (uri.startsWith("/relatorios")) {
             return "relatorio";
