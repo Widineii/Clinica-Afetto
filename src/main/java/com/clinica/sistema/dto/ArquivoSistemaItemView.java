@@ -7,10 +7,11 @@ import lombok.Getter;
 @AllArgsConstructor
 public class ArquivoSistemaItemView {
 
+    private final String nome;
     private final String caminho;
-    private final String tipo;
-    private final long tamanhoBytes;
+    private final boolean diretorio;
     private final String tamanhoLabel;
+    private final String commitMensagem;
+    private final String commitRelativo;
     private final String urlGitHub;
-    private final String urlRaw;
 }

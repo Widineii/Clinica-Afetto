@@ -35,7 +35,9 @@ public class AdminArquivoSistemaController {
 
     @GetMapping("/arquivo-sistema")
     public String arquivoSistema(
+            @RequestParam(value = "path", required = false) String path,
             @RequestParam(value = "caminho", required = false) String caminho,
+            @RequestParam(value = "abrir", defaultValue = "false") boolean abrir,
             @RequestParam(value = "atualizar", defaultValue = "false") boolean atualizar,
             Model model,
             RedirectAttributes redirectAttributes
@@ -50,15 +52,27 @@ public class AdminArquivoSistemaController {
             return "redirect:/agendamentos/dashboard";
         }
 
+        model.addAttribute("usuarioLogado", usuario);
+        model.addAttribute("isAdmin", authService.isAdmin(usuario));
+        model.addAttribute("repositorioUrl", arquivoSistemaGitHubProperties.resolverUrlRepositorio());
+
+        boolean temPathInicial = (path != null && !path.isBlank())
+                || (caminho != null && !caminho.isBlank());
+        boolean abrirNavegador = abrir || atualizar || temPathInicial;
+        if (!abrirNavegador) {
+            model.addAttribute("mostrarPasta", true);
+            return "admin-arquivo-sistema";
+        }
+
         try {
-            model.addAttribute("usuarioLogado", usuario);
-            model.addAttribute("isAdmin", authService.isAdmin(usuario));
-            model.addAttribute("resumo", arquivoSistemaGitHubService.montarResumo(atualizar));
+            String diretorio = arquivoSistemaGitHubService.normalizarDiretorio(path);
+            model.addAttribute("mostrarPasta", false);
+            model.addAttribute("resumo", arquivoSistemaGitHubService.navegar(diretorio, atualizar));
             model.addAttribute("atualizadoAgora", atualizar);
 
             if (caminho != null && !caminho.isBlank()) {
                 String caminhoNormalizado = caminho.trim();
-                arquivoSistemaGitHubService.validarCaminhoRelativo(caminhoNormalizado);
+                arquivoSistemaGitHubService.validarCaminho(caminhoNormalizado);
                 model.addAttribute("caminhoSelecionado", caminhoNormalizado);
                 model.addAttribute(
                         "urlGitHubArquivoSelecionado",
@@ -77,9 +91,11 @@ public class AdminArquivoSistemaController {
             return "admin-arquivo-sistema";
         } catch (ArquivoSistemaIndisponivelException e) {
             log.warn("Falha ao carregar arquivo do sistema: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("erro", e.getMessage());
-            redirectAttributes.addFlashAttribute("erroContexto", "arquivo-sistema");
-            return "redirect:/agendamentos/dashboard";
+            model.addAttribute("mostrarPasta", false);
+            model.addAttribute("resumo", arquivoSistemaGitHubService.resumoIndisponivel(path));
+            model.addAttribute("atualizadoAgora", false);
+            model.addAttribute("erroArquivoSistema", e.getMessage());
+            return "admin-arquivo-sistema";
         } catch (RuntimeException e) {
             log.error("Falha ao carregar arquivo do sistema", e);
             redirectAttributes.addFlashAttribute(

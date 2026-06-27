@@ -15,7 +15,7 @@
                 linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
         }
         .app-shell {
-            width: min(1200px, 100%);
+            width: min(1100px, 100%);
             margin-inline: auto;
             padding: 24px 16px 40px;
         }
@@ -27,80 +27,72 @@
         }
         .shell-card {
             border: 0;
-            border-radius: 20px;
+            border-radius: 18px;
             background: #fff;
             box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
-            padding: 24px;
             margin-bottom: 20px;
+            overflow: hidden;
         }
-        .hint {
-            font-size: 0.9rem;
-            color: #64748b;
-            line-height: 1.55;
+        .repo-topbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.92rem;
         }
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px;
-        }
-        .stat-box {
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 16px;
-            text-align: center;
-        }
-        .stat-box h3 {
-            font-size: 1.5rem;
-            margin: 0;
-            color: var(--afetto-teal-dark);
-        }
-        .stat-box p {
-            margin: 6px 0 0;
-            font-size: 0.85rem;
-            color: #64748b;
-        }
-        .arquivo-layout {
-            display: grid;
-            grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-            gap: 20px;
-            align-items: start;
-        }
-        @media (max-width: 991px) {
-            .arquivo-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-        .arquivo-lista-wrap {
-            max-height: min(70vh, 720px);
-            overflow: auto;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-        }
-        .arquivo-lista {
-            margin: 0;
-        }
-        .arquivo-lista a {
-            display: block;
-            padding: 8px 12px;
-            color: #0f172a;
-            text-decoration: none;
-            font-size: 0.82rem;
-            border-bottom: 1px solid #f1f5f9;
-            word-break: break-all;
-        }
-        .arquivo-lista a:hover {
-            background: #f8fafc;
-        }
-        .arquivo-lista a.is-active {
-            background: rgba(10, 135, 133, 0.12);
+        .repo-topbar .commit-sha {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
             color: var(--afetto-teal-dark);
             font-weight: 600;
         }
-        .arquivo-lista .meta {
-            display: block;
+        .repo-topbar .commit-msg {
+            color: #334155;
+        }
+        .repo-topbar .commit-meta {
             color: #94a3b8;
-            font-size: 0.72rem;
-            margin-top: 2px;
+        }
+        .repo-topbar .commits-total {
+            margin-left: auto;
+            color: #475569;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .breadcrumb-bar {
+            padding: 12px 18px;
+            font-size: 0.95rem;
+        }
+        .breadcrumb-bar a {
+            color: var(--afetto-teal-dark);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .breadcrumb-bar a:hover { text-decoration: underline; }
+        .breadcrumb-bar .sep { color: #cbd5e1; margin: 0 6px; }
+        .repo-list { margin: 0; }
+        .repo-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.2fr) minmax(0, 2fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 18px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+            text-decoration: none;
+            color: #0f172a;
+        }
+        .repo-row:hover { background: #f8fafc; }
+        .repo-row .nome { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .repo-row .nome span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .repo-row .nome i { width: 18px; text-align: center; }
+        .repo-row .nome .fa-folder { color: #54aeff; }
+        .repo-row .nome .fa-file { color: #94a3b8; }
+        .repo-row .commit { color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .repo-row .tempo { color: #94a3b8; text-align: right; white-space: nowrap; font-size: 0.82rem; }
+        @media (max-width: 720px) {
+            .repo-row { grid-template-columns: 1fr auto; }
+            .repo-row .commit { display: none; }
         }
         .conteudo-arquivo {
             background: #0f172a;
@@ -115,28 +107,109 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
-        .busca-arquivo {
-            margin-bottom: 12px;
+        .busca-arquivo { margin: 14px 18px 0; max-width: 360px; }
+        .modelo-pastas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: stretch;
+            padding: 8px 4px;
+        }
+        .modelo-pasta {
+            width: 210px;
+            text-decoration: none;
+            color: #1f2937;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 18px 14px 16px;
+            background: #fff;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        }
+        .modelo-pasta:hover {
+            color: #0f766e;
+            border-color: #0a8785;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+            transform: translateY(-1px);
+        }
+        .modelo-pasta:focus-visible {
+            outline: 2px solid #0a8785;
+            outline-offset: 2px;
+        }
+        .modelo-pasta svg {
+            width: 96px;
+            height: 76px;
+            display: block;
+            margin: 0 auto 10px;
+            filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.18));
+        }
+        .modelo-pasta__nome {
+            display: block;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .modelo-pasta__hint {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+        .arquivo-explicacao {
+            background: #f8fafc;
+            border: 1px solid #dbe4ea;
+            border-radius: 14px;
+            padding: 16px 18px;
+            font-size: 0.94rem;
+            color: #334155;
+            margin-top: 20px;
+        }
+        .arquivo-explicacao__titulo {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #0a8785;
+            line-height: 1.35;
+        }
+        .arquivo-explicacao__intro {
+            margin: 0 0 10px;
+            line-height: 1.45;
+        }
+        .arquivo-explicacao__lista {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+        .arquivo-explicacao__lista li {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .arquivo-explicacao__nota {
+            margin: 10px 0 0;
+            font-size: 0.88rem;
+            color: #64748b;
+            line-height: 1.4;
         }
     </style>
     <th:block th:replace="~{fragments/afetto-tema :: css}"></th:block>
 </head>
 <body>
 <div class="container-fluid app-shell">
-    <div th:if="${erro}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+    <div th:if="${erro}" class="alert alert-danger shell-card p-3" th:text="${erro}"></div>
 
     <div class="hero-band mb-4">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
                 <p class="text-uppercase small mb-2 opacity-75">Administracao</p>
                 <h1 class="h2 mb-2">Arquivo do sistema</h1>
-                <p class="mb-0 opacity-75">
-                    Codigo-fonte completo no GitHub, sempre atualizado com o ultimo commit da branch
+                <p class="mb-0 opacity-75" th:if="${mostrarPasta}">
+                    Abra a pasta para ver o codigo-fonte completo do sistema, sempre atualizado do GitHub.
+                </p>
+                <p class="mb-0 opacity-75" th:unless="${mostrarPasta}">
+                    Codigo-fonte completo no GitHub, navegando por pastas e arquivos da branch
                     <strong th:text="${resumo.branch}">main</strong>.
                 </p>
             </div>
-            <div class="d-flex flex-wrap gap-2">
-                <a th:href="@{/agendamentos/admin/arquivo-sistema(atualizar=true, caminho=${caminhoSelecionado})}"
+            <div class="d-flex flex-wrap gap-2" th:unless="${mostrarPasta}">
+                <a th:href="@{/agendamentos/admin/arquivo-sistema(atualizar=true, path=${resumo.caminhoAtual})}"
                    class="btn btn-light">
                     <i class="fa-solid fa-rotate-right me-1" aria-hidden="true"></i>
                     Atualizar agora
@@ -145,112 +218,140 @@
                     <i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>
                     Baixar ZIP
                 </a>
-                <a th:href="${resumo.repositorioUrl}" class="btn btn-light" target="_blank" rel="noopener">
+                <a th:href="${resumo.urlPastaAtualGitHub}" class="btn btn-light" target="_blank" rel="noopener">
                     <i class="fa-brands fa-github me-1" aria-hidden="true"></i>
                     Abrir no GitHub
                 </a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar</a>
             </div>
+            <div class="d-flex flex-wrap gap-2" th:if="${mostrarPasta}">
+                <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar</a>
+            </div>
         </div>
     </div>
 
-    <div class="shell-card">
-        <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
-            <div>
-                <h2 class="h5 mb-1">Ultima versao no GitHub</h2>
-                <p class="hint mb-0">
-                    Commit <code th:text="${resumo.commitShaCurto}">abc1234</code>
-                    em <span th:text="${resumo.commitDataLabel}">—</span>
-                    — <span th:text="${resumo.commitMensagem}">—</span>
-                </p>
-            </div>
-            <p th:if="${atualizadoAgora}" class="text-success small mb-0 align-self-md-center">
-                Lista atualizada agora.
+    <div class="shell-card p-4" th:if="${mostrarPasta}">
+        <h2 class="h5 mb-1">Sistema</h2>
+        <p class="text-muted mb-3">Clique na pasta para abrir o codigo-fonte completo.</p>
+        <div class="modelo-pastas">
+            <a th:href="@{/agendamentos/admin/arquivo-sistema(abrir=true)}"
+               class="modelo-pasta"
+               title="Abrir arquivo do sistema">
+                <svg viewBox="0 0 84 66" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 17C6 14.2 8.2 12 11 12H32L39 19H73C75.8 19 78 21.2 78 24V54C78 56.8 75.8 59 73 59H11C8.2 59 6 56.8 6 54V17Z" fill="#F5C542"/>
+                    <path d="M6 25C6 22.2 8.2 20 11 20H73C75.8 20 78 22.2 78 25V54C78 56.8 75.8 59 73 59H11C8.2 59 6 56.8 6 54V25Z" fill="#FFD767"/>
+                    <rect x="29" y="31" width="29" height="21" rx="2" fill="#fff" opacity="0.96"/>
+                    <path d="M33 37H54M33 41H50M33 45H45" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span class="modelo-pasta__nome">Arquivo do sistema</span>
+                <span class="modelo-pasta__hint">Codigo completo do GitHub · sempre atualizado</span>
+            </a>
+        </div>
+
+        <div class="arquivo-explicacao">
+            <h2 class="arquivo-explicacao__titulo">Para que serve</h2>
+            <p class="arquivo-explicacao__intro">
+                Este arquivo e o espelho do codigo-fonte da Agenda Afetto que esta no GitHub.
+                Ele serve para a administracao, Lucas e Polyana consultarem o sistema completo sem precisar sair do site.
+            </p>
+            <ul class="arquivo-explicacao__lista">
+                <li>Ver pastas e arquivos do projeto (Java, telas, scripts, deploy).</li>
+                <li>Conferir a ultima versao publicada no GitHub e quando cada parte foi alterada.</li>
+                <li>Abrir um arquivo para ler o conteudo ou baixar o ZIP completo do sistema.</li>
+                <li>Transparencia: o que esta no ar e o mesmo codigo versionado no repositorio oficial.</li>
+            </ul>
+            <p class="arquivo-explicacao__nota mb-0">
+                A lista e atualizada direto do GitHub (branch <strong>main</strong>). Use <strong>Atualizar agora</strong> dentro da pasta para puxar a versao mais recente.
             </p>
         </div>
-        <div class="stat-grid mb-3">
-            <div class="stat-box">
-                <h3 th:text="${resumo.totalArquivos}">0</h3>
-                <p>Arquivos</p>
-            </div>
-            <div class="stat-box">
-                <h3 th:text="${resumo.totalPastas}">0</h3>
-                <p>Pastas</p>
-            </div>
-            <div class="stat-box">
-                <h3 th:text="${resumo.branch}">main</h3>
-                <p>Branch</p>
-            </div>
-        </div>
-        <p th:if="${resumo.arvoreTruncada}" class="hint text-warning mb-0">
-            A GitHub limitou a listagem; use o ZIP ou o repositorio online para ver tudo.
-        </p>
     </div>
 
-    <div class="shell-card">
-        <div class="arquivo-layout">
-            <div>
-                <label class="form-label fw-semibold" for="buscaArquivo">Arquivos do projeto</label>
-                <input type="search"
-                       id="buscaArquivo"
-                       class="form-control busca-arquivo"
-                       placeholder="Buscar por nome ou pasta..."
-                       autocomplete="off">
-                <div class="arquivo-lista-wrap">
-                    <div class="arquivo-lista" id="listaArquivos">
-                        <a th:each="item : ${resumo.arquivos}"
-                           th:href="@{/agendamentos/admin/arquivo-sistema(caminho=${item.caminho})}"
-                           th:classappend="${caminhoSelecionado != null and caminhoSelecionado == item.caminho} ? ' is-active' : ''"
-                           th:attr="data-caminho=${item.caminho}">
-                            <span th:text="${item.caminho}">src/main/java/...</span>
-                            <span class="meta" th:text="${item.tamanhoLabel}">1 KB</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
+    <div class="alert alert-warning shell-card p-3" th:if="${erroArquivoSistema}" th:text="${erroArquivoSistema}"></div>
 
-            <div>
-                <div th:if="${caminhoSelecionado == null}">
-                    <h2 class="h5 mb-2">Visualizar arquivo</h2>
-                    <p class="hint mb-0">
-                        Selecione um arquivo na lista ao lado para ver o conteudo atualizado direto do GitHub,
-                        ou baixe o ZIP completo do sistema.
-                    </p>
-                </div>
-                <div th:if="${caminhoSelecionado != null}">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h2 class="h6 mb-0 text-break" th:text="${caminhoSelecionado}">arquivo</h2>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a th:href="@{/agendamentos/admin/arquivo-sistema}"
-                               class="btn btn-sm btn-outline-secondary">Fechar</a>
-                            <a th:href="${urlGitHubArquivoSelecionado}"
-                               class="btn btn-sm btn-outline-primary"
-                               target="_blank"
-                               rel="noopener">
-                                Ver no GitHub
-                            </a>
-                        </div>
-                    </div>
-                    <div th:if="${erroArquivo}" class="alert alert-warning" th:text="${erroArquivo}"></div>
-                    <pre th:if="${conteudoArquivo != null}" class="conteudo-arquivo mb-0" th:text="${conteudoArquivo}">conteudo</pre>
-                </div>
+    <div class="shell-card" th:unless="${mostrarPasta}">
+        <div class="repo-topbar">
+            <i class="fa-solid fa-code-commit text-muted" aria-hidden="true"></i>
+            <span class="commit-sha" th:text="${resumo.commitShaCurto}">abc1234</span>
+            <span class="commit-msg text-truncate" th:text="${resumo.commitMensagem}">mensagem</span>
+            <span class="commit-meta d-none d-md-inline"
+                  th:text="|· ${resumo.commitAutor} · ${resumo.commitRelativo}|">· autor · há 5 horas</span>
+            <span class="commits-total">
+                <i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>
+                <span th:text="${resumo.totalCommits}">102</span> Commits
+            </span>
+        </div>
+
+        <nav class="breadcrumb-bar" aria-label="breadcrumb">
+            <th:block th:each="crumb, it : ${resumo.breadcrumb}">
+                <a th:href="@{/agendamentos/admin/arquivo-sistema(path=${crumb.caminho})}"
+                   th:text="${crumb.nome}">raiz</a>
+                <span class="sep" th:if="${!it.last}">/</span>
+            </th:block>
+        </nav>
+
+        <input type="search"
+               id="buscaArquivo"
+               class="form-control busca-arquivo"
+               placeholder="Filtrar nesta pasta..."
+               autocomplete="off">
+
+        <div class="repo-list mt-2" id="listaArquivos">
+            <a th:if="${!resumo.raiz}"
+               class="repo-row"
+               th:href="@{/agendamentos/admin/arquivo-sistema(path=${resumo.caminhoPai})}"
+               data-nome="..">
+                <span class="nome"><i class="fa-solid fa-turn-up fa-rotate-270" aria-hidden="true"></i><span>..</span></span>
+                <span class="commit"></span>
+                <span class="tempo"></span>
+            </a>
+
+            <a th:each="item : ${resumo.itens}"
+               class="repo-row"
+               th:attr="data-nome=${item.nome}"
+               th:href="${item.diretorio}
+                   ? @{/agendamentos/admin/arquivo-sistema(path=${item.caminho})}
+                   : @{/agendamentos/admin/arquivo-sistema(path=${resumo.caminhoAtual}, caminho=${item.caminho})}">
+                <span class="nome">
+                    <i th:class="${item.diretorio} ? 'fa-solid fa-folder' : 'fa-regular fa-file'"
+                       aria-hidden="true"></i>
+                    <span th:text="${item.nome}">nome</span>
+                </span>
+                <span class="commit" th:text="${item.commitMensagem}">commit</span>
+                <span class="tempo" th:text="${item.commitRelativo}">há 1 dia</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="shell-card p-4" th:if="${caminhoSelecionado != null}">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="h6 mb-0 text-break" th:text="${caminhoSelecionado}">arquivo</h2>
+            <div class="d-flex flex-wrap gap-2">
+                <a th:href="@{/agendamentos/admin/arquivo-sistema(path=${resumo.caminhoAtual})}"
+                   class="btn btn-sm btn-outline-secondary">Fechar</a>
+                <a th:href="${urlGitHubArquivoSelecionado}"
+                   class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">Ver no GitHub</a>
             </div>
         </div>
+        <div th:if="${erroArquivo}" class="alert alert-warning" th:text="${erroArquivo}"></div>
+        <pre th:if="${conteudoArquivo != null}" class="conteudo-arquivo mb-0" th:text="${conteudoArquivo}">conteudo</pre>
     </div>
 </div>
 
 <script>
     (function () {
         var busca = document.getElementById('buscaArquivo');
-        var links = document.querySelectorAll('#listaArquivos a');
-        if (!busca || !links.length) {
+        var linhas = document.querySelectorAll('#listaArquivos .repo-row');
+        if (!busca || !linhas.length) {
             return;
         }
         busca.addEventListener('input', function () {
             var termo = busca.value.trim().toLowerCase();
-            links.forEach(function (link) {
-                var caminho = (link.getAttribute('data-caminho') || '').toLowerCase();
-                link.style.display = !termo || caminho.indexOf(termo) >= 0 ? '' : 'none';
+            linhas.forEach(function (linha) {
+                var nome = (linha.getAttribute('data-nome') || '').toLowerCase();
+                if (nome === '..') {
+                    return;
+                }
+                linha.style.display = !termo || nome.indexOf(termo) >= 0 ? '' : 'none';
             });
         });
     })();

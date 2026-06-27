@@ -1,6 +1,7 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.config.ArquivoSistemaGitHubProperties;
+import com.clinica.sistema.dto.ArquivoSistemaBreadcrumbView;
 import com.clinica.sistema.dto.ArquivoSistemaItemView;
 import com.clinica.sistema.dto.ArquivoSistemaResumoView;
 import com.clinica.sistema.exception.ArquivoSistemaIndisponivelException;
@@ -12,56 +13,98 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ArquivoSistemaGitHubService {
 
-    private static final DateTimeFormatter DATA_COMMIT =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.forLanguageTag("pt-BR"))
-                    .withZone(ZoneId.of("America/Sao_Paulo"));
+    private static final Pattern LINK_LAST_PAGE = Pattern.compile("[?&]page=(\\d+)>;\\s*rel=\"last\"");
+    private static final int MAX_ENTRADAS_COM_COMMIT = 120;
 
     private final ArquivoSistemaGitHubProperties properties;
     private final RestTemplate restTemplate;
-    private final AtomicReference<CachedResumo> cacheResumo = new AtomicReference<>();
+    private final Map<String, CachedResumo> cachePorDiretorio = new ConcurrentHashMap<>();
+    private final Map<String, ArquivoSistemaResumoView> ultimoResumoBom = new ConcurrentHashMap<>();
+    private final Map<String, String[]> commitPorCaminho = new ConcurrentHashMap<>();
 
     public ArquivoSistemaGitHubService(ArquivoSistemaGitHubProperties properties) {
         this.properties = properties;
         this.restTemplate = new RestTemplate();
     }
 
-    public ArquivoSistemaResumoView montarResumo(boolean forcarAtualizacao) {
-        if (!forcarAtualizacao) {
-            CachedResumo cached = cacheResumo.get();
+    public ArquivoSistemaResumoView navegar(String diretorio, boolean forcarAtualizacao) {
+        String dir = normalizarDiretorio(diretorio);
+        if (forcarAtualizacao) {
+            cachePorDiretorio.remove(dir);
+        } else {
+            CachedResumo cached = cachePorDiretorio.get(dir);
             if (cached != null && !cached.expirado()) {
                 return cached.resumo();
             }
         }
 
-        ArquivoSistemaResumoView resumo = buscarResumoNoGitHub();
-        cacheResumo.set(new CachedResumo(resumo, Instant.now().plusSeconds(cacheSegundos())));
-        return resumo;
+        try {
+            ArquivoSistemaResumoView resumo = montarNavegacao(dir);
+            cachePorDiretorio.put(dir, new CachedResumo(resumo, Instant.now().plusSeconds(cacheSegundos())));
+            ultimoResumoBom.put(dir, resumo);
+            return resumo;
+        } catch (ArquivoSistemaIndisponivelException e) {
+            ArquivoSistemaResumoView bom = ultimoResumoBom.get(dir);
+            if (bom != null) {
+                return bom;
+            }
+            throw e;
+        }
+    }
+
+    /** Resumo minimo para a tela continuar abrindo mesmo sem conseguir falar com o GitHub. */
+    public ArquivoSistemaResumoView resumoIndisponivel(String diretorio) {
+        String dir = normalizarDiretorio(diretorio);
+        ArquivoSistemaResumoView bom = ultimoResumoBom.get(dir);
+        if (bom != null) {
+            return bom;
+        }
+        String branch = properties.getGithubBranch();
+        return new ArquivoSistemaResumoView(
+                properties.resolverUrlRepositorio(),
+                properties.resolverUrlDownloadZip(),
+                branch,
+                dir,
+                dir.isEmpty(),
+                calcularPai(dir),
+                montarBreadcrumb(dir),
+                "",
+                "Indisponivel no momento",
+                "",
+                "",
+                0,
+                0,
+                0,
+                dir.isEmpty()
+                        ? properties.resolverUrlRepositorio()
+                        : properties.resolverUrlRepositorio() + "/tree/" + branch + "/" + dir,
+                List.of()
+        );
     }
 
     public String buscarConteudoArquivo(String caminhoRelativo) {
-        validarCaminhoRelativo(caminhoRelativo);
+        validarCaminho(caminhoRelativo);
         String url = properties.resolverUrlRaw(caminhoRelativo);
         try {
             ResponseEntity<byte[]> resposta = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    new HttpEntity<>(headersGitHub()),
-                    byte[].class
+                    url, HttpMethod.GET, new HttpEntity<>(headersGitHub()), byte[].class
             );
             byte[] corpo = resposta.getBody();
             if (corpo == null) {
@@ -78,107 +121,211 @@ public class ArquivoSistemaGitHubService {
                 throw new ArquivoSistemaIndisponivelException("Arquivo nao encontrado no GitHub: " + caminhoRelativo);
             }
             throw new ArquivoSistemaIndisponivelException(
-                    "Nao foi possivel carregar o arquivo no GitHub. Tente novamente em alguns minutos.",
-                    e
+                    "Nao foi possivel carregar o arquivo no GitHub. Tente novamente em alguns minutos.", e
             );
         } catch (ArquivoSistemaIndisponivelException e) {
             throw e;
         } catch (RuntimeException e) {
             throw new ArquivoSistemaIndisponivelException(
-                    "Nao foi possivel carregar o arquivo no GitHub. Tente novamente em alguns minutos.",
-                    e
+                    "Nao foi possivel carregar o arquivo no GitHub. Tente novamente em alguns minutos.", e
             );
         }
     }
 
-    public void validarCaminhoRelativo(String caminhoRelativo) {
-        if (caminhoRelativo == null || caminhoRelativo.isBlank()) {
+    public void validarCaminho(String caminho) {
+        if (caminho == null || caminho.isBlank()) {
             throw new ArquivoSistemaIndisponivelException("Informe o caminho do arquivo.");
         }
-        String caminho = caminhoRelativo.trim();
-        if (caminho.startsWith("/") || caminho.contains("..") || caminho.contains("\\")) {
-            throw new ArquivoSistemaIndisponivelException("Caminho de arquivo invalido.");
+        String valor = caminho.trim();
+        if (valor.startsWith("/") || valor.contains("..") || valor.contains("\\")) {
+            throw new ArquivoSistemaIndisponivelException("Caminho invalido.");
         }
     }
 
-    private ArquivoSistemaResumoView buscarResumoNoGitHub() {
+    public String normalizarDiretorio(String diretorio) {
+        if (diretorio == null) {
+            return "";
+        }
+        String valor = diretorio.trim();
+        if (valor.isEmpty() || "/".equals(valor)) {
+            return "";
+        }
+        if (valor.contains("..") || valor.contains("\\")) {
+            throw new ArquivoSistemaIndisponivelException("Caminho invalido.");
+        }
+        while (valor.startsWith("/")) {
+            valor = valor.substring(1);
+        }
+        while (valor.endsWith("/")) {
+            valor = valor.substring(0, valor.length() - 1);
+        }
+        return valor;
+    }
+
+    private ArquivoSistemaResumoView montarNavegacao(String dir) {
         String branch = properties.getGithubBranch();
-        Map<String, Object> commit = buscarMap(
-                "https://api.github.com/repos/"
-                        + properties.getGithubOwner() + "/"
-                        + properties.getGithubRepo() + "/commits/" + branch
-        );
 
-        String commitSha = texto(commit.get("sha"));
-        Map<String, Object> commitDetalhe = mapa(commit.get("commit"));
-        String commitMensagem = texto(commitDetalhe.get("message"));
-        if (commitMensagem.contains("\n")) {
-            commitMensagem = commitMensagem.substring(0, commitMensagem.indexOf('\n')).trim();
-        }
-        Map<String, Object> committer = mapa(commitDetalhe.get("committer"));
-        String commitDataLabel = formatarDataCommit(texto(committer.get("date")));
+        Map<String, Object> headCommit = buscarMap(urlApi("/commits/" + branch));
+        String commitSha = texto(headCommit.get("sha"));
+        Map<String, Object> commitDetalhe = mapa(headCommit.get("commit"));
+        String commitMensagem = primeiraLinha(texto(commitDetalhe.get("message")));
+        Map<String, Object> autor = mapa(commitDetalhe.get("author"));
+        String commitAutor = texto(autor.get("name"));
+        String commitRelativo = relativo(texto(mapa(commitDetalhe.get("committer")).get("date")));
 
-        Map<String, Object> treeCommit = mapa(commitDetalhe.get("tree"));
-        String treeSha = texto(treeCommit.get("sha"));
-        Map<String, Object> arvore = buscarMap(
-                "https://api.github.com/repos/"
-                        + properties.getGithubOwner() + "/"
-                        + properties.getGithubRepo() + "/git/trees/" + treeSha + "?recursive=1"
-        );
+        int totalCommits = contarCommits(branch);
 
-        boolean truncada = Boolean.TRUE.equals(arvore.get("truncated"));
-        List<ArquivoSistemaItemView> arquivos = new ArrayList<>();
+        String contentsUrl = dir.isEmpty()
+                ? urlApi("/contents?ref=" + branch)
+                : urlApi("/contents/" + codificarCaminho(dir) + "?ref=" + branch);
+        List<Map<String, Object>> entradas = buscarLista(contentsUrl);
+
+        List<ArquivoSistemaItemView> itens = new ArrayList<>();
         int pastas = 0;
-        Object treeObj = arvore.get("tree");
-        if (treeObj instanceof List<?> tree) {
-            for (Object itemObj : tree) {
-                if (!(itemObj instanceof Map<?, ?>)) {
-                    continue;
-                }
-                Map<String, Object> no = mapa(itemObj);
-                String tipo = texto(no.get("type"));
-                String caminho = texto(no.get("path"));
-                if ("tree".equals(tipo)) {
-                    pastas++;
-                    continue;
-                }
-                if (!"blob".equals(tipo) || caminho.isBlank()) {
-                    continue;
-                }
-                long tamanho = numero(no.get("size"));
-                arquivos.add(new ArquivoSistemaItemView(
-                        caminho,
-                        tipo,
-                        tamanho,
-                        formatarTamanho(tamanho),
-                        properties.resolverUrlArquivoNoGitHub(caminho),
-                        properties.resolverUrlRaw(caminho)
-                ));
+        int arquivos = 0;
+        boolean buscarCommits = entradas.size() <= MAX_ENTRADAS_COM_COMMIT;
+        int orcamentoConsultas = 30;
+        boolean limiteAtingido = false;
+
+        for (Map<String, Object> entrada : entradas) {
+            String tipo = texto(entrada.get("type"));
+            String caminho = texto(entrada.get("path"));
+            String nome = texto(entrada.get("name"));
+            boolean diretorio = "dir".equals(tipo);
+            if (diretorio) {
+                pastas++;
+            } else if ("file".equals(tipo)) {
+                arquivos++;
+            } else {
+                continue;
             }
+
+            String commitMsg = "";
+            String commitRel = "";
+            String chaveCache = branch + ":" + caminho;
+            String[] emCache = commitPorCaminho.get(chaveCache);
+            if (emCache != null) {
+                commitMsg = emCache[0];
+                commitRel = emCache[1];
+            } else if (buscarCommits && !limiteAtingido && orcamentoConsultas > 0) {
+                orcamentoConsultas--;
+                Map<String, Object> ultimo = ultimoCommitDoCaminho(caminho, branch);
+                if (ultimo != null) {
+                    Map<String, Object> detalhe = mapa(ultimo.get("commit"));
+                    commitMsg = primeiraLinha(texto(detalhe.get("message")));
+                    commitRel = relativo(texto(mapa(detalhe.get("committer")).get("date")));
+                    commitPorCaminho.put(chaveCache, new String[]{commitMsg, commitRel});
+                } else {
+                    limiteAtingido = true;
+                }
+            }
+
+            itens.add(new ArquivoSistemaItemView(
+                    nome,
+                    caminho,
+                    diretorio,
+                    diretorio ? "" : formatarTamanho(numero(entrada.get("size"))),
+                    commitMsg,
+                    commitRel,
+                    diretorio
+                            ? properties.resolverUrlRepositorio() + "/tree/" + branch + "/" + caminho
+                            : properties.resolverUrlArquivoNoGitHub(caminho)
+            ));
         }
 
-        arquivos.sort(Comparator.comparing(ArquivoSistemaItemView::getCaminho, String.CASE_INSENSITIVE_ORDER));
+        itens.sort(Comparator
+                .comparing(ArquivoSistemaItemView::isDiretorio, Comparator.reverseOrder())
+                .thenComparing(ArquivoSistemaItemView::getNome, String.CASE_INSENSITIVE_ORDER));
 
         return new ArquivoSistemaResumoView(
                 properties.resolverUrlRepositorio(),
                 properties.resolverUrlDownloadZip(),
                 branch,
+                dir,
+                dir.isEmpty(),
+                calcularPai(dir),
+                montarBreadcrumb(dir),
                 encurtarSha(commitSha),
                 commitMensagem.isBlank() ? "Sem mensagem" : commitMensagem,
-                commitDataLabel,
-                arquivos.size(),
+                commitAutor,
+                commitRelativo,
+                totalCommits,
                 pastas,
-                truncada,
-                arquivos
+                arquivos,
+                dir.isEmpty()
+                        ? properties.resolverUrlRepositorio()
+                        : properties.resolverUrlRepositorio() + "/tree/" + branch + "/" + dir,
+                itens
         );
+    }
+
+    private Map<String, Object> ultimoCommitDoCaminho(String caminho, String branch) {
+        try {
+            List<Map<String, Object>> commits = buscarLista(
+                    urlApi("/commits?sha=" + branch + "&per_page=1&path=" + codificarCaminho(caminho))
+            );
+            return commits.isEmpty() ? null : commits.get(0);
+        } catch (ArquivoSistemaIndisponivelException e) {
+            return null;
+        }
+    }
+
+    private int contarCommits(String branch) {
+        try {
+            ResponseEntity<List<Map<String, Object>>> resposta = restTemplate.exchange(
+                    urlApi("/commits?sha=" + branch + "&per_page=1"),
+                    HttpMethod.GET,
+                    new HttpEntity<>(headersGitHub()),
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+            String link = resposta.getHeaders().getFirst("Link");
+            if (link != null) {
+                Matcher matcher = LINK_LAST_PAGE.matcher(link);
+                if (matcher.find()) {
+                    return Integer.parseInt(matcher.group(1));
+                }
+            }
+            List<Map<String, Object>> corpo = resposta.getBody();
+            return corpo != null ? corpo.size() : 0;
+        } catch (RuntimeException e) {
+            return 0;
+        }
+    }
+
+    private List<ArquivoSistemaBreadcrumbView> montarBreadcrumb(String dir) {
+        List<ArquivoSistemaBreadcrumbView> crumbs = new ArrayList<>();
+        crumbs.add(new ArquivoSistemaBreadcrumbView(properties.getGithubRepo(), ""));
+        if (dir.isEmpty()) {
+            return crumbs;
+        }
+        String[] partes = dir.split("/");
+        StringBuilder acumulado = new StringBuilder();
+        for (String parte : partes) {
+            if (parte.isBlank()) {
+                continue;
+            }
+            if (acumulado.length() > 0) {
+                acumulado.append('/');
+            }
+            acumulado.append(parte);
+            crumbs.add(new ArquivoSistemaBreadcrumbView(parte, acumulado.toString()));
+        }
+        return crumbs;
+    }
+
+    private String calcularPai(String dir) {
+        if (dir == null || dir.isEmpty()) {
+            return "";
+        }
+        int corte = dir.lastIndexOf('/');
+        return corte < 0 ? "" : dir.substring(0, corte);
     }
 
     private Map<String, Object> buscarMap(String url) {
         try {
             ResponseEntity<Map<String, Object>> resposta = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    new HttpEntity<>(headersGitHub()),
+                    url, HttpMethod.GET, new HttpEntity<>(headersGitHub()),
                     new ParameterizedTypeReference<>() {
                     }
             );
@@ -188,23 +335,72 @@ public class ArquivoSistemaGitHubService {
             }
             return corpo;
         } catch (HttpStatusCodeException e) {
-            if (e.getStatusCode().value() == 403) {
-                throw new ArquivoSistemaIndisponivelException(
-                        "Limite de consultas ao GitHub atingido. Aguarde alguns minutos ou configure um token de acesso."
-                );
-            }
-            throw new ArquivoSistemaIndisponivelException(
-                    "Nao foi possivel consultar o GitHub agora. Tente novamente em alguns minutos.",
-                    e
-            );
+            throw traduzirErro(e);
         } catch (ArquivoSistemaIndisponivelException e) {
             throw e;
         } catch (RuntimeException e) {
             throw new ArquivoSistemaIndisponivelException(
-                    "Nao foi possivel consultar o GitHub agora. Tente novamente em alguns minutos.",
-                    e
+                    "Nao foi possivel consultar o GitHub agora. Tente novamente em alguns minutos.", e
             );
         }
+    }
+
+    private List<Map<String, Object>> buscarLista(String url) {
+        try {
+            ResponseEntity<List<Map<String, Object>>> resposta = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headersGitHub()),
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+            List<Map<String, Object>> corpo = resposta.getBody();
+            return corpo != null ? corpo : List.of();
+        } catch (HttpStatusCodeException e) {
+            throw traduzirErro(e);
+        } catch (RuntimeException e) {
+            throw new ArquivoSistemaIndisponivelException(
+                    "Nao foi possivel consultar o GitHub agora. Tente novamente em alguns minutos.", e
+            );
+        }
+    }
+
+    private ArquivoSistemaIndisponivelException traduzirErro(HttpStatusCodeException e) {
+        if (e.getStatusCode().value() == 403) {
+            return new ArquivoSistemaIndisponivelException(
+                    "Limite de consultas ao GitHub atingido. Aguarde alguns minutos ou configure um token de acesso."
+            );
+        }
+        if (e.getStatusCode().value() == 404) {
+            return new ArquivoSistemaIndisponivelException("Pasta ou arquivo nao encontrado no GitHub.");
+        }
+        return new ArquivoSistemaIndisponivelException(
+                "Nao foi possivel consultar o GitHub agora. Tente novamente em alguns minutos.", e
+        );
+    }
+
+    private String urlApi(String sufixo) {
+        return "https://api.github.com/repos/"
+                + properties.getGithubOwner() + "/" + properties.getGithubRepo() + sufixo;
+    }
+
+    private String codificarCaminho(String caminho) {
+        return UriUtils.encodePath(caminho, StandardCharsets.UTF_8);
+    }
+
+    private HttpHeaders headersGitHub() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/vnd.github+json");
+        headers.set("User-Agent", "Agenda-Afetto-Arquivo-Sistema");
+        headers.set("X-GitHub-Api-Version", "2022-11-28");
+        String token = properties.getGithubToken();
+        if (token != null && !token.isBlank()) {
+            headers.setBearerAuth(token.trim());
+        }
+        return headers;
+    }
+
+    private long cacheSegundos() {
+        int minutos = properties.getCacheMinutos();
+        return minutos < 1 ? 60L : minutos * 60L;
     }
 
     @SuppressWarnings("unchecked")
@@ -230,24 +426,13 @@ public class ArquivoSistemaGitHubService {
         }
     }
 
-    private HttpHeaders headersGitHub() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", "application/vnd.github+json");
-        headers.set("User-Agent", "Agenda-Afetto-Arquivo-Sistema");
-        headers.set("X-GitHub-Api-Version", "2022-11-28");
-        String token = properties.getGithubToken();
-        if (token != null && !token.isBlank()) {
-            headers.setBearerAuth(token.trim());
+    private String primeiraLinha(String mensagem) {
+        if (mensagem == null) {
+            return "";
         }
-        return headers;
-    }
-
-    private long cacheSegundos() {
-        int minutos = properties.getCacheMinutos();
-        if (minutos < 1) {
-            return 60L;
-        }
-        return minutos * 60L;
+        String texto = mensagem.strip();
+        int quebra = texto.indexOf('\n');
+        return quebra < 0 ? texto : texto.substring(0, quebra).strip();
     }
 
     private String encurtarSha(String sha) {
@@ -257,14 +442,48 @@ public class ArquivoSistemaGitHubService {
         return sha.substring(0, 7);
     }
 
-    private String formatarDataCommit(String iso) {
+    private String relativo(String iso) {
         if (iso == null || iso.isBlank()) {
-            return "—";
+            return "";
         }
         try {
-            return DATA_COMMIT.format(Instant.parse(iso));
+            Instant momento = Instant.parse(iso);
+            long segundos = Duration.between(momento, Instant.now()).getSeconds();
+            if (segundos < 0) {
+                segundos = 0;
+            }
+            if (segundos < 60) {
+                return "agora mesmo";
+            }
+            long minutos = segundos / 60;
+            if (minutos < 60) {
+                return "há " + minutos + (minutos == 1 ? " minuto" : " minutos");
+            }
+            long horas = minutos / 60;
+            if (horas < 24) {
+                return "há " + horas + (horas == 1 ? " hora" : " horas");
+            }
+            long dias = horas / 24;
+            if (dias == 1) {
+                return "ontem";
+            }
+            if (dias < 30) {
+                return "há " + dias + " dias";
+            }
+            long meses = dias / 30;
+            if (meses == 1) {
+                return "mês passado";
+            }
+            if (meses < 12) {
+                return "há " + meses + " meses";
+            }
+            long anos = dias / 365;
+            if (anos <= 1) {
+                return "ano passado";
+            }
+            return "há " + anos + " anos";
         } catch (RuntimeException e) {
-            return iso;
+            return "";
         }
     }
 
