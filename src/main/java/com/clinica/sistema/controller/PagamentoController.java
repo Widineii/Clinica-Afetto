@@ -6,10 +6,13 @@ import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
+import com.clinica.sistema.service.AuditoriaService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.QrCodeService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,19 +39,22 @@ public class PagamentoController {
     private final AuthService authService;
     private final QrCodeService qrCodeService;
     private final InfinitePayProperties infinitePayProperties;
+    private final AuditoriaService auditoriaService;
 
     public PagamentoController(
             PagamentoConsultaService pagamentoConsultaService,
             AgendamentoRepository agendamentoRepository,
             AuthService authService,
             QrCodeService qrCodeService,
-            InfinitePayProperties infinitePayProperties
+            InfinitePayProperties infinitePayProperties,
+            AuditoriaService auditoriaService
     ) {
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.agendamentoRepository = agendamentoRepository;
         this.authService = authService;
         this.qrCodeService = qrCodeService;
         this.infinitePayProperties = infinitePayProperties;
+        this.auditoriaService = auditoriaService;
     }
 
     @GetMapping("/{id}")
@@ -351,14 +357,25 @@ public class PagamentoController {
     @PostMapping("/{id}/confirmar-gestor")
     public String confirmarPagamentoGestor(
             @PathVariable Long id,
+            @RequestParam(required = false) String origem,
             RedirectAttributes redirectAttributes,
             HttpServletRequest request
     ) {
+        Agendamento agendamentoRef = null;
         try {
             Usuario gestor = authService.buscarUsuarioLogadoObrigatorio();
             PagamentoConsultaService.ResultadoConfirmacaoGestor resultado =
                     pagamentoConsultaService.confirmarPagamentoComoGestor(id, gestor);
             Agendamento agendamento = resultado.referencia();
+            agendamentoRef = agendamento;
+            if (agendamento.getProfissional() != null) {
+                auditoriaService.registrarPagamentoConfirmadoGestor(
+                        gestor,
+                        agendamento.getProfissional(),
+                        agendamento,
+                        resultado.consultasConfirmadas()
+                );
+            }
             if (resultado.consultasConfirmadas() > 1) {
                 redirectAttributes.addFlashAttribute(
                         "sucesso",
@@ -378,10 +395,29 @@ public class PagamentoController {
             }
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            agendamentoRef = agendamentoRepository.findById(id).orElse(null);
+        }
+        if ("confirmar-pagamento".equals(origem) || "auditoria".equals(origem)) {
+            Long profId = agendamentoRef != null && agendamentoRef.getProfissional() != null
+                    ? agendamentoRef.getProfissional().getId()
+                    : null;
+            String cliente = agendamentoRef != null && agendamentoRef.getNomeCliente() != null
+                    ? agendamentoRef.getNomeCliente().trim()
+                    : null;
+            if (profId != null && cliente != null && !cliente.isBlank()) {
+                return "redirect:/agendamentos/central-profissionais?aba=confirmar-pagamento&profConfirmacao="
+                        + profId
+                        + "&clienteConfirmacao="
+                        + URLEncoder.encode(cliente, StandardCharsets.UTF_8);
+            }
+            if (profId != null) {
+                return "redirect:/agendamentos/central-profissionais?aba=confirmar-pagamento&profConfirmacao=" + profId;
+            }
+            return "redirect:/agendamentos/central-profissionais?aba=confirmar-pagamento";
         }
         String referer = request.getHeader("Referer");
         if (referer != null && referer.contains("/agendamentos/central-profissionais")) {
-            return "redirect:/agendamentos/central-profissionais";
+            return "redirect:/agendamentos/central-profissionais?aba=confirmar-pagamento";
         }
         if (referer != null && referer.contains("/agendamentos/dashboard")) {
             return "redirect:/agendamentos/dashboard";

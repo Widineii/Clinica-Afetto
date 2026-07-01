@@ -7,6 +7,7 @@
          role="tabpanel"
          aria-labelledby="tabAuditoria"
          th:hidden="${abaCentral != 'auditoria'}">
+
     <div class="central-panel__head">
         <div>
             <h2 class="central-panel__title">Auditoria do sistema</h2>
@@ -65,6 +66,7 @@
                     : evento.tipo == 'PERIODICIDADE_ALTERADA' ? 'fa-solid fa-rotate'
                     : evento.tipo == 'VALORES_CONSULTA_ALTERADOS' ? 'fa-solid fa-coins'
                     : evento.tipo == 'TAXA_INDICACAO_ALTERADA' ? 'fa-solid fa-percent'
+                    : evento.tipo == 'PAGAMENTO_CONFIRMADO_GESTOR' ? 'fa-solid fa-receipt'
                     : 'fa-solid fa-circle-info'}"></i>
             </div>
             <div class="auditoria-item__corpo">

@@ -3263,4 +3263,88 @@ public class PagamentoConsultaService {
 
     public record ResultadoConfirmacaoGestor(Agendamento referencia, int consultasConfirmadas) {
     }
+
+    public record ClientePagamentoPendenteAuditoria(String nome, int quantidadePendente) {
+    }
+
+    /**
+     * Auditoria / gestor: consultas com pagamento em aberto da profissional no mes calendario atual.
+     */
+    public List<Agendamento> listarConsultasPagamentoPendentesAuditoriaGestor(Usuario profissional) {
+        if (profissional == null
+                || profissional.getId() == null
+                || authService.profissionalIgnoraValoresEPagamento(profissional)) {
+            return Collections.emptyList();
+        }
+        YearMonth mesAtual = YearMonth.now();
+        LocalDateTime desde = mesAtual.atDay(1).atStartOfDay();
+        LocalDateTime ate = mesAtual.atEndOfMonth().atTime(23, 59, 59);
+        return repository
+                .findByProfissionalIdAndStatusPagamentoNotAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                        profissional.getId(),
+                        PagamentoStatus.PAGO,
+                        desde
+                )
+                .stream()
+                .filter(consulta -> consulta.getDataHoraInicio() != null
+                        && !consulta.getDataHoraInicio().isAfter(ate))
+                .filter(Agendamento::isReservaPendenteNaGrade)
+                .toList();
+    }
+
+    public List<ClientePagamentoPendenteAuditoria> listarClientesPagamentoPendentesAuditoriaGestor(
+            Usuario profissional
+    ) {
+        return listarConsultasPagamentoPendentesAuditoriaGestor(profissional).stream()
+                .filter(consulta -> consulta.getNomeCliente() != null && !consulta.getNomeCliente().isBlank())
+                .collect(Collectors.groupingBy(
+                        consulta -> consulta.getNomeCliente().trim(),
+                        Collectors.counting()
+                ))
+                .entrySet()
+                .stream()
+                .map(entry -> new ClientePagamentoPendenteAuditoria(entry.getKey(), entry.getValue().intValue()))
+                .sorted(Comparator.comparing(ClientePagamentoPendenteAuditoria::nome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    public List<Agendamento> listarConsultasPagamentoPendentesAuditoriaGestor(
+            Usuario profissional,
+            String nomeCliente
+    ) {
+        return listarConsultasPagamentoPendentesAuditoriaGestor(profissional, nomeCliente, YearMonth.now());
+    }
+
+    public List<Agendamento> listarConsultasPagamentoPendentesAuditoriaGestor(
+            Usuario profissional,
+            String nomeCliente,
+            YearMonth mesReferencia
+    ) {
+        if (nomeCliente == null || nomeCliente.isBlank()) {
+            return Collections.emptyList();
+        }
+        String alvo = nomeCliente.trim();
+        YearMonth mes = mesReferencia != null ? mesReferencia : YearMonth.now();
+        return listarConsultasPagamentoPendentesAuditoriaGestor(profissional).stream()
+                .filter(consulta -> consulta.getNomeCliente() != null
+                        && consulta.getNomeCliente().trim().equalsIgnoreCase(alvo))
+                .filter(consulta -> consultaNoMes(consulta, mes))
+                .toList();
+    }
+
+    private boolean consultaNoMes(Agendamento consulta, YearMonth mesReferencia) {
+        if (consulta == null || consulta.getDataHoraInicio() == null || mesReferencia == null) {
+            return false;
+        }
+        LocalDate dataConsulta = consulta.getDataHoraInicio().toLocalDate();
+        return YearMonth.from(dataConsulta).equals(mesReferencia);
+    }
+
+    public int contarConsultasPagamentoPendentesAuditoriaGestor(Usuario profissional) {
+        return listarConsultasPagamentoPendentesAuditoriaGestor(profissional).size();
+    }
+
+    public boolean profissionalIgnoraValoresEPagamento(Usuario profissional) {
+        return authService.profissionalIgnoraValoresEPagamento(profissional);
+    }
 }

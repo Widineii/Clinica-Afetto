@@ -248,6 +248,45 @@
             font-size: 0.9rem;
         }
 
+        .auditoria-confirmacao-pagamento {
+            background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
+            border-color: #bbf7d0 !important;
+        }
+
+        .auditoria-prof-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .auditoria-prof-card {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            color: inherit;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .auditoria-prof-card:hover {
+            border-color: var(--afetto-teal, #0d9488);
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.12);
+            color: inherit;
+        }
+
+        .auditoria-prof-card__nome {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .auditoria-prof-card__badge {
+            align-self: flex-start;
+            font-size: 0.7rem;
+        }
+
         .valores-prof-list {
             display: flex;
             flex-direction: column;
@@ -1177,6 +1216,15 @@
                     E-mail
                 </a>
                 <a th:if="${podeVerAuditoria == true}"
+                   th:href="@{/agendamentos/central-profissionais(aba='confirmar-pagamento')}"
+                   th:class="${abaCentral == 'confirmar-pagamento' ? 'central-tab active' : 'central-tab'}"
+                   id="tabConfirmarPagamento"
+                   data-aba="confirmar-pagamento"
+                   th:attr="aria-current=${abaCentral == 'confirmar-pagamento' ? 'page' : null}">
+                    <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                    Confirmar pagamento
+                </a>
+                <a th:if="${podeVerAuditoria == true}"
                    th:href="@{/agendamentos/central-profissionais(aba='auditoria')}"
                    th:class="${abaCentral == 'auditoria' ? 'central-tab active' : 'central-tab'}"
                    id="tabAuditoria"
@@ -1484,6 +1532,19 @@
                  th:replace="~{fragments/central-valores-profissionais-painel :: painel(profissionais=${profissionaisValoresConsulta}, abaCentral=${abaCentral})}"></div>
 
             <div th:replace="~{fragments/central-mensagem-painel :: painel(abaCentral=${abaCentral}, whatsappMetaAtivo=${whatsappMetaAtivo})}"></div>
+
+            <div th:if="${podeVerAuditoria == true}"
+                 th:replace="~{fragments/central-confirmar-pagamento-painel :: painel(
+                    abaCentral=${abaCentral},
+                    profissionais=${profissionais},
+                    profConfirmacao=${profConfirmacao},
+                    clienteConfirmacao=${clienteConfirmacao},
+                    profissionalConfirmacaoSelecionado=${profissionalConfirmacaoSelecionado},
+                    clientesConfirmacaoPagamento=${clientesConfirmacaoPagamento},
+                    consultasConfirmacaoPagamento=${consultasConfirmacaoPagamento},
+                    mesConfirmacaoPagamento=${mesConfirmacaoPagamento},
+                    pagamentoService=${pagamentoService}
+                 )}"></div>
 
             <div th:if="${podeVerAuditoria == true}"
                  th:replace="~{fragments/central-auditoria-painel :: painel(
@@ -1861,6 +1922,7 @@
             valores: document.getElementById('central-pane-valores'),
             'uso-site': document.getElementById('central-pane-uso-site'),
             mensagem: document.getElementById('central-pane-mensagem'),
+            'confirmar-pagamento': document.getElementById('central-pane-confirmar-pagamento'),
             auditoria: document.getElementById('central-pane-auditoria')
         };
 
@@ -1888,7 +1950,7 @@
                 if (!aba) {
                     return;
                 }
-                if (aba === 'mensagem' || aba === 'auditoria') {
+                if (aba === 'mensagem' || aba === 'confirmar-pagamento' || aba === 'auditoria') {
                     return;
                 }
                 evento.preventDefault();

@@ -33,6 +33,7 @@ public class AuditoriaService {
     public static final String TIPO_PERIODICIDADE_ALTERADA = "PERIODICIDADE_ALTERADA";
     public static final String TIPO_VALORES_CONSULTA_ALTERADOS = "VALORES_CONSULTA_ALTERADOS";
     public static final String TIPO_TAXA_INDICACAO_ALTERADA = "TAXA_INDICACAO_ALTERADA";
+    public static final String TIPO_PAGAMENTO_CONFIRMADO_GESTOR = "PAGAMENTO_CONFIRMADO_GESTOR";
 
     private static final DateTimeFormatter FORMATO_DATA_HORA =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'as' HH:mm", new Locale("pt", "BR"));
@@ -274,6 +275,35 @@ public class AuditoriaService {
             descricao += " (" + agendamentosAtualizados + " agendamento(s) ajustado(s))";
         }
         registrar(autor, TIPO_TAXA_INDICACAO_ALTERADA, descricao + ".");
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarPagamentoConfirmadoGestor(
+            Usuario autor,
+            Usuario profissional,
+            Agendamento referencia,
+            int consultasConfirmadas
+    ) {
+        if (autor == null || profissional == null || referencia == null) {
+            return;
+        }
+        String cliente = referencia.getNomeCliente() != null ? referencia.getNomeCliente() : "consulta";
+        String sala = referencia.getSala() != null && referencia.getSala().getNome() != null
+                ? referencia.getSala().getNome()
+                : "Sala";
+        String dataHora = referencia.getDataHoraInicio() != null
+                ? FORMATO_DATA_HORA.format(referencia.getDataHoraInicio())
+                : "";
+        String descricao = nomeCurto(autor) + " confirmou pagamento de "
+                + nomeCurto(profissional) + ": " + cliente + " — " + sala;
+        if (!dataHora.isBlank()) {
+            descricao += " (" + dataHora + ")";
+        }
+        if (consultasConfirmadas > 1) {
+            descricao += " — total " + consultasConfirmadas + " consulta(s) quitada(s) no lote";
+        }
+        descricao += " (comprovante InfinitePay).";
+        registrar(autor, TIPO_PAGAMENTO_CONFIRMADO_GESTOR, descricao);
     }
 
     private void registrar(Usuario autor, String tipo, String descricao) {

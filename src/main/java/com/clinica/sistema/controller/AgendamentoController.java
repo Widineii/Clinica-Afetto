@@ -789,6 +789,8 @@ public class AgendamentoController {
             @RequestParam(name = "aba", required = false, defaultValue = "equipe") String aba,
             @RequestParam(name = "dataAuditoria", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataAuditoria,
+            @RequestParam(name = "profConfirmacao", required = false) Long profConfirmacao,
+            @RequestParam(name = "clienteConfirmacao", required = false) String clienteConfirmacao,
             @RequestParam(name = "viaNotificacaoEncerramento", required = false, defaultValue = "false")
             boolean viaNotificacaoEncerramento,
             Model model,
@@ -830,6 +832,9 @@ public class AgendamentoController {
         if ("auditoria".equals(abaSolicitada) && !podeVerAuditoria) {
             abaSolicitada = "equipe";
         }
+        if ("confirmar-pagamento".equals(abaSolicitada) && !podeVerAuditoria) {
+            abaSolicitada = "equipe";
+        }
         if ("valores".equals(abaSolicitada) && !podeGerenciarValoresConsulta) {
             abaSolicitada = "equipe";
         }
@@ -840,6 +845,7 @@ public class AgendamentoController {
             case "indicacoes" -> "indicacoes";
             case "mensagem" -> "mensagem";
             case "auditoria" -> "auditoria";
+            case "confirmar-pagamento" -> "confirmar-pagamento";
             case "uso-site" -> "uso-site";
             case "valores" -> "valores";
             default -> "equipe";
@@ -864,6 +870,39 @@ public class AgendamentoController {
             model.addAttribute("auditoriaEhHoje", diaAuditoria.equals(LocalDate.now()));
             model.addAttribute("dataAuditoriaMaxima", LocalDate.now());
             model.addAttribute("eventosAuditoria", auditoriaService.listarPorDia(diaAuditoria));
+        }
+        if (podeVerAuditoria && "confirmar-pagamento".equals(abaAtiva)) {
+            LocalDate mesReferencia = LocalDate.now();
+            model.addAttribute("mesConfirmacaoPagamento", mesReferencia);
+            model.addAttribute("profConfirmacao", profConfirmacao);
+            model.addAttribute("clienteConfirmacao", clienteConfirmacao);
+            if (profConfirmacao != null) {
+                profissionais.stream()
+                        .filter(prof -> profConfirmacao.equals(prof.getId()))
+                        .findFirst()
+                        .ifPresent(prof -> {
+                            try {
+                                pagamentoConsultaService.reconciliarPagamentosInfinitePayPendentes(prof);
+                            } catch (RuntimeException ignored) {
+                                // tenta InfinitePay antes de mostrar pendentes
+                            }
+                            model.addAttribute("profissionalConfirmacaoSelecionado", prof);
+                            if (clienteConfirmacao != null && !clienteConfirmacao.isBlank()) {
+                                model.addAttribute(
+                                        "consultasConfirmacaoPagamento",
+                                        pagamentoConsultaService.listarConsultasPagamentoPendentesAuditoriaGestor(
+                                                prof,
+                                                clienteConfirmacao
+                                        )
+                                );
+                            } else {
+                                model.addAttribute(
+                                        "clientesConfirmacaoPagamento",
+                                        pagamentoConsultaService.listarClientesPagamentoPendentesAuditoriaGestor(prof)
+                                );
+                            }
+                        });
+            }
         }
         model.addAttribute("podeGerenciarValoresConsulta", podeGerenciarValoresConsulta);
         model.addAttribute("whatsappMetaAtivo", whatsAppNotificacaoService.ativo());

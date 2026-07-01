@@ -380,6 +380,13 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             PagamentoStatus statusPagamento
     );
 
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByProfissionalIdAndStatusPagamentoNotAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+            Long profissionalId,
+            PagamentoStatus statusPagamento,
+            LocalDateTime dataHoraInicio
+    );
+
     @Query("""
             SELECT DISTINCT a.pagamentoOrderNsu FROM Agendamento a
             WHERE a.pagamentoOrderNsu IS NOT NULL

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="painel (abaCentral, profissionais, profConfirmacao, clienteConfirmacao, profissionalConfirmacaoSelecionado, clientesConfirmacaoPagamento, consultasConfirmacaoPagamento, mesConfirmacaoPagamento, pagamentoService)"
+         class="central-pane"
+         id="central-pane-confirmar-pagamento"
+         role="tabpanel"
+         aria-labelledby="tabConfirmarPagamento"
+         th:hidden="${abaCentral != 'confirmar-pagamento'}">
+
+    <div class="central-panel__head mb-3">
+        <div>
+            <h2 class="central-panel__title">
+                <i class="fa-solid fa-receipt text-success me-1" aria-hidden="true"></i>
+                Confirmar pagamento (comprovante)
+            </h2>
+            <p class="central-panel__hint mb-0">
+                Quando a InfinitePay não atualizou, mas a profissional tem comprovante.
+                Mostra só o mês atual; ao virar o mês, aparecem as consultas do mês seguinte.
+            </p>
+        </div>
+        <a th:if="${profConfirmacao != null and clienteConfirmacao != null and !#strings.isEmpty(clienteConfirmacao)}"
+           th:href="@{/agendamentos/central-profissionais(aba='confirmar-pagamento', profConfirmacao=${profConfirmacao})}"
+           class="btn btn-sm btn-outline-secondary btn-pill-outline align-self-start">
+            Voltar aos clientes
+        </a>
+        <a th:if="${profConfirmacao != null and (clienteConfirmacao == null or #strings.isEmpty(clienteConfirmacao))}"
+           th:href="@{/agendamentos/central-profissionais(aba='confirmar-pagamento')}"
+           class="btn btn-sm btn-outline-secondary btn-pill-outline align-self-start">
+            Voltar à lista
+        </a>
+    </div>
+
+    <!-- Nível 1: profissionais -->
+    <div th:if="${profConfirmacao == null}" class="auditoria-prof-grid">
+        <a th:each="prof : ${profissionais}"
+           th:if="${prof != null and prof.id != null and (pagamentoService == null or !pagamentoService.profissionalIgnoraValoresEPagamento(prof))}"
+           th:href="@{/agendamentos/central-profissionais(aba='confirmar-pagamento', profConfirmacao=${prof.id})}"
+           class="auditoria-prof-card text-decoration-none">
+            <span class="auditoria-prof-card__nome" th:text="${prof.nome}">Carol</span>
+            <span class="auditoria-prof-card__meta text-muted small"
+                  th:text="${pagamentoService != null ? pagamentoService.resolverPeriodicidade(prof).rotulo : 'Profissional'}">
+                Semanal
+            </span>
+        </a>
+    </div>
+
+    <div th:if="${profConfirmacao != null and profissionalConfirmacaoSelecionado == null}" class="alert alert-warning mb-0">
+        Profissional não encontrado.
+    </div>
+
+    <!-- Nível 2: clientes da profissional -->
+    <div th:if="${profissionalConfirmacaoSelecionado != null and (clienteConfirmacao == null or #strings.isEmpty(clienteConfirmacao))}">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom">
+            <strong th:text="${profissionalConfirmacaoSelecionado.nome}">Carol</strong>
+            <span class="badge text-bg-light border"
+                  th:text="${pagamentoService.resolverPeriodicidade(profissionalConfirmacaoSelecionado).rotulo}">
+                Semanal
+            </span>
+            <span class="text-muted small"
+                  th:if="${mesConfirmacaoPagamento != null}"
+                  th:text="'Referência: ' + ${#temporals.format(mesConfirmacaoPagamento, 'MMMM/yyyy')}">
+                Referência: julho/2026
+            </span>
+        </div>
+
+        <div th:if="${clientesConfirmacaoPagamento == null or #lists.isEmpty(clientesConfirmacaoPagamento)}"
+             class="central-empty py-4">
+            <p class="text-muted mb-0">
+                Nenhum cliente com consulta pendente neste mês para esta profissional.
+            </p>
+        </div>
+
+        <div th:if="${clientesConfirmacaoPagamento != null and !#lists.isEmpty(clientesConfirmacaoPagamento)}"
+             class="auditoria-prof-grid">
+            <a th:each="cliente : ${clientesConfirmacaoPagamento}"
+               th:href="@{/agendamentos/central-profissionais(aba='confirmar-pagamento', profConfirmacao=${profConfirmacao}, clienteConfirmacao=${cliente.nome})}"
+               class="auditoria-prof-card text-decoration-none">
+                <span class="auditoria-prof-card__nome" th:text="${cliente.nome}">Antonio</span>
+                <span class="auditoria-prof-card__meta text-muted small">Cliente</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Nível 3: consultas do cliente no mês -->
+    <div th:if="${profissionalConfirmacaoSelecionado != null and clienteConfirmacao != null and !#strings.isEmpty(clienteConfirmacao)}">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom">
+            <strong th:text="${profissionalConfirmacaoSelecionado.nome}">Carol</strong>
+            <span class="text-muted">›</span>
+            <strong th:text="${clienteConfirmacao}">Antonio</strong>
+            <span class="badge text-bg-light border"
+                  th:text="${pagamentoService.resolverPeriodicidade(profissionalConfirmacaoSelecionado).rotulo}">
+                Semanal
+            </span>
+            <span class="text-muted small"
+                  th:if="${mesConfirmacaoPagamento != null}"
+                  th:text="'Mês: ' + ${#temporals.format(mesConfirmacaoPagamento, 'MMMM/yyyy')}">
+                Mês: julho/2026
+            </span>
+        </div>
+
+        <div th:if="${consultasConfirmacaoPagamento == null or #lists.isEmpty(consultasConfirmacaoPagamento)}"
+             class="central-empty py-4">
+            <p class="text-muted mb-0">
+                Nenhuma consulta pendente deste cliente neste mês. Se já foi pago ou confirmado, não aparece aqui.
+            </p>
+        </div>
+
+        <div th:if="${consultasConfirmacaoPagamento != null and !#lists.isEmpty(consultasConfirmacaoPagamento)}">
+            <p class="small text-muted mb-2">
+                <span th:text="${#lists.size(consultasConfirmacaoPagamento)}">0</span>
+                consulta(s) pendente(s) neste mês.
+                Pagamento semanal: confirmar uma consulta quita o lote da semana.
+                Consultas pagas ou confirmadas somem da lista.
+            </p>
+            <div class="table-responsive prof-table-wrap">
+                <table class="table prof-table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Horário</th>
+                        <th>Sala</th>
+                        <th>Taxa</th>
+                        <th>Status</th>
+                        <th class="text-end">Ação</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="consulta : ${consultasConfirmacaoPagamento}">
+                        <td class="text-nowrap"
+                            th:text="${consulta.dataHoraInicio != null ? #temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy') : '-'}">
+                            04/07/2026
+                        </td>
+                        <td class="text-nowrap"
+                            th:text="${consulta.dataHoraInicio != null ? #temporals.format(consulta.dataHoraInicio, 'HH:mm') : '-'}">
+                            11:00
+                        </td>
+                        <td th:text="${consulta.sala != null ? consulta.sala.nome : '-'}">Sala 4</td>
+                        <td th:text="${pagamentoService.formatarValorTaxaPix(consulta)}">R$ 25,00</td>
+                        <td>
+                            <span class="badge text-bg-secondary"
+                                  th:text="${pagamentoService.rotuloStatusPagamento(consulta)}">Pendente</span>
+                        </td>
+                        <td class="text-end">
+                            <form th:action="@{/pagamentos/{id}/confirmar-gestor(id=${consulta.id})}"
+                                  method="post"
+                                  class="d-inline">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <input type="hidden" name="origem" value="confirmar-pagamento">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    Confirmar pagamento
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
