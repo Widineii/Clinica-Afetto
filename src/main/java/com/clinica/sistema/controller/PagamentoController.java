@@ -266,8 +266,19 @@ public class PagamentoController {
     ) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            if (pagamentoConsultaService.usaPagamentoPixEmLote(usuarioLogado)) {
+                if (pagamentoConsultaService.resolverPeriodicidade(usuarioLogado)
+                        == com.clinica.sistema.model.PeriodicidadePagamento.MENSAL) {
+                    String order = pagamentoConsultaService.gerarPagamentoUnicoMesVigente(usuarioLogado);
+                    return "redirect:/pagamentos/mes?order=" + order;
+                }
+                String order = pagamentoConsultaService.gerarPagamentoUnicoSemanaAtual(usuarioLogado);
+                return "redirect:/pagamentos/semana?order=" + order;
+            }
             Agendamento agendamento = pagamentoConsultaService.pagarAgora(id, usuarioLogado);
             return redirecionarModalPixAgenda(agendamento, redirectAttributes);
+        } catch (HorarioJaReservadoPorOutroProfissionalException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         }

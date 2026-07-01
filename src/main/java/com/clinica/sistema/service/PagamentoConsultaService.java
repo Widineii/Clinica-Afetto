@@ -369,6 +369,26 @@ public class PagamentoConsultaService {
         return orderNsu != null && !orderNsu.isBlank();
     }
 
+    /** Semanal/mensal: PIX único por lote — não há pagamento individual por consulta. */
+    public boolean usaPagamentoPixEmLote(Usuario usuarioLogado) {
+        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
+        return periodicidade == PeriodicidadePagamento.SEMANAL
+                || periodicidade == PeriodicidadePagamento.MENSAL;
+    }
+
+    /** Aba Semana: profissional diário pode pagar consulta avulsa; semanal/mensal não. */
+    public boolean exibirBotaoPixIndividualNaSemana(Usuario usuarioLogado) {
+        return !usaPagamentoPixEmLote(usuarioLogado);
+    }
+
+    /** Consulta de referência do PIX da semana (verificar ou reabrir QR). */
+    public Agendamento referenciaPedidoPixSemanaAtual(Usuario usuarioLogado) {
+        return listarConsultasAdiantamentoSemanaAtual(usuarioLogado).stream()
+                .filter(this::possuiPedidoInfinitePayParaVerificar)
+                .findFirst()
+                .orElse(null);
+    }
+
     /** PIX gerado: consulta automática na InfinitePay até confirmar ou expirar o prazo do QR. */
     public boolean deveSincronizarPagamentoAutomatico(Agendamento agendamento) {
         if (agendamento == null || infinitePayProperties.isModoTeste() || agendamento.isPagamentoPago()) {
@@ -404,9 +424,7 @@ public class PagamentoConsultaService {
         if (!possuiPedidoInfinitePayParaVerificar(agendamento)) {
             throw new RuntimeException("Nao ha pedido InfinitePay para verificar nesta consulta.");
         }
-        if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())
-                && !PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())
-                && !PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
+        if (!statusPermiteVerificacaoManualInfinitePay(agendamento.getStatusPagamento())) {
             throw new RuntimeException("Nao ha pagamento aguardando confirmacao.");
         }
         String orderNsu = agendamento.getPagamentoOrderNsu();
@@ -786,7 +804,6 @@ public class PagamentoConsultaService {
 
     @Transactional
     public String gerarPagamentoUnicoSemanaAtual(Usuario usuarioLogado) {
-        PeriodicidadePagamento periodicidade = resolverPeriodicidade(usuarioLogado);
         List<Agendamento> consultas = listarConsultasAdiantamentoSemanaAtual(usuarioLogado);
         if (consultas.isEmpty()) {
             throw new RuntimeException("Não há consultas da semana disponíveis para pagamento.");
@@ -794,6 +811,20 @@ public class PagamentoConsultaService {
         for (Agendamento consulta : consultas) {
             if (vagaPreenchidaPorOutroProfissional(consulta)) {
                 throw new HorarioJaReservadoPorOutroProfissionalException(formatarDetalheHorario(consulta));
+            }
+        }
+        String orderExistente = consultas.stream()
+                .map(Agendamento::getPagamentoOrderNsu)
+                .filter(order -> order != null && !order.isBlank())
+                .findFirst()
+                .orElse(null);
+        if (orderExistente != null) {
+            boolean linkValido = consultas.stream()
+                    .filter(consulta -> orderExistente.equals(consulta.getPagamentoOrderNsu()))
+                    .anyMatch(consulta -> consulta.getPagamentoLink() != null && !consulta.getPagamentoLink().isBlank());
+            if (linkValido) {
+                reativarPedidoPixLote(consultas, orderExistente);
+                return orderExistente;
             }
         }
         LinkPagamentoGerado link = infinitePayService.gerarLinkPagamentoSemana(consultas);
@@ -2616,7 +2647,29 @@ public class PagamentoConsultaService {
 
     private boolean statusPermiteReconciliacaoAposExpiracao(PagamentoStatus status) {
         return PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(status)
-                || PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status);
+                || PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status)
+                || PagamentoStatus.PAGAMENTO_FUTURO.equals(status);
+    }
+
+    private boolean statusPermiteVerificacaoManualInfinitePay(PagamentoStatus status) {
+        return PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(status)
+                || PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(status)
+                || PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status)
+                || PagamentoStatus.PAGAMENTO_FUTURO.equals(status);
+    }
+
+    private void reativarPedidoPixLote(List<Agendamento> consultas, String orderNsu) {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime expiraEm = agora.plusMinutes(pagamentoProperties.getPrazoConfirmacaoMinutos());
+        for (Agendamento consulta : consultas) {
+            if (!orderNsu.equals(consulta.getPagamentoOrderNsu())) {
+                continue;
+            }
+            consulta.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+            consulta.setPagamentoIniciadoEm(agora);
+            consulta.setPagamentoExpiraEm(expiraEm);
+            repository.save(consulta);
+        }
     }
 
     private LocalTime resolverHoraLimiteVespera() {

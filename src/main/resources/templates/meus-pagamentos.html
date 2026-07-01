@@ -294,15 +294,38 @@
                             <strong class="fs-5" th:text="${totalTaxaSemana}">R$ 0,00</strong>
                             <span class="small text-muted ms-1"
                                   th:text="'(' + ${totalConsultasPagamentoSemana} + ' consulta(s))'">(0 consulta(s))</span>
+                            <span th:if="${periodicidadePagamento.name() == 'SEMANAL'}"
+                                  class="small text-muted d-block mt-1">
+                                Sua forma de pagamento é semanal: use o PIX único abaixo (não pague consulta por consulta).
+                            </span>
                         </div>
-                        <form th:action="@{/pagamentos/gerar-links-semana-atual}" method="post" class="d-inline">
-                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                            <button type="submit"
-                                    class="btn btn-primary"
-                                    onclick="return confirm('Gerar um único PIX com o total da semana? Todas as consultas listadas serão quitadas de uma vez.');">
-                                Pagar semana inteira (PIX único)
-                            </button>
-                        </form>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <th:block th:with="pedidoSemana=${pagamentoService.referenciaPedidoPixSemanaAtual(usuarioLogado)}">
+                                <a th:if="${pedidoSemana != null and pedidoSemana.possuiQrPagamentoAtivo()}"
+                                   th:href="@{/pagamentos/semana(order=${pedidoSemana.pagamentoOrderNsu})}"
+                                   class="btn btn-outline-primary">
+                                    Abrir PIX da semana
+                                </a>
+                                <form th:if="${pedidoSemana != null}"
+                                      th:action="@{/pagamentos/{id}/verificar(id=${pedidoSemana.id})}"
+                                      method="post"
+                                      class="d-inline">
+                                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                    <button type="submit" class="btn btn-outline-success fw-semibold">
+                                        Já paguei — verificar
+                                    </button>
+                                </form>
+                            </th:block>
+                            <form th:action="@{/pagamentos/gerar-links-semana-atual}" method="post" class="d-inline">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <button type="submit"
+                                        class="btn btn-primary"
+                                        th:text="${pagamentoService.referenciaPedidoPixSemanaAtual(usuarioLogado) != null ? 'Gerar novo PIX da semana' : 'Pagar semana inteira (PIX único)'}"
+                                        onclick="return confirm('Gerar um único PIX com o total da semana? Todas as consultas listadas serão quitadas de uma vez.');">
+                                    Pagar semana inteira (PIX único)
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
@@ -326,7 +349,11 @@
                                 <td th:text="${pagamentoService.formatarValorTaxaPix(consulta)}">R$ 35,00</td>
                                 <td>
                                     <div class="d-flex flex-wrap gap-1">
-                                        <form th:if="${pagamentoService.possuiPedidoInfinitePayParaVerificar(consulta)}"
+                                        <span th:if="${periodicidadePagamento.name() == 'SEMANAL' and !pagamentoService.possuiPedidoInfinitePayParaVerificar(consulta)}"
+                                              class="small text-muted">
+                                            Incluída no PIX da semana
+                                        </span>
+                                        <form th:if="${pagamentoService.exibirBotaoPixIndividualNaSemana(usuarioLogado) and pagamentoService.possuiPedidoInfinitePayParaVerificar(consulta)}"
                                               th:action="@{/pagamentos/{id}/verificar(id=${consulta.id})}"
                                               method="post"
                                               class="d-inline">
@@ -335,7 +362,7 @@
                                                 Já paguei — verificar
                                             </button>
                                         </form>
-                                        <form th:if="${!pagamentoService.possuiPedidoInfinitePayParaVerificar(consulta)}"
+                                        <form th:if="${pagamentoService.exibirBotaoPixIndividualNaSemana(usuarioLogado) and !pagamentoService.possuiPedidoInfinitePayParaVerificar(consulta)}"
                                               th:action="@{/pagamentos/{id}/gerar-link(id=${consulta.id})}"
                                               method="post"
                                               class="d-inline">
