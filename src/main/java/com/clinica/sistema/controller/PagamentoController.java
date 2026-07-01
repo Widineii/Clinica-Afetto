@@ -70,6 +70,8 @@ public class PagamentoController {
         validarAcesso(agendamento, usuarioLogado);
 
         model.addAttribute("agendamento", agendamento);
+        model.addAttribute("usuarioLogado", usuarioLogado);
+        model.addAttribute("podeGerenciarEquipe", authService.podeGerenciarEquipe(usuarioLogado));
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("rotuloStatus", pagamentoConsultaService.rotuloStatusPagamento(agendamento));
         model.addAttribute("bloqueado", pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
@@ -312,22 +314,38 @@ public class PagamentoController {
     @ResponseBody
     public Map<String, Object> sincronizarAutomatico(@PathVariable Long id) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-        try {
-            Agendamento agendamento = pagamentoConsultaService.sincronizarPagamentoComInfinitePay(id, usuarioLogado);
-            return Map.of(
-                    "pago", agendamento.isPagamentoPago(),
-                    "status", agendamento.getStatusPagamento() != null ? agendamento.getStatusPagamento().name() : ""
-            );
-        } catch (RuntimeException ex) {
-            Agendamento agendamento = agendamentoRepository.findById(id).orElse(null);
-            boolean expirado = agendamento != null
-                    && agendamento.getPagamentoExpiraEm() != null
-                    && java.time.LocalDateTime.now().isAfter(agendamento.getPagamentoExpiraEm());
-            if (expirado) {
-                return Map.of("pago", false, "expirado", true);
-            }
-            return Map.of("pago", false);
+        if (pagamentoConsultaService.sincronizarPagamentoAutomaticoSilencioso(id, usuarioLogado)) {
+            return Map.of("pago", true);
         }
+        pagamentoConsultaService.reconciliarPagamentosInfinitePayPendentes(usuarioLogado);
+        Agendamento agendamento = agendamentoRepository.findById(id).orElse(null);
+        boolean pago = agendamento != null && agendamento.isPagamentoPago();
+        return Map.of("pago", pago);
+    }
+
+    @PostMapping("/semana/verificar-atual")
+    public String verificarSemanaAtual(RedirectAttributes redirectAttributes) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            PagamentoConsultaService.ReconciliacaoInfinitePayResult resultado =
+                    pagamentoConsultaService.reconciliarPagamentosInfinitePayPendentes(usuarioLogado);
+            if (resultado.pedidosConfirmados() > 0) {
+                redirectAttributes.addFlashAttribute("sucesso", "Pagamento da semana confirmado pela InfinitePay!");
+            } else if (resultado.pedidosVerificados() > 0) {
+                redirectAttributes.addFlashAttribute(
+                        "erro",
+                        "InfinitePay ainda não confirmou. Envie o comprovante do PIX para a Polyana."
+                );
+            } else {
+                redirectAttributes.addFlashAttribute(
+                        "info",
+                        "Não há PIX registrado no sistema. Envie o comprovante para a Polyana confirmar na agenda."
+                );
+            }
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+        }
+        return "redirect:/agendamentos/meus-pagamentos#pagamentos-semana";
     }
 
     @PostMapping("/{id}/confirmar-gestor")
@@ -338,19 +356,38 @@ public class PagamentoController {
     ) {
         try {
             Usuario gestor = authService.buscarUsuarioLogadoObrigatorio();
-            Agendamento agendamento = pagamentoConsultaService.confirmarPagamentoComoGestor(id, gestor);
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    "Pagamento confirmado para "
-                            + (agendamento.getNomeCliente() != null ? agendamento.getNomeCliente() : "consulta")
-                            + "."
-            );
+            PagamentoConsultaService.ResultadoConfirmacaoGestor resultado =
+                    pagamentoConsultaService.confirmarPagamentoComoGestor(id, gestor);
+            Agendamento agendamento = resultado.referencia();
+            if (resultado.consultasConfirmadas() > 1) {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Pagamento confirmado para "
+                                + resultado.consultasConfirmadas()
+                                + " consulta(s) de "
+                                + (agendamento.getProfissional() != null ? agendamento.getProfissional().getNome() : "profissional")
+                                + "."
+                );
+            } else {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Pagamento confirmado para "
+                                + (agendamento.getNomeCliente() != null ? agendamento.getNomeCliente() : "consulta")
+                                + "."
+                );
+            }
         } catch (RuntimeException ex) {
             redirectAttributes.addFlashAttribute("erro", ex.getMessage());
         }
         String referer = request.getHeader("Referer");
         if (referer != null && referer.contains("/agendamentos/central-profissionais")) {
             return "redirect:/agendamentos/central-profissionais";
+        }
+        if (referer != null && referer.contains("/agendamentos/dashboard")) {
+            return "redirect:/agendamentos/dashboard";
+        }
+        if (referer != null && referer.contains("/agendamentos/meus-pagamentos")) {
+            return "redirect:/agendamentos/meus-pagamentos";
         }
         return "redirect:/agendamentos/dashboard";
     }

@@ -343,6 +343,11 @@ public class AgendamentoController {
         }
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         service.renovarSeriesRecorrentesAtivasSeNecessario();
+        try {
+            pagamentoConsultaService.reconciliarPagamentosInfinitePayPendentes(usuarioLogado);
+        } catch (RuntimeException ignored) {
+            // best-effort ao abrir agenda
+        }
 
         if (viaNotificacaoNovoAgendamento && authService.podeAcessarCentralProfissionais(usuarioLogado)) {
             novoAgendamentoNotificacaoService.marcarComoVisto(session);
@@ -599,6 +604,8 @@ public class AgendamentoController {
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         model.addAttribute("pagamentoService", pagamentoConsultaService);
+        model.addAttribute("idSyncPagamentoAutomatico",
+                pagamentoConsultaService.idReferenciaSincronizacaoPagamento(usuarioLogado));
         model.addAttribute("agendamentoService", service);
         model.addAttribute("abrirRemarcarMensal", abrirRemarcarMensal);
         model.addAttribute("secaoMensal", secaoMensal);
@@ -1477,6 +1484,16 @@ public class AgendamentoController {
             return "redirect:/agendamentos/dashboard";
         }
 
+        try {
+            PagamentoConsultaService.ReconciliacaoInfinitePayResult reconciliado =
+                    pagamentoConsultaService.reconciliarPagamentosInfinitePayPendentes(usuarioLogado);
+            if (reconciliado.pedidosConfirmados() > 0) {
+                model.addAttribute("sucesso", "Pagamento confirmado automaticamente pela InfinitePay.");
+            }
+        } catch (RuntimeException ignored) {
+            // reconciliacao e best-effort ao abrir a tela
+        }
+
         List<com.clinica.sistema.model.Agendamento> meusPagamentosPendentes =
                 pagamentoConsultaService.listarPagamentosPendentesExibicaoMeusPagamentos(usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> consultasSemana =
@@ -1510,6 +1527,8 @@ public class AgendamentoController {
         model.addAttribute("totalConsultasPagamentoMes", consultasMes.size());
         model.addAttribute("rotuloMesPagamento", pagamentoConsultaService.rotuloMesPagamentoPendente());
         model.addAttribute("totalTaxaMes", pagamentoConsultaService.formatarTotalTaxaPix(consultasMes));
+        model.addAttribute("idSyncPagamentoAutomatico",
+                pagamentoConsultaService.idReferenciaSincronizacaoPagamento(usuarioLogado));
         aplicarModalPixConfirmadoSeNecessario(model);
         return "meus-pagamentos";
     }

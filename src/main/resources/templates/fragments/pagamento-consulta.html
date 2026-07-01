@@ -65,6 +65,26 @@
         <div th:if="${bloqueado and !vagaPreenchida}" class="alert alert-danger mt-3 mb-0">
             Consulta bloqueada: pagamento não confirmado para usar a sala hoje.
         </div>
+
+        <div th:if="${!agendamento.pagamentoPago and !vagaPreenchida}" class="d-grid gap-2 mt-3">
+            <form th:if="${!pagamentoService.modoTestePagamento() and pagamentoService.possuiPedidoInfinitePayParaVerificar(agendamento) and agendamento.id != null}"
+                  th:action="@{/pagamentos/{id}/verificar(id=${agendamento.id})}"
+                  method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-outline-success w-100">
+                    Já paguei — verificar pagamento
+                </button>
+            </form>
+            <form th:if="${podeGerenciarEquipe != null and podeGerenciarEquipe and agendamento.id != null}"
+                  th:action="@{/pagamentos/{id}/confirmar-gestor(id=${agendamento.id})}"
+                  method="post"
+                  onsubmit="return confirm('Confirmar pagamento com base no comprovante? Todas as consultas do mesmo PIX da semana serão quitadas.');">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-primary w-100">
+                    Confirmar com comprovante (Polyana)
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -262,9 +282,9 @@
               th:action="@{/pagamentos/{id}/confirmar-gestor(id=${agendamento.id})}"
               method="post"
               class="d-inline"
-              onsubmit="return confirm('Confirmar pagamento manualmente com base no comprovante?');">
+              onsubmit="return confirm('Confirmar pagamento com base no comprovante? Todas as consultas do mesmo PIX da semana serão quitadas.');">
             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-            <button type="submit" class="btn btn-sm btn-outline-primary">Confirmar pagamento (gestor)</button>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Confirmar com comprovante (Polyana)</button>
         </form>
 
         <span th:if="${pagamentoService.vagaPreenchidaPorOutroProfissional(agendamento)}"
@@ -593,6 +613,7 @@
 
         var INTERVALO_MS = 4000;
         var PRIMEIRA_CONSULTA_MS = 2000;
+        var JANELA_SYNC_APOS_EXPIRAR_MS = 30 * 24 * 60 * 60 * 1000;
         var ativos = new Map();
         var intervalId = null;
         var primeiraConsultaId = null;
@@ -618,8 +639,15 @@
             return Number.isNaN(valor) ? null : valor;
         }
 
-        function expirou(expiraEmMs) {
-            return expiraEmMs != null && Date.now() >= expiraEmMs;
+        function limiteSyncMs(expiraEmMs) {
+            if (expiraEmMs == null) {
+                return Date.now() + JANELA_SYNC_APOS_EXPIRAR_MS;
+            }
+            return expiraEmMs + JANELA_SYNC_APOS_EXPIRAR_MS;
+        }
+
+        function aindaDentroJanelaSync(limiteMs) {
+            return limiteMs != null && Date.now() < limiteMs;
         }
 
         function registrar(id, expiraEmIso) {
@@ -627,12 +655,11 @@
                 return;
             }
             var chave = String(id);
-            var expiraEmMs = parseExpiraEm(expiraEmIso);
-            if (expirou(expiraEmMs)) {
-                ativos.delete(chave);
+            var limiteMs = limiteSyncMs(parseExpiraEm(expiraEmIso));
+            if (!aindaDentroJanelaSync(limiteMs)) {
                 return;
             }
-            ativos.set(chave, expiraEmMs);
+            ativos.set(chave, limiteMs);
             iniciarCiclo();
         }
 
@@ -666,8 +693,8 @@
                 pararCiclo();
                 return;
             }
-            ativos.forEach(function (expiraEmMs, id) {
-                if (expirou(expiraEmMs)) {
+            ativos.forEach(function (limiteMs, id) {
+                if (!aindaDentroJanelaSync(limiteMs)) {
                     ativos.delete(id);
                     return;
                 }
@@ -675,10 +702,6 @@
                     if (resultado && resultado.pago) {
                         ativos.delete(id);
                         window.location.reload();
-                        return;
-                    }
-                    if (resultado && resultado.expirado) {
-                        ativos.delete(id);
                     }
                 });
             });

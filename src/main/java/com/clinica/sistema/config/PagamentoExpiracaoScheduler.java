@@ -52,6 +52,14 @@ public class PagamentoExpiracaoScheduler {
 
     public void expirarPagamentosVencidos() {
 
+        int confirmados = pagamentoConsultaService.reconciliarTodosPagamentosInfinitePayPendentes();
+
+        if (confirmados > 0) {
+
+            log.info("Confirmados automaticamente {} pedido(s) InfinitePay.", confirmados);
+
+        }
+
         int removidos = pagamentoConsultaService.expirarPagamentosVencidos();
 
         if (removidos > 0) {

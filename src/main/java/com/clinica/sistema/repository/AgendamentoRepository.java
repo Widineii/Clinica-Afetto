@@ -374,6 +374,19 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(String pagamentoOrderNsu);
 
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByProfissionalIdAndPagamentoOrderNsuIsNotNullAndStatusPagamentoNot(
+            Long profissionalId,
+            PagamentoStatus statusPagamento
+    );
+
+    @Query("""
+            SELECT DISTINCT a.pagamentoOrderNsu FROM Agendamento a
+            WHERE a.pagamentoOrderNsu IS NOT NULL
+              AND a.statusPagamento <> com.clinica.sistema.model.PagamentoStatus.PAGO
+            """)
+    List<String> findDistinctPagamentoOrderNsuNaoPagos();
+
     List<Agendamento> findByStatusPagamentoAndPagamentoExpiraEmBefore(
             PagamentoStatus statusPagamento,
             LocalDateTime pagamentoExpiraEm

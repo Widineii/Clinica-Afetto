@@ -5520,6 +5520,9 @@
         window.setInterval(atualizarCountdownsPagamento, 1000);
     });
 </script>
+<div th:if="${idSyncPagamentoAutomatico != null}"
+     class="d-none"
+     th:attr="data-sincronizar-pagamento-id=${idSyncPagamentoAutomatico}"></div>
 <th:block th:replace="~{fragments/pagamento-consulta :: auto-sincronizar-pix-script}"></th:block>
 </body>
 </html>

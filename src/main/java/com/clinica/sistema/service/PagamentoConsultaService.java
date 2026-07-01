@@ -389,7 +389,7 @@ public class PagamentoConsultaService {
                 .orElse(null);
     }
 
-    /** PIX gerado: consulta automática na InfinitePay até confirmar ou expirar o prazo do QR. */
+    /** PIX gerado: consulta automática na InfinitePay até confirmar (mesmo após expirar o QR). */
     public boolean deveSincronizarPagamentoAutomatico(Agendamento agendamento) {
         if (agendamento == null || infinitePayProperties.isModoTeste() || agendamento.isPagamentoPago()) {
             return false;
@@ -397,14 +397,99 @@ public class PagamentoConsultaService {
         if (!possuiPedidoInfinitePayParaVerificar(agendamento)) {
             return false;
         }
-        LocalDateTime expiraEm = agendamento.getPagamentoExpiraEm();
-        if (expiraEm != null && LocalDateTime.now().isAfter(expiraEm)) {
+        return statusPermiteVerificacaoManualInfinitePay(agendamento.getStatusPagamento());
+    }
+
+    /** Id de consulta para o script de sync automático na tela (ex.: meus pagamentos). */
+    public Long idReferenciaSincronizacaoPagamento(Usuario profissional) {
+        if (profissional == null || profissional.getId() == null) {
+            return null;
+        }
+        Agendamento pedidoSemana = referenciaPedidoPixSemanaAtual(profissional);
+        if (pedidoSemana != null && pedidoSemana.getId() != null) {
+            return pedidoSemana.getId();
+        }
+        return repository.findByProfissionalIdAndPagamentoOrderNsuIsNotNullAndStatusPagamentoNot(
+                        profissional.getId(),
+                        PagamentoStatus.PAGO
+                ).stream()
+                .filter(this::deveSincronizarPagamentoAutomatico)
+                .map(Agendamento::getId)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Consulta a InfinitePay por todos os pedidos em aberto da profissional
+     * (inclui PIX da semana cujo QR ja expirou).
+     */
+    @Transactional
+    public ReconciliacaoInfinitePayResult reconciliarPagamentosInfinitePayPendentes(Usuario profissional) {
+        if (profissional == null
+                || profissional.getId() == null
+                || infinitePayProperties.isModoTeste()) {
+            return ReconciliacaoInfinitePayResult.vazio();
+        }
+        java.util.LinkedHashSet<String> pedidos = new java.util.LinkedHashSet<>();
+        for (Agendamento agendamento : repository.findByProfissionalIdAndPagamentoOrderNsuIsNotNullAndStatusPagamentoNot(
+                profissional.getId(),
+                PagamentoStatus.PAGO
+        )) {
+            if (agendamento.getPagamentoOrderNsu() != null && !agendamento.getPagamentoOrderNsu().isBlank()) {
+                pedidos.add(agendamento.getPagamentoOrderNsu().trim());
+            }
+        }
+        int confirmados = 0;
+        for (String orderNsu : pedidos) {
+            if (tentarConfirmarPedidoInfinitePay(orderNsu)) {
+                confirmados++;
+            }
+        }
+        return new ReconciliacaoInfinitePayResult(pedidos.size(), confirmados);
+    }
+
+    /** Job em background: reconcilia todos os pedidos InfinitePay ainda nao pagos no sistema. */
+    @Transactional
+    public int reconciliarTodosPagamentosInfinitePayPendentes() {
+        if (infinitePayProperties.isModoTeste()) {
+            return 0;
+        }
+        java.util.LinkedHashSet<String> pedidos = new java.util.LinkedHashSet<>();
+        for (String orderNsu : repository.findDistinctPagamentoOrderNsuNaoPagos()) {
+            if (orderNsu != null && !orderNsu.isBlank()) {
+                pedidos.add(orderNsu.trim());
+            }
+        }
+        int confirmados = 0;
+        for (String orderNsu : pedidos) {
+            if (tentarConfirmarPedidoInfinitePay(orderNsu)) {
+                confirmados++;
+            }
+        }
+        return confirmados;
+    }
+
+    /** Sync silencioso para polling automatico no navegador (nao lanca excecao). */
+    @Transactional
+    public boolean sincronizarPagamentoAutomaticoSilencioso(Long agendamentoId, Usuario usuarioLogado) {
+        try {
+            Agendamento agendamento = buscarComPermissao(agendamentoId, usuarioLogado);
+            if (agendamento.isPagamentoPago()) {
+                return true;
+            }
+            String orderNsu = agendamento.getPagamentoOrderNsu();
+            if (orderNsu == null || orderNsu.isBlank()) {
+                return false;
+            }
+            if (tentarConfirmarPedidoInfinitePay(orderNsu)) {
+                return true;
+            }
+            return repository.findById(agendamentoId)
+                    .map(Agendamento::isPagamentoPago)
+                    .orElse(false);
+        } catch (RuntimeException ex) {
             return false;
         }
-        PagamentoStatus status = agendamento.getStatusPagamento();
-        return PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(status)
-                || PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(status)
-                || PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status);
     }
 
     public String formatarExpiraEmPagamentoIso(Agendamento agendamento) {
@@ -455,16 +540,17 @@ public class PagamentoConsultaService {
     /**
      * Gestor confirma pagamento quando a profissional pagou na InfinitePay mas o sistema nao atualizou.
      * Tenta reconciliar pelo order_nsu; se a InfinitePay confirmar, marca o lote inteiro como pago.
+     * Com comprovante manual, confirma o lote semanal/mensal inteiro (nao so uma consulta).
      */
     @Transactional
-    public Agendamento confirmarPagamentoComoGestor(Long agendamentoId, Usuario gestor) {
+    public ResultadoConfirmacaoGestor confirmarPagamentoComoGestor(Long agendamentoId, Usuario gestor) {
         if (!authService.podeGerenciarEquipe(gestor)) {
             throw new RuntimeException("Acesso negado.");
         }
         Agendamento agendamento = repository.findById(agendamentoId)
                 .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
-            return agendamento;
+            return new ResultadoConfirmacaoGestor(agendamento, 0);
         }
         String orderNsu = agendamento.getPagamentoOrderNsu();
         if (orderNsu != null && !orderNsu.isBlank() && !infinitePayProperties.isModoTeste()) {
@@ -477,14 +563,55 @@ public class PagamentoConsultaService {
                     slugResolvido,
                     agendamento.getPagamentoLink()
             )) {
-                return confirmarPagamentoPorWebhook(orderNsu);
+                Agendamento referencia = confirmarPagamentoPorWebhook(orderNsu);
+                int total = (int) repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu).stream()
+                        .filter(Agendamento::isPagamentoPago)
+                        .count();
+                return new ResultadoConfirmacaoGestor(referencia, Math.max(total, 1));
             }
         }
-        validarRecuperacaoPagamento(agendamento);
-        if (vagaPreenchidaPorOutroProfissional(agendamento)) {
-            throw new HorarioJaReservadoPorOutroProfissionalException(formatarDetalheHorario(agendamento));
+        List<Agendamento> alvos = resolverConsultasParaConfirmacaoGestor(agendamento);
+        int confirmadas = 0;
+        Agendamento ultimo = agendamento;
+        for (Agendamento alvo : alvos) {
+            if (alvo.isPagamentoPago()) {
+                continue;
+            }
+            validarRecuperacaoPagamento(alvo);
+            if (vagaPreenchidaPorOutroProfissional(alvo)) {
+                throw new HorarioJaReservadoPorOutroProfissionalException(formatarDetalheHorario(alvo));
+            }
+            ultimo = marcarComoPago(alvo);
+            confirmadas++;
         }
-        return marcarComoPago(agendamento);
+        if (confirmadas == 0) {
+            throw new RuntimeException("Nenhuma consulta pendente para confirmar.");
+        }
+        return new ResultadoConfirmacaoGestor(ultimo, confirmadas);
+    }
+
+    private List<Agendamento> resolverConsultasParaConfirmacaoGestor(Agendamento agendamento) {
+        String orderNsu = agendamento.getPagamentoOrderNsu();
+        if (orderNsu != null && !orderNsu.isBlank()) {
+            List<Agendamento> lote = repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu);
+            if (!lote.isEmpty()) {
+                return lote.stream().filter(consulta -> !consulta.isPagamentoPago()).toList();
+            }
+        }
+        Usuario profissional = agendamento.getProfissional();
+        if (profissional != null && profissionalUsaPagamentoSemanal(agendamento)) {
+            List<Agendamento> semana = listarConsultasPagamentoSemanalDisponiveis(profissional);
+            if (semana.stream().anyMatch(consulta -> agendamento.getId().equals(consulta.getId()))) {
+                return semana;
+            }
+        }
+        if (profissional != null && profissionalUsaPagamentoMensal(agendamento)) {
+            List<Agendamento> mes = listarConsultasPagamentoMensalPendentes(profissional);
+            if (mes.stream().anyMatch(consulta -> agendamento.getId().equals(consulta.getId()))) {
+                return mes;
+            }
+        }
+        return List.of(agendamento);
     }
 
     @Transactional
@@ -819,6 +946,9 @@ public class PagamentoConsultaService {
                 .findFirst()
                 .orElse(null);
         if (orderExistente != null) {
+            if (tentarConfirmarPedidoInfinitePay(orderExistente)) {
+                return orderExistente;
+            }
             boolean linkValido = consultas.stream()
                     .filter(consulta -> orderExistente.equals(consulta.getPagamentoOrderNsu()))
                     .anyMatch(consulta -> consulta.getPagamentoLink() != null && !consulta.getPagamentoLink().isBlank());
@@ -3090,5 +3220,47 @@ public class PagamentoConsultaService {
             selecionadas.add(consulta);
         }
         return selecionadas;
+    }
+
+    private boolean tentarConfirmarPedidoInfinitePay(String orderNsu) {
+        if (orderNsu == null || orderNsu.isBlank()) {
+            return false;
+        }
+        try {
+            List<Agendamento> agendamentos = repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc(orderNsu);
+            if (agendamentos.isEmpty()) {
+                return false;
+            }
+            if (agendamentos.stream().allMatch(Agendamento::isPagamentoPago)) {
+                return true;
+            }
+            Agendamento referencia = agendamentos.get(0);
+            String slug = infinitePayService.resolverSlugPagamento(
+                    referencia.getPagamentoSlug(),
+                    referencia.getPagamentoLink()
+            );
+            if (!infinitePayService.consultarPagamentoConfirmado(
+                    orderNsu,
+                    slug,
+                    referencia.getPagamentoLink()
+            )) {
+                return false;
+            }
+            confirmarPagamentoPorWebhook(orderNsu);
+            return true;
+        } catch (RuntimeException ex) {
+            org.slf4j.LoggerFactory.getLogger(PagamentoConsultaService.class)
+                    .warn("Reconciliacao InfinitePay falhou para order_nsu={}: {}", orderNsu, ex.getMessage());
+            return false;
+        }
+    }
+
+    public record ReconciliacaoInfinitePayResult(int pedidosVerificados, int pedidosConfirmados) {
+        public static ReconciliacaoInfinitePayResult vazio() {
+            return new ReconciliacaoInfinitePayResult(0, 0);
+        }
+    }
+
+    public record ResultadoConfirmacaoGestor(Agendamento referencia, int consultasConfirmadas) {
     }
 }

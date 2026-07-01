@@ -306,6 +306,11 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         }
 
         pagamentoConsultaService.marcarLembretePendenciasPagamentoNoLogin(session, usuario);
+        try {
+            pagamentoConsultaService.reconciliarPagamentosInfinitePayPendentes(usuario);
+        } catch (RuntimeException ignored) {
+            // best-effort ao entrar
+        }
 
     }
 

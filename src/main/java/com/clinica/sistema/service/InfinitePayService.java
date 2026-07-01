@@ -180,33 +180,46 @@ public class InfinitePayService {
             return false;
         }
         String slug = resolverSlugPagamento(slugSalvo, linkPagamento);
-        Map<String, Object> body = montarCorpoPaymentCheck(orderNsu, slug, transactionNsu);
 
         for (String endpoint : List.of(API_PAYMENT_CHECK_CHECKOUT, API_PAYMENT_CHECK_LEGACY)) {
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> resposta = postPaymentCheck(endpoint, body);
-                if (respostaPagamentoConfirmado(resposta)) {
-                    return true;
+            for (Map<String, Object> tentativa : montarTentativasPaymentCheck(orderNsu, slug, transactionNsu)) {
+                try {
+                    Map<String, Object> resposta = postPaymentCheck(endpoint, tentativa);
+                    if (respostaPagamentoConfirmado(resposta)) {
+                        return true;
+                    }
+                } catch (RestClientException ex) {
+                    log.warn(
+                            "Falha ao consultar InfinitePay em {}: order_nsu={} erro={}",
+                            endpoint,
+                            orderNsu,
+                            ex.getMessage()
+                    );
                 }
-                log.warn(
-                        "InfinitePay payment_check nao confirmou em {}: order_nsu={} slug={} resposta={}",
-                        endpoint,
-                        orderNsu,
-                        slug,
-                        resposta
-                );
-            } catch (RestClientException ex) {
-                log.warn(
-                        "Falha ao consultar InfinitePay em {}: order_nsu={} slug={} erro={}",
-                        endpoint,
-                        orderNsu,
-                        slug,
-                        ex.getMessage()
-                );
             }
         }
+        log.warn(
+                "InfinitePay payment_check nao confirmou: order_nsu={} slug={}",
+                orderNsu,
+                slug
+        );
         return false;
+    }
+
+    private List<Map<String, Object>> montarTentativasPaymentCheck(
+            String orderNsu,
+            String slug,
+            String transactionNsu
+    ) {
+        List<Map<String, Object>> tentativas = new ArrayList<>();
+        tentativas.add(montarCorpoPaymentCheck(orderNsu, slug, transactionNsu));
+        if (slug != null && !slug.isBlank()) {
+            tentativas.add(montarCorpoPaymentCheck(orderNsu, null, transactionNsu));
+        }
+        if (transactionNsu != null && !transactionNsu.isBlank()) {
+            tentativas.add(montarCorpoPaymentCheck(orderNsu, slug, null));
+        }
+        return tentativas;
     }
 
     public String resolverSlugPagamento(String slugSalvo, String linkPagamento) {
@@ -272,6 +285,33 @@ public class InfinitePayService {
         Object paid = resposta.get("paid");
         if (Boolean.TRUE.equals(paid)) {
             return true;
+        }
+        Object status = resposta.get("status");
+        if (status != null && "paid".equalsIgnoreCase(status.toString().trim())) {
+            return true;
+        }
+        Object paidAmount = resposta.get("paid_amount");
+        if (paidAmount == null) {
+            paidAmount = resposta.get("paidAmount");
+        }
+        if (paidAmount != null) {
+            try {
+                if (new BigDecimal(paidAmount.toString()).signum() > 0) {
+                    return true;
+                }
+            } catch (NumberFormatException ignored) {
+                // ignora formato inesperado
+            }
+        }
+        Object captureMethod = resposta.get("capture_method");
+        if (captureMethod == null) {
+            captureMethod = resposta.get("captureMethod");
+        }
+        if (captureMethod != null && !captureMethod.toString().isBlank()) {
+            Object success = resposta.get("success");
+            if (Boolean.TRUE.equals(success)) {
+                return true;
+            }
         }
         Object success = resposta.get("success");
         return Boolean.TRUE.equals(success) && Boolean.TRUE.equals(paid);

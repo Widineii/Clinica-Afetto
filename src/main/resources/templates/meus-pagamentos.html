@@ -288,6 +288,11 @@
                 </div>
 
                 <div th:if="${!#lists.isEmpty(consultasPagamentoSemana)}">
+                    <div th:if="${periodicidadePagamento.name() == 'SEMANAL'}"
+                         class="alert alert-info border mb-3 py-3">
+                        O sistema consulta a InfinitePay automaticamente a cada poucos segundos.
+                        Se você já pagou, aguarde ou atualize a página — a confirmação aparece sozinha.
+                    </div>
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 p-3 rounded border bg-light">
                         <div>
                             <span class="small text-muted d-block">Total estimado da semana</span>
@@ -300,6 +305,15 @@
                             </span>
                         </div>
                         <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <form th:if="${periodicidadePagamento.name() == 'SEMANAL'}"
+                                  th:action="@{/pagamentos/semana/verificar-atual}"
+                                  method="post"
+                                  class="d-inline">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <button type="submit" class="btn btn-outline-success fw-semibold">
+                                    Já paguei — verificar semana
+                                </button>
+                            </form>
                             <th:block th:with="pedidoSemana=${pagamentoService.referenciaPedidoPixSemanaAtual(usuarioLogado)}">
                                 <a th:if="${pedidoSemana != null and pedidoSemana.possuiQrPagamentoAtivo()}"
                                    th:href="@{/pagamentos/semana(order=${pedidoSemana.pagamentoOrderNsu})}"
@@ -565,6 +579,9 @@
         atualizarSelecao();
     })();
 </script>
+<div th:if="${idSyncPagamentoAutomatico != null}"
+     class="d-none"
+     th:attr="data-sincronizar-pagamento-id=${idSyncPagamentoAutomatico}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pagamento-consulta-shell}"></div>
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
 <th:block th:replace="~{fragments/pagamento-consulta :: abrir-pagamento-modal-script}"></th:block>
