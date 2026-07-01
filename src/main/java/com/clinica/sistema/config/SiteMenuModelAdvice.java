@@ -12,6 +12,7 @@ import com.clinica.sistema.service.ContratoLicenciamentoService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.PerfilFotoService;
+import com.clinica.sistema.service.PresencaOnlineService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -31,6 +32,7 @@ public class SiteMenuModelAdvice {
     private final UsuarioService usuarioService;
     private final UsuarioRepository usuarioRepository;
     private final PerfilFotoService perfilFotoService;
+    private final PresencaOnlineService presencaOnlineService;
     private final ManualProperties manualProperties;
     private final ContratoLicenciamentoService contratoLicenciamentoService;
 
@@ -41,6 +43,7 @@ public class SiteMenuModelAdvice {
             UsuarioService usuarioService,
             UsuarioRepository usuarioRepository,
             PerfilFotoService perfilFotoService,
+            PresencaOnlineService presencaOnlineService,
             ManualProperties manualProperties,
             ContratoLicenciamentoService contratoLicenciamentoService
     ) {
@@ -50,6 +53,7 @@ public class SiteMenuModelAdvice {
         this.usuarioService = usuarioService;
         this.usuarioRepository = usuarioRepository;
         this.perfilFotoService = perfilFotoService;
+        this.presencaOnlineService = presencaOnlineService;
         this.manualProperties = manualProperties;
         this.contratoLicenciamentoService = contratoLicenciamentoService;
     }
@@ -218,6 +222,11 @@ public class SiteMenuModelAdvice {
             }
         }
         model.addAttribute("menuQtdAcoesPendentes", qtdAcoes);
+        presencaOnlineService.registrarAtividade(usuario);
+        var presencaOnline = presencaOnlineService.montarVisaoAtual();
+        model.addAttribute("usuariosOnlineAgora", presencaOnline.online());
+        model.addAttribute("usuariosOnlineLista", presencaOnline.usuarios());
+        model.addAttribute("presencaOnlineMinutosAtivos", presencaOnline.minutosAtivos());
 
         boolean podeEditarPerfil = authService.podeEditarProprioPerfil(usuario);
         model.addAttribute("podeEditarPerfil", podeEditarPerfil);

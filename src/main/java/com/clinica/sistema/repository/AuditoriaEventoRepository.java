@@ -19,4 +19,21 @@ public interface AuditoriaEventoRepository extends JpaRepository<AuditoriaEvento
     @Modifying
     @Query("DELETE FROM AuditoriaEvento evento WHERE evento.criadoEm < :limite")
     int deleteByCriadoEmBefore(@Param("limite") LocalDateTime limite);
+
+    long countByTipoAndDescricaoContainingIgnoreCase(String tipo, String trecho);
+
+    @Query("""
+            SELECT COUNT(evento) FROM AuditoriaEvento evento
+            WHERE evento.tipo = :tipo
+              AND LOWER(evento.descricao) LIKE LOWER(CONCAT('%', :marcadorCliente, '%'))
+              AND (
+                  LOWER(evento.descricao) LIKE LOWER(CONCAT('% na ', :sala, ' %'))
+                  OR LOWER(evento.descricao) LIKE LOWER(CONCAT('% da ', :sala, ' %'))
+              )
+            """)
+    long countCancelamentosClienteComSala(
+            @Param("tipo") String tipo,
+            @Param("marcadorCliente") String marcadorCliente,
+            @Param("sala") String sala
+    );
 }

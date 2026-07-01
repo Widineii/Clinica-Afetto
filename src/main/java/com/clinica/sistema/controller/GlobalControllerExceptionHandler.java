@@ -65,7 +65,7 @@ public class GlobalControllerExceptionHandler {
 
     private boolean deveResponderDownload(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return uri != null && uri.contains("/download");
+        return uri != null && (uri.contains("/download") || uri.contains("/exportar-pdf"));
     }
 
     private boolean deveResponderJson(HttpServletRequest request) {
@@ -94,6 +94,14 @@ public class GlobalControllerExceptionHandler {
         }
         if (uri.contains("/central-profissionais")) {
             return "/agendamentos/central-profissionais?aba=equipe";
+        }
+        if (uri.contains("/meus-pacientes/")) {
+            int inicio = uri.indexOf("/meus-pacientes/");
+            int fim = uri.indexOf('/', inicio + "/meus-pacientes/".length());
+            if (fim > inicio) {
+                return uri.substring(0, fim);
+            }
+            return uri;
         }
         return "/agendamentos/dashboard";
     }

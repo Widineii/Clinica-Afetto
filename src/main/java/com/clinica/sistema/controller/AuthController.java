@@ -12,6 +12,7 @@ import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.BoasVindasLoginService;
 import com.clinica.sistema.service.LgpdConsentimentoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
+import com.clinica.sistema.service.PendenciasDonaLoginService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,19 +43,22 @@ public class AuthController {
     private final PagamentoConsultaService pagamentoConsultaService;
     private final LgpdConsentimentoService lgpdConsentimentoService;
     private final BoasVindasLoginService boasVindasLoginService;
+    private final PendenciasDonaLoginService pendenciasDonaLoginService;
 
     public AuthController(
             AuthService authService,
             UsuarioService usuarioService,
             PagamentoConsultaService pagamentoConsultaService,
             LgpdConsentimentoService lgpdConsentimentoService,
-            BoasVindasLoginService boasVindasLoginService
+            BoasVindasLoginService boasVindasLoginService,
+            PendenciasDonaLoginService pendenciasDonaLoginService
     ) {
         this.authService = authService;
         this.usuarioService = usuarioService;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.lgpdConsentimentoService = lgpdConsentimentoService;
         this.boasVindasLoginService = boasVindasLoginService;
+        this.pendenciasDonaLoginService = pendenciasDonaLoginService;
     }
 
     @ModelAttribute
@@ -382,6 +386,13 @@ public class AuthController {
     public String pularLembretePendenciasPagamento(HttpSession session) {
         authService.buscarUsuarioLogadoObrigatorio();
         pagamentoConsultaService.dispensarLembretePendenciasPagamento(session);
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/conta/pendencias-dona/pular")
+    public String pularLembretePendenciasDona(HttpSession session) {
+        authService.buscarUsuarioLogadoObrigatorio();
+        pendenciasDonaLoginService.dispensarLembretePendenciasDona(session);
         return "redirect:/agendamentos/dashboard";
     }
 

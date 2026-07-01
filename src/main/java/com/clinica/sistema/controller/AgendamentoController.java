@@ -28,6 +28,7 @@ import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.NovidadeSiteService;
 import com.clinica.sistema.service.IndicacaoReservaService;
 import com.clinica.sistema.service.PagamentoConsultaService;
+import com.clinica.sistema.service.PendenciasDonaLoginService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import com.clinica.sistema.service.RelatorioSemanalService;
 import com.clinica.sistema.service.RelatorioUsoSitePdfService;
@@ -40,6 +41,7 @@ import com.clinica.sistema.service.WhatsAppMensagemPagamentoService;
 import com.clinica.sistema.service.WhatsAppNotificacaoService;
 import com.clinica.sistema.service.UsuarioService;
 import com.clinica.sistema.util.MoedaBrasilUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -59,6 +61,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -69,6 +72,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/agendamentos")
@@ -99,6 +103,7 @@ public class AgendamentoController {
     private final WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService;
     private final AvisoPagamentoEmailService avisoPagamentoEmailService;
     private final BoasVindasLoginService boasVindasLoginService;
+    private final PendenciasDonaLoginService pendenciasDonaLoginService;
     private final AuditoriaService auditoriaService;
 
     public AgendamentoController(
@@ -125,6 +130,7 @@ public class AgendamentoController {
             WhatsAppAvisoPagamentoService whatsAppAvisoPagamentoService,
             AvisoPagamentoEmailService avisoPagamentoEmailService,
             BoasVindasLoginService boasVindasLoginService,
+            PendenciasDonaLoginService pendenciasDonaLoginService,
             AuditoriaService auditoriaService
     ) {
         this.service = service;
@@ -150,6 +156,7 @@ public class AgendamentoController {
         this.whatsAppAvisoPagamentoService = whatsAppAvisoPagamentoService;
         this.avisoPagamentoEmailService = avisoPagamentoEmailService;
         this.boasVindasLoginService = boasVindasLoginService;
+        this.pendenciasDonaLoginService = pendenciasDonaLoginService;
         this.auditoriaService = auditoriaService;
     }
 
@@ -226,6 +233,18 @@ public class AgendamentoController {
         }
         if (!model.containsAttribute("novidadesDepoisBoasVindas")) {
             model.addAttribute("novidadesDepoisBoasVindas", false);
+        }
+        if (!model.containsAttribute("exibirModalPendenciasDona")) {
+            model.addAttribute("exibirModalPendenciasDona", false);
+        }
+        if (!model.containsAttribute("pendenciasPagamentoDepoisPendenciasDona")) {
+            model.addAttribute("pendenciasPagamentoDepoisPendenciasDona", false);
+        }
+        if (!model.containsAttribute("novidadesDepoisPendenciasDona")) {
+            model.addAttribute("novidadesDepoisPendenciasDona", false);
+        }
+        if (!model.containsAttribute("boasVindasDepoisPendenciasDona")) {
+            model.addAttribute("boasVindasDepoisPendenciasDona", false);
         }
         if (!model.containsAttribute("podeCadastrarEmailNotificacao")) {
             model.addAttribute("podeCadastrarEmailNotificacao", false);
@@ -420,8 +439,16 @@ public class AgendamentoController {
             model.addAttribute("atualizarTelefoneWhatsappForm", contatoForm);
         }
         model.addAttribute("podeCadastrarTelefoneWhatsapp", podeCadastrarTelefoneWhatsapp);
+        boolean exibirModalPendenciasDona = !exibirModalTrocarSenhaObrigatoria
+                && !exibirModalCadastroContato
+                && pendenciasDonaLoginService.exibirModalPendenciasDonaEntrada(session, usuarioLogado);
+        if (exibirModalPendenciasDona) {
+            model.addAttribute("pendenciasDonaLogin", pendenciasDonaLoginService.montar(usuarioLogado));
+        }
+        model.addAttribute("exibirModalPendenciasDona", exibirModalPendenciasDona);
         boolean exibirModalBoasVindasLogin = !exibirModalTrocarSenhaObrigatoria
                 && !exibirModalCadastroContato
+                && !exibirModalPendenciasDona
                 && boasVindasLoginService.exibirBoasVindasLoginEntrada(session)
                 && boasVindasLoginService.elegivelBoasVindas(usuarioLogado);
         if (exibirModalBoasVindasLogin) {
@@ -583,6 +610,9 @@ public class AgendamentoController {
         if (Boolean.TRUE.equals(model.getAttribute("exibirModalCadastroContato"))) {
             model.addAttribute("exibirModalPendenciasPagamento", false);
         }
+        if (Boolean.TRUE.equals(model.getAttribute("exibirModalPendenciasDona"))) {
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+        }
         model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
         model.addAttribute(
                 "pagamentoBloqueioAgendamentoId",
@@ -635,9 +665,22 @@ public class AgendamentoController {
             model.addAttribute("novidadesDepoisBoasVindas", novidadesDepois);
             model.addAttribute("exibirModalPendenciasPagamento", false);
             model.addAttribute("exibirModalNovidades", false);
+        } else if (Boolean.TRUE.equals(model.getAttribute("exibirModalPendenciasDona"))) {
+            boolean boasVindasDepois = boasVindasLoginService.exibirBoasVindasLoginEntrada(session)
+                    && boasVindasLoginService.elegivelBoasVindas(usuarioLogado);
+            boolean pendenciasDepois = Boolean.TRUE.equals(model.getAttribute("exibirModalPendenciasPagamento"));
+            boolean novidadesDepois = Boolean.TRUE.equals(model.getAttribute("exibirModalNovidades"));
+            model.addAttribute("boasVindasDepoisPendenciasDona", boasVindasDepois);
+            model.addAttribute("pendenciasPagamentoDepoisPendenciasDona", pendenciasDepois);
+            model.addAttribute("novidadesDepoisPendenciasDona", novidadesDepois);
+            model.addAttribute("exibirModalPendenciasPagamento", false);
+            model.addAttribute("exibirModalNovidades", false);
         } else {
             model.addAttribute("pendenciasPagamentoDepoisBoasVindas", false);
             model.addAttribute("novidadesDepoisBoasVindas", false);
+            model.addAttribute("boasVindasDepoisPendenciasDona", false);
+            model.addAttribute("pendenciasPagamentoDepoisPendenciasDona", false);
+            model.addAttribute("novidadesDepoisPendenciasDona", false);
         }
         return "agenda";
     }
@@ -1274,7 +1317,157 @@ public class AgendamentoController {
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         model.addAttribute("cardsPacientes", cards);
         model.addAttribute("totalClientes", cards.size());
+        model.addAttribute("resumoSemanalCaderno", service.montarResumoSemanalCaderno(usuarioLogado, cards));
+        model.addAttribute("lembretesCaderno", service.listarLembretesCaderno(usuarioLogado, cards));
         return "meus-pacientes";
+    }
+
+    @GetMapping("/meus-pacientes/{cardId}")
+    public String abrirDetalhePaciente(@PathVariable String cardId, Model model) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeAcessarMeusPacientes(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+
+        Optional<com.clinica.sistema.dto.PacienteAgendamentoCardView> card =
+                service.buscarCardPacienteAgendamento(usuarioLogado, cardId, usuarioLogado);
+        if (card.isEmpty()) {
+            return "redirect:/agendamentos/meus-pacientes";
+        }
+
+        com.clinica.sistema.dto.PacienteAgendamentoCardView cardPaciente = card.get();
+        model.addAttribute("agendamentoService", service);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
+        model.addAttribute("salas", service.listarSalas());
+        model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
+        model.addAttribute("card", cardPaciente);
+        model.addAttribute("resumoCaderno", service.montarResumoCadernoPaciente(cardPaciente));
+        model.addAttribute("resumoSemanalCaderno", service.montarResumoSemanalCaderno(usuarioLogado, List.of(cardPaciente)));
+        model.addAttribute("anotacoesCaderno", service.listarAnotacoesCadernoPaciente(usuarioLogado, cardId));
+        return "meus-pacientes-detalhe";
+    }
+
+    @PostMapping("/meus-pacientes/{cardId}/anotacoes")
+    public ResponseEntity<Map<String, Object>> criarAnotacaoCaderno(
+            @PathVariable String cardId,
+            @RequestParam("texto") String texto,
+            @RequestParam(value = "evolucao", required = false) String evolucao,
+            @RequestParam(value = "lembreteEm", required = false) String lembreteEm
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            if (!authService.podeAcessarMeusPacientes(usuarioLogado)) {
+                return ResponseEntity.status(403).body(Map.of("erro", "Sem permissão."));
+            }
+            var anotacao = service.criarAnotacaoCadernoPaciente(usuarioLogado, cardId, texto, evolucao, lembreteEm);
+            return ResponseEntity.ok(respostaAnotacao(anotacao));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/meus-pacientes/{cardId}/anotacoes/{anotacaoId}")
+    public ResponseEntity<Map<String, Object>> atualizarAnotacaoCaderno(
+            @PathVariable String cardId,
+            @PathVariable Long anotacaoId,
+            @RequestParam("texto") String texto,
+            @RequestParam(value = "evolucao", required = false) String evolucao,
+            @RequestParam(value = "lembreteEm", required = false) String lembreteEm
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            if (!authService.podeAcessarMeusPacientes(usuarioLogado)) {
+                return ResponseEntity.status(403).body(Map.of("erro", "Sem permissão."));
+            }
+            var anotacao = service.atualizarAnotacaoCadernoPaciente(
+                    usuarioLogado,
+                    cardId,
+                    anotacaoId,
+                    texto,
+                    evolucao,
+                    lembreteEm
+            );
+            return ResponseEntity.ok(respostaAnotacao(anotacao));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/meus-pacientes/{cardId}/anotacoes/exportar-pdf")
+    public void exportarAnotacoesCadernoPdfGet(
+            @PathVariable String cardId,
+            HttpServletResponse response
+    ) throws IOException {
+        exportarAnotacoesCadernoPdf(cardId, response);
+    }
+
+    @PostMapping("/meus-pacientes/{cardId}/anotacoes/exportar-pdf")
+    public void exportarAnotacoesCadernoPdf(
+            @PathVariable String cardId,
+            HttpServletResponse response
+    ) throws IOException {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            if (!authService.podeAcessarMeusPacientes(usuarioLogado)) {
+                responderErroExportacaoPdf(response, HttpServletResponse.SC_FORBIDDEN, "Sem permissao.");
+                return;
+            }
+            Optional<com.clinica.sistema.dto.PacienteAgendamentoCardView> card =
+                    service.buscarCardPacienteAgendamento(usuarioLogado, cardId, usuarioLogado);
+            if (card.isEmpty()) {
+                responderErroExportacaoPdf(response, HttpServletResponse.SC_NOT_FOUND, "Paciente nao encontrado.");
+                return;
+            }
+            com.clinica.sistema.dto.PacienteAgendamentoCardView cardPaciente = card.get();
+            byte[] pdf = service.exportarPdfAnotacoesCaderno(usuarioLogado, cardPaciente, cardId);
+            if (pdf.length < 4 || pdf[0] != '%' || pdf[1] != 'P' || pdf[2] != 'D' || pdf[3] != 'F') {
+                log.error("PDF do caderno invalido para card {}", cardId);
+                responderErroExportacaoPdf(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erro ao gerar PDF.");
+                return;
+            }
+            String nomeArquivo = service.nomeArquivoPdfAnotacoesCaderno(cardPaciente);
+            response.setContentType(MediaType.APPLICATION_PDF_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"");
+            response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0");
+            response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+            response.getOutputStream().write(pdf);
+            response.flushBuffer();
+        } catch (RuntimeException e) {
+            log.error("Falha ao exportar PDF do caderno para card {}", cardId, e);
+            responderErroExportacaoPdf(
+                    response,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Nao foi possivel gerar o PDF. Tente novamente."
+            );
+        }
+    }
+
+    private void responderErroExportacaoPdf(HttpServletResponse response, int status, String mensagem)
+            throws IOException {
+        if (response.isCommitted()) {
+            return;
+        }
+        response.reset();
+        response.setStatus(status);
+        response.setContentType(MediaType.TEXT_PLAIN_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write(mensagem);
+        response.flushBuffer();
+    }
+
+    private Map<String, Object> respostaAnotacao(com.clinica.sistema.dto.PacienteCadernoAnotacaoView anotacao) {
+        return Map.of(
+                "sucesso", "Anotação salva.",
+                "anotacao", Map.of(
+                        "id", anotacao.getId(),
+                        "texto", anotacao.getTexto(),
+                        "dataRotulo", anotacao.getDataRotulo(),
+                        "evolucaoRotulo", anotacao.getEvolucaoRotulo(),
+                        "lembreteRotulo", anotacao.getLembreteRotulo(),
+                        "lembreteDataInput", anotacao.getLembreteDataInput()
+                )
+        );
     }
 
     @GetMapping("/meus-pagamentos")

@@ -114,6 +114,11 @@ public class AuthService {
         return isAdminApoioClinica(usuario);
     }
 
+    /** Presenca online no menu: admin principal fica oculto; Lucas, Polyana e profissionais aparecem. */
+    public boolean deveAparecerNaPresencaOnline(Usuario usuario) {
+        return usuario != null && !podeEditarContratoComoDesenvolvedor(usuario);
+    }
+
     /** Polyana preenche, salva e inicia o contrato da clinica. */
     public boolean podeEditarDadosContratoClinica(Usuario usuario) {
         return isDonaClinica(usuario);

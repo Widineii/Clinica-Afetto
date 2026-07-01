@@ -3,7 +3,7 @@
 <head>
     <th:block th:fragment="estilos">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <link th:href="@{/css/afetto-site-menu.css(v=16)}" rel="stylesheet">
+        <link th:href="@{/css/afetto-site-menu.css(v=18)}" rel="stylesheet">
         <th:block th:replace="~{fragments/afetto-tema :: script-inicial}"></th:block>
         <style>
             .afetto-site-nav__perfil-btn {
@@ -195,6 +195,39 @@
 
         <div class="afetto-site-nav__utils">
             <span class="afetto-site-nav__utils-divider d-none d-xl-block" aria-hidden="true"></span>
+            <div class="dropdown afetto-site-nav__presenca-wrap d-none d-md-block">
+                <button type="button"
+                        class="afetto-site-nav__presenca-btn dropdown-toggle"
+                        id="afettoPresencaOnlineBtn"
+                        data-bs-toggle="dropdown"
+                        data-bs-display="static"
+                        data-bs-auto-close="outside"
+                        aria-expanded="false"
+                        th:attr="title=${'Pessoas online agora (últimos ' + presencaOnlineMinutosAtivos + ' min)'}">
+                    <span class="afetto-site-nav__presenca-ponto-wrap" aria-hidden="true">
+                        <span class="afetto-site-nav__presenca-ponto"></span>
+                        <span class="afetto-site-nav__presenca-numero"
+                              id="afettoPresencaOnlineNumero"
+                              th:text="${usuariosOnlineAgora != null ? usuariosOnlineAgora : 1}">1</span>
+                    </span>
+                    <span class="visually-hidden"> pessoas online. Clique para ver quem está logado.</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow afetto-perfil-panel afetto-presenca-panel">
+                    <p class="afetto-perfil-panel__kicker mb-1">Online agora</p>
+                    <p class="afetto-perfil-panel__sub mb-3"
+                       id="afettoPresencaOnlineSubtitulo"
+                       th:text="${usuariosOnlineAgora + ' pessoa(s) usando o sistema'}">1 pessoa(s) usando o sistema</p>
+                    <ul class="list-unstyled mb-0 afetto-presenca-lista" id="afettoPresencaOnlineLista">
+                        <li th:each="usuarioOnline : ${usuariosOnlineLista}"
+                            class="afetto-presenca-item"
+                            th:text="${usuarioOnline.nome()}">Nome</li>
+                        <li th:if="${usuariosOnlineLista == null or usuariosOnlineLista.isEmpty()}"
+                            class="afetto-presenca-item afetto-presenca-item--vazio">
+                            Ninguém online no momento
+                        </li>
+                    </ul>
+                </div>
+            </div>
             <button th:if="${totalNovidadesVisiveis != null and totalNovidadesVisiveis > 0 and pagina == 'AGENDA'}"
                     type="button"
                     class="afetto-site-nav__item afetto-site-nav__item--compact d-none d-md-inline-flex"
@@ -662,6 +695,66 @@
         navImg.classList.add('d-none');
         navIniciais.classList.remove('d-none');
     });
+})();
+
+(function () {
+    var numero = document.getElementById('afettoPresencaOnlineNumero');
+    var lista = document.getElementById('afettoPresencaOnlineLista');
+    var subtitulo = document.getElementById('afettoPresencaOnlineSubtitulo');
+    var botao = document.getElementById('afettoPresencaOnlineBtn');
+    if (!numero || !lista || !window.fetch) {
+        return;
+    }
+
+    function renderLista(usuarios) {
+        lista.innerHTML = '';
+        if (!usuarios || usuarios.length === 0) {
+            var vazio = document.createElement('li');
+            vazio.className = 'afetto-presenca-item afetto-presenca-item--vazio';
+            vazio.textContent = 'Ninguém online no momento';
+            lista.appendChild(vazio);
+            return;
+        }
+        usuarios.forEach(function (usuario) {
+            var item = document.createElement('li');
+            item.className = 'afetto-presenca-item';
+            item.textContent = usuario.nome || usuario.login || 'Usuário';
+            lista.appendChild(item);
+        });
+    }
+
+    function atualizarPresenca() {
+        fetch('/agendamentos/api/presenca-online', {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function (resposta) {
+                if (!resposta.ok) {
+                    throw new Error('Falha ao buscar presenca online');
+                }
+                return resposta.json();
+            })
+            .then(function (dados) {
+                var total = typeof dados.online === 'number' ? dados.online : 0;
+                numero.textContent = String(Math.max(0, total));
+                if (subtitulo) {
+                    subtitulo.textContent = total === 1
+                        ? '1 pessoa usando o sistema'
+                        : total + ' pessoas usando o sistema';
+                }
+                renderLista(dados.usuarios || []);
+            })
+            .catch(function () {
+                // Mantem o ultimo estado exibido se a sessao expirar ou a rede falhar.
+            });
+    }
+
+    if (botao) {
+        botao.addEventListener('show.bs.dropdown', atualizarPresenca);
+    }
+
+    atualizarPresenca();
+    window.setInterval(atualizarPresenca, 30000);
 })();
 </script>
 <th:block th:replace="~{fragments/afetto-tema :: script-troca-tema}"></th:block>

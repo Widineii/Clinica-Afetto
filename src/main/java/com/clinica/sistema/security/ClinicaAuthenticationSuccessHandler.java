@@ -10,6 +10,7 @@ import com.clinica.sistema.repository.UsuarioRepository;
 import com.clinica.sistema.service.BoasVindasLoginService;
 import com.clinica.sistema.service.LgpdConsentimentoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
+import com.clinica.sistema.service.PendenciasDonaLoginService;
 import com.clinica.sistema.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +42,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     public static final String SESSION_LOGIN_COM_CONTATO_PENDENTE = "loginComContatoPendente";
     public static final String SESSION_LOGIN_COM_BOAS_VINDAS = "loginComBoasVindasPendente";
     public static final String SESSION_LOGIN_COM_PENDENCIAS_PAGAMENTO = "loginComPendenciasPagamentoPendente";
+    public static final String SESSION_LOGIN_COM_PENDENCIAS_DONA = "loginComPendenciasDonaPendente";
 
 
 
@@ -55,6 +57,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
     private final LgpdConsentimentoService lgpdConsentimentoService;
 
     private final BoasVindasLoginService boasVindasLoginService;
+
+    private final PendenciasDonaLoginService pendenciasDonaLoginService;
 
     private final RequestCache requestCache = new HttpSessionRequestCache();
 
@@ -72,7 +76,9 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
 
             LgpdConsentimentoService lgpdConsentimentoService,
 
-            BoasVindasLoginService boasVindasLoginService
+            BoasVindasLoginService boasVindasLoginService,
+
+            PendenciasDonaLoginService pendenciasDonaLoginService
 
     ) {
 
@@ -87,6 +93,8 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         this.lgpdConsentimentoService = lgpdConsentimentoService;
 
         this.boasVindasLoginService = boasVindasLoginService;
+
+        this.pendenciasDonaLoginService = pendenciasDonaLoginService;
 
     }
 
@@ -108,6 +116,7 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         marcarContatoPendenteNoLogin(request, authentication);
         marcarBoasVindasPendenteNoLogin(request, authentication);
         marcarPendenciasPagamentoNoLogin(request, authentication);
+        marcarPendenciasDonaNoLogin(request, authentication);
 
         salvarAcessoNoNavegador(request, response, authentication);
 
@@ -297,6 +306,34 @@ public class ClinicaAuthenticationSuccessHandler implements AuthenticationSucces
         }
 
         pagamentoConsultaService.marcarLembretePendenciasPagamentoNoLogin(session, usuario);
+
+    }
+
+    private void marcarPendenciasDonaNoLogin(HttpServletRequest request, Authentication authentication) {
+
+        if (!(authentication.getPrincipal() instanceof ClinicaUserPrincipal principal)) {
+
+            return;
+
+        }
+
+        Usuario usuario = principal.getUsuario();
+
+        if (usuario == null) {
+
+            return;
+
+        }
+
+        HttpSession session = request.getSession(false);
+
+        if (session == null) {
+
+            return;
+
+        }
+
+        pendenciasDonaLoginService.marcarPendenciasDonaNoLogin(session, usuario);
 
     }
 

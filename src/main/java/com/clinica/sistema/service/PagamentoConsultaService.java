@@ -361,19 +361,55 @@ public class PagamentoConsultaService {
         confirmarPagamentoPorWebhook(orderNsu);
     }
 
+    public boolean possuiPedidoInfinitePayParaVerificar(Agendamento agendamento) {
+        if (agendamento == null || agendamento.isPagamentoPago()) {
+            return false;
+        }
+        String orderNsu = agendamento.getPagamentoOrderNsu();
+        return orderNsu != null && !orderNsu.isBlank();
+    }
+
+    /** PIX gerado: consulta automática na InfinitePay até confirmar ou expirar o prazo do QR. */
+    public boolean deveSincronizarPagamentoAutomatico(Agendamento agendamento) {
+        if (agendamento == null || infinitePayProperties.isModoTeste() || agendamento.isPagamentoPago()) {
+            return false;
+        }
+        if (!possuiPedidoInfinitePayParaVerificar(agendamento)) {
+            return false;
+        }
+        LocalDateTime expiraEm = agendamento.getPagamentoExpiraEm();
+        if (expiraEm != null && LocalDateTime.now().isAfter(expiraEm)) {
+            return false;
+        }
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        return PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(status)
+                || PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(status)
+                || PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status);
+    }
+
+    public String formatarExpiraEmPagamentoIso(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getPagamentoExpiraEm() == null) {
+            return "";
+        }
+        return agendamento.getPagamentoExpiraEm()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+    }
+
     @Transactional
     public Agendamento sincronizarPagamentoComInfinitePay(Long agendamentoId, Usuario usuarioLogado) {
         Agendamento agendamento = buscarComPermissao(agendamentoId, usuarioLogado);
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return agendamento;
         }
-        if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
+        if (!possuiPedidoInfinitePayParaVerificar(agendamento)) {
+            throw new RuntimeException("Nao ha pedido InfinitePay para verificar nesta consulta.");
+        }
+        if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())
+                && !PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())
+                && !PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
             throw new RuntimeException("Nao ha pagamento aguardando confirmacao.");
         }
         String orderNsu = agendamento.getPagamentoOrderNsu();
-        if (orderNsu == null || orderNsu.isBlank()) {
-            throw new RuntimeException("Pedido de pagamento nao encontrado.");
-        }
         if (infinitePayProperties.isModoTeste()) {
             throw new RuntimeException("Use \"Simular pagamento\" no modo teste local.");
         }
@@ -396,6 +432,41 @@ public class PagamentoConsultaService {
             );
         }
         return confirmarPagamentoPorWebhook(orderNsu);
+    }
+
+    /**
+     * Gestor confirma pagamento quando a profissional pagou na InfinitePay mas o sistema nao atualizou.
+     * Tenta reconciliar pelo order_nsu; se a InfinitePay confirmar, marca o lote inteiro como pago.
+     */
+    @Transactional
+    public Agendamento confirmarPagamentoComoGestor(Long agendamentoId, Usuario gestor) {
+        if (!authService.podeGerenciarEquipe(gestor)) {
+            throw new RuntimeException("Acesso negado.");
+        }
+        Agendamento agendamento = repository.findById(agendamentoId)
+                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return agendamento;
+        }
+        String orderNsu = agendamento.getPagamentoOrderNsu();
+        if (orderNsu != null && !orderNsu.isBlank() && !infinitePayProperties.isModoTeste()) {
+            String slugResolvido = infinitePayService.resolverSlugPagamento(
+                    agendamento.getPagamentoSlug(),
+                    agendamento.getPagamentoLink()
+            );
+            if (infinitePayService.consultarPagamentoConfirmado(
+                    orderNsu,
+                    slugResolvido,
+                    agendamento.getPagamentoLink()
+            )) {
+                return confirmarPagamentoPorWebhook(orderNsu);
+            }
+        }
+        validarRecuperacaoPagamento(agendamento);
+        if (vagaPreenchidaPorOutroProfissional(agendamento)) {
+            throw new HorarioJaReservadoPorOutroProfissionalException(formatarDetalheHorario(agendamento));
+        }
+        return marcarComoPago(agendamento);
     }
 
     @Transactional
@@ -2531,12 +2602,21 @@ public class PagamentoConsultaService {
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return;
         }
-        if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
-            throw new RuntimeException("Pagamento não está aguardando confirmação.");
+        if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
+            if (!viaWebhook && !agendamento.possuiQrPagamentoAtivo()) {
+                throw new RuntimeException("Pagamento expirado ou inválido.");
+            }
+            return;
         }
-        if (!viaWebhook && !agendamento.possuiQrPagamentoAtivo()) {
-            throw new RuntimeException("Pagamento expirado ou inválido.");
+        if (viaWebhook && statusPermiteReconciliacaoAposExpiracao(agendamento.getStatusPagamento())) {
+            return;
         }
+        throw new RuntimeException("Pagamento não está aguardando confirmação.");
+    }
+
+    private boolean statusPermiteReconciliacaoAposExpiracao(PagamentoStatus status) {
+        return PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(status)
+                || PagamentoStatus.LIBERADO_FALTA_PAGAMENTO.equals(status);
     }
 
     private LocalTime resolverHoraLimiteVespera() {
@@ -2676,7 +2756,7 @@ public class PagamentoConsultaService {
             return 1;
         }
 
-        limparDadosPagamentoEmAberto(agendamento);
+        agendamento.setPagamentoExpiraEm(null);
         if (deveAbrirPagamentoAgora(agendamento)) {
             agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
         } else {

@@ -564,7 +564,25 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void confirmarPagamentoWebhookExigeQrAtivo() {
+    void confirmarPagamentoWebhookAceitaAposExpiracaoQr() {
+        Agendamento consulta = new Agendamento();
+        consulta.setId(1L);
+        consulta.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        consulta.setPagamentoOrderNsu("ag-1-teste");
+        consulta.setPagamentoLink("https://checkout.infinitepay.io/pay/x");
+        consulta.setPagamentoExpiraEm(null);
+
+        when(repository.findAllByPagamentoOrderNsuOrderByDataHoraInicioAsc("ag-1-teste"))
+                .thenReturn(java.util.List.of(consulta));
+        when(repository.save(any(Agendamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        pagamentoConsultaService.confirmarPagamentoPorWebhook("ag-1-teste");
+
+        assertEquals(PagamentoStatus.PAGO, consulta.getStatusPagamento());
+    }
+
+    @Test
+    void confirmarPagamentoManualExigeEsperandoConfirmacao() {
         Agendamento consulta = new Agendamento();
         consulta.setId(1L);
         consulta.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);

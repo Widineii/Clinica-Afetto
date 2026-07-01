@@ -342,4 +342,22 @@ public class AuditoriaService {
         }
         return " (cliente " + nomeCliente.trim() + ").";
     }
+
+    public long contarCancelamentosCliente(String nomeCliente, String salaNomeOpcional) {
+        if (nomeCliente == null || nomeCliente.isBlank()) {
+            return 0;
+        }
+        String marcadorCliente = textoCliente(nomeCliente.trim());
+        if (salaNomeOpcional == null || salaNomeOpcional.isBlank()) {
+            return auditoriaEventoRepository.countByTipoAndDescricaoContainingIgnoreCase(
+                    TIPO_AGENDAMENTO_CANCELADO,
+                    marcadorCliente
+            );
+        }
+        return auditoriaEventoRepository.countCancelamentosClienteComSala(
+                TIPO_AGENDAMENTO_CANCELADO,
+                marcadorCliente,
+                salaNomeOpcional.trim()
+        );
+    }
 }

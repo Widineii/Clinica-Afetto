@@ -10,15 +10,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final PrimeiroAcessoInterceptor primeiroAcessoInterceptor;
     private final LgpdConsentimentoInterceptor lgpdConsentimentoInterceptor;
+    private final PresencaOnlineInterceptor presencaOnlineInterceptor;
     private final PerfilFotoProperties perfilFotoProperties;
 
     public WebMvcConfig(
             PrimeiroAcessoInterceptor primeiroAcessoInterceptor,
             LgpdConsentimentoInterceptor lgpdConsentimentoInterceptor,
+            PresencaOnlineInterceptor presencaOnlineInterceptor,
             PerfilFotoProperties perfilFotoProperties
     ) {
         this.primeiroAcessoInterceptor = primeiroAcessoInterceptor;
         this.lgpdConsentimentoInterceptor = lgpdConsentimentoInterceptor;
+        this.presencaOnlineInterceptor = presencaOnlineInterceptor;
         this.perfilFotoProperties = perfilFotoProperties;
     }
 
@@ -26,6 +29,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(lgpdConsentimentoInterceptor);
         registry.addInterceptor(primeiroAcessoInterceptor);
+        registry.addInterceptor(presencaOnlineInterceptor);
     }
 
     @Override

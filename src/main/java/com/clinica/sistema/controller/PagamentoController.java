@@ -308,8 +308,40 @@ public class PagamentoController {
                     "status", agendamento.getStatusPagamento() != null ? agendamento.getStatusPagamento().name() : ""
             );
         } catch (RuntimeException ex) {
+            Agendamento agendamento = agendamentoRepository.findById(id).orElse(null);
+            boolean expirado = agendamento != null
+                    && agendamento.getPagamentoExpiraEm() != null
+                    && java.time.LocalDateTime.now().isAfter(agendamento.getPagamentoExpiraEm());
+            if (expirado) {
+                return Map.of("pago", false, "expirado", true);
+            }
             return Map.of("pago", false);
         }
+    }
+
+    @PostMapping("/{id}/confirmar-gestor")
+    public String confirmarPagamentoGestor(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request
+    ) {
+        try {
+            Usuario gestor = authService.buscarUsuarioLogadoObrigatorio();
+            Agendamento agendamento = pagamentoConsultaService.confirmarPagamentoComoGestor(id, gestor);
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    "Pagamento confirmado para "
+                            + (agendamento.getNomeCliente() != null ? agendamento.getNomeCliente() : "consulta")
+                            + "."
+            );
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+        }
+        String referer = request.getHeader("Referer");
+        if (referer != null && referer.contains("/agendamentos/central-profissionais")) {
+            return "redirect:/agendamentos/central-profissionais";
+        }
+        return "redirect:/agendamentos/dashboard";
     }
 
     @PostMapping("/{id}/simular")

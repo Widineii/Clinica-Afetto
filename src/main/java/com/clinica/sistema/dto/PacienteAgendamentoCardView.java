@@ -34,6 +34,10 @@ public class PacienteAgendamentoCardView {
     private final SerieAgendamentoLinha serie;
     private final MensalAgendamentoLinha mensal;
     private final List<Agendamento> avulsos;
+    private final String textoBuscaAnotacoes;
+    private final String telefoneBruto;
+    private final LocalDateTime proximaConsulta;
+    private final LocalDateTime ultimaConsulta;
 
     private PacienteAgendamentoCardView(
             String cardId,
@@ -46,7 +50,8 @@ public class PacienteAgendamentoCardView {
             TipoCard tipo,
             SerieAgendamentoLinha serie,
             MensalAgendamentoLinha mensal,
-            List<Agendamento> avulsos
+            List<Agendamento> avulsos,
+            String textoBuscaAnotacoes
     ) {
         this.cardId = cardId;
         this.nomeExibicao = nomeExibicao != null ? nomeExibicao.trim() : "—";
@@ -62,6 +67,27 @@ public class PacienteAgendamentoCardView {
         this.serie = serie;
         this.mensal = mensal;
         this.avulsos = avulsos != null ? avulsos : List.of();
+        this.textoBuscaAnotacoes = textoBuscaAnotacoes != null ? textoBuscaAnotacoes.trim() : "";
+        this.telefoneBruto = telefone;
+        this.proximaConsulta = proxima;
+        this.ultimaConsulta = ultima;
+    }
+
+    public PacienteAgendamentoCardView comTextoBuscaAnotacoes(String texto) {
+        return new PacienteAgendamentoCardView(
+                cardId,
+                nomeExibicao,
+                telefoneBruto,
+                recorrenciaRotulo,
+                totalConsultas,
+                proximaConsulta,
+                ultimaConsulta,
+                tipo,
+                serie,
+                mensal,
+                avulsos,
+                texto
+        );
     }
 
     public static PacienteAgendamentoCardView deAvulso(Agendamento agendamento, LocalDateTime agora) {
@@ -79,7 +105,8 @@ public class PacienteAgendamentoCardView {
                 TipoCard.AVULSO,
                 null,
                 null,
-                List.of(agendamento)
+                List.of(agendamento),
+                ""
         );
     }
 
@@ -102,7 +129,8 @@ public class PacienteAgendamentoCardView {
                 tipo,
                 serie,
                 null,
-                null
+                null,
+                ""
         );
     }
 
@@ -123,12 +151,17 @@ public class PacienteAgendamentoCardView {
                 TipoCard.MENSAL,
                 null,
                 mensal,
-                null
+                null,
+                ""
         );
     }
 
     public String getBuscaTexto() {
-        return nomeExibicao + " " + telefoneRotulo + " " + recorrenciaRotulo;
+        String base = nomeExibicao + " " + telefoneRotulo + " " + recorrenciaRotulo;
+        if (textoBuscaAnotacoes.isBlank()) {
+            return base;
+        }
+        return base + " " + textoBuscaAnotacoes;
     }
 
     public List<SerieAgendamentoLinha> getSerieComoLista() {

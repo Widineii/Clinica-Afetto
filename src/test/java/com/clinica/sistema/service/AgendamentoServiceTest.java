@@ -81,6 +81,12 @@ class AgendamentoServiceTest {
     private AuditoriaService auditoriaService;
 
     @Mock
+    private PacienteCadernoObservacaoService pacienteCadernoObservacaoService;
+
+    @Mock
+    private PacienteCadernoPdfService pacienteCadernoPdfService;
+
+    @Mock
     private AuthService authService;
 
     @Mock
@@ -116,9 +122,14 @@ class AgendamentoServiceTest {
                 novoAgendamentoNotificacaoService,
                 feriadoBeloHorizonteService,
                 auditoriaService,
+                pacienteCadernoObservacaoService,
+                pacienteCadernoPdfService,
                 4,
                 14
         );
+
+        lenient().when(pacienteCadernoObservacaoService.enriquecerCardsComBuscaAnotacoes(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
 
         profissional = new Usuario();
         profissional.setId(10L);

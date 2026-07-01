@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal"
+     class="modal fade"
+     id="pendenciasDonaLoginModal"
+     tabindex="-1"
+     aria-labelledby="pendenciasDonaLoginModalTitulo"
+     aria-hidden="true"
+     th:if="${exibirModalPendenciasDona == true and pendenciasDonaLogin != null and pendenciasDonaLogin.temPendencias()}">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content pendencias-dona-login-modal">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="pendencias-dona-login-modal__kicker mb-1">Ao entrar no sistema</p>
+                    <h2 class="modal-title h4 mb-0" id="pendenciasDonaLoginModalTitulo">
+                        <span th:text="${pendenciasDonaLogin.primeiroNome}">Polyana</span>,
+                        você tem pendências para autorizar
+                    </h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"
+                        id="pendenciasDonaLoginModalFechar"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="pendencias-dona-login-modal__intro mb-4">
+                    Alguns profissionais pediram sua confirmação. Revise abaixo e aprove quando estiver de acordo.
+                </p>
+
+                <section class="pendencias-dona-login-modal__secao"
+                         th:if="${pendenciasDonaLogin.totalIndicacoes > 0}">
+                    <div class="pendencias-dona-login-modal__secao-head">
+                        <h3 class="h6 mb-1">Indicações aguardando aprovação</h3>
+                        <span class="pendencias-dona-login-modal__badge"
+                              th:text="${pendenciasDonaLogin.totalIndicacoes == 1 ? '1 pendente' : pendenciasDonaLogin.totalIndicacoes + ' pendentes'}">
+                            1 pendente
+                        </span>
+                    </div>
+                    <ul class="pendencias-dona-login-modal__lista list-unstyled mb-0">
+                        <li class="pendencias-dona-login-modal__item"
+                            th:each="item : ${pendenciasDonaLogin.indicacoes}">
+                            <div class="pendencias-dona-login-modal__item-texto">
+                                <p class="mb-1">
+                                    <strong th:text="${item.nomeProfissional}">Carol</strong>
+                                    pediu autorização de indicação para
+                                    <strong th:text="${item.nomeCliente}">Cliente</strong>
+                                </p>
+                                <p class="small text-muted mb-0"
+                                   th:text="${'Consulta em ' + item.dataHoraFormatada}">Consulta em 02/06/2026 10:00</p>
+                            </div>
+                            <form th:action="@{/indicacoes/{id}/aprovar(id=${item.agendamentoId})}"
+                                  method="post"
+                                  class="pendencias-dona-login-modal__acao">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <button type="submit" class="btn btn-teal btn-sm">Aprovar</button>
+                            </form>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="pendencias-dona-login-modal__secao"
+                         th:if="${pendenciasDonaLogin.totalContas > 0}">
+                    <div class="pendencias-dona-login-modal__secao-head">
+                        <h3 class="h6 mb-1">Contas novas aguardando confirmação</h3>
+                        <span class="pendencias-dona-login-modal__badge"
+                              th:text="${pendenciasDonaLogin.totalContas == 1 ? '1 pendente' : pendenciasDonaLogin.totalContas + ' pendentes'}">
+                            1 pendente
+                        </span>
+                    </div>
+                    <ul class="pendencias-dona-login-modal__lista list-unstyled mb-0">
+                        <li class="pendencias-dona-login-modal__item"
+                            th:each="conta : ${pendenciasDonaLogin.contas}">
+                            <div class="pendencias-dona-login-modal__item-texto">
+                                <p class="mb-1">
+                                    <strong th:text="${conta.nome}">Ana</strong>
+                                    pediu para criar uma conta nova
+                                    <span class="text-muted">(@<span th:text="${conta.login}">ana</span>)</span>
+                                </p>
+                                <p class="small text-muted mb-0"
+                                   th:text="${'Solicitada em ' + conta.solicitadoEmFormatado}">Solicitada em 26/06/2026 08:00</p>
+                            </div>
+                            <form th:action="@{/agendamentos/central-profissionais/contas-novas/aprovar}"
+                                  method="post"
+                                  class="pendencias-dona-login-modal__acao">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <input type="hidden" name="usuarioId" th:value="${conta.usuarioId}">
+                                <button type="submit" class="btn btn-teal btn-sm">Aceitar conta</button>
+                            </form>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+            <div class="modal-footer flex-column flex-sm-row gap-2 border-0 pt-0">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        id="pendenciasDonaLoginModalVerDepois">
+                    Ver depois
+                </button>
+                <a th:href="@{/agendamentos/central-profissionais}"
+                   class="btn btn-primary flex-grow-1"
+                   id="pendenciasDonaLoginModalIrCentral">
+                    Abrir Central dos profissionais
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

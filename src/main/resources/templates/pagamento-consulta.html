@@ -18,7 +18,8 @@
 </head>
 <body class="bg-light"
       th:attr="data-pagamento-auto-sync=${!pagamentoService.modoTestePagamento()},
-               data-sincronizar-pagamento-id=${agendamento.esperandoConfirmacaoPagamento ? agendamento.id : null}">
+               data-sincronizar-pagamento-id=${pagamentoService.deveSincronizarPagamentoAutomatico(agendamento) ? agendamento.id : null},
+               data-expira-em=${pagamentoService.formatarExpiraEmPagamentoIso(agendamento)}">
 <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 <div class="container py-5" style="max-width: 520px;">
     <div class="card shadow-sm border-0">

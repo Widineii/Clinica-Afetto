@@ -2,7 +2,9 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<div th:fragment="corpo-pagamento-consulta (agendamento)">
+<div th:fragment="corpo-pagamento-consulta (agendamento)"
+     th:attr="data-sincronizar-pagamento-id=${pagamentoService.deveSincronizarPagamentoAutomatico(agendamento) ? agendamento.id : null},
+              data-expira-em=${pagamentoService.formatarExpiraEmPagamentoIso(agendamento)}">
     <div class="text-center">
         <h2 class="h5 mb-2">Pagamento da consulta</h2>
         <p th:if="${pagamentoService.modoTestePagamento()}" class="text-muted small mb-3">
@@ -178,7 +180,9 @@
         <li>Toque no botão verde <strong>Abrir pagamento PIX</strong> abaixo.</li>
         <li>Vai abrir o site da <strong>InfinitePay</strong> (pode ser em outra aba do celular).</li>
         <li>Lá você gera o <strong>QR Code</strong> e paga com PIX no app do banco.</li>
-        <li>Depois de pagar, volte aqui e toque em <strong>Já paguei — verificar pagamento</strong>.</li>
+        <li>Depois de pagar, o sistema <strong>confirma automaticamente</strong> em alguns segundos (até
+            <span th:text="${pagamentoService.prazoConfirmacaoMinutos() + ' minutos'}">15 minutos</span>).
+            Se preferir, toque em <strong>Já paguei — verificar pagamento</strong>.</li>
     </ol>
 </div>
 
@@ -246,12 +250,21 @@
             Abrir pagamento PIX
         </button>
 
-        <form th:if="${agendamento.esperandoConfirmacaoPagamento and agendamento.id != null and !pagamentoService.modoTestePagamento()}"
+        <form th:if="${pagamentoService.possuiPedidoInfinitePayParaVerificar(agendamento) and agendamento.id != null and !pagamentoService.modoTestePagamento()}"
               th:action="@{/pagamentos/{id}/verificar(id=${agendamento.id})}"
               method="post"
               class="d-inline">
             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-            <button type="submit" class="btn btn-sm btn-success">Já paguei</button>
+            <button type="submit" class="btn btn-sm btn-success">Já paguei — verificar</button>
+        </form>
+
+        <form th:if="${podeGerenciarEquipe != null and podeGerenciarEquipe and !agendamento.pagamentoPago and agendamento.id != null}"
+              th:action="@{/pagamentos/{id}/confirmar-gestor(id=${agendamento.id})}"
+              method="post"
+              class="d-inline"
+              onsubmit="return confirm('Confirmar pagamento manualmente com base no comprovante?');">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Confirmar pagamento (gestor)</button>
         </form>
 
         <span th:if="${pagamentoService.vagaPreenchidaPorOutroProfissional(agendamento)}"
@@ -311,12 +324,13 @@
             </h2>
             <p class="small text-muted mb-3">
                 Consultas reservadas aguardando pagamento. Toque em <strong>Abrir pagamento PIX</strong>,
-                pague no site da InfinitePay e volte para verificar. Tempo restante:
-                <span th:text="${pagamentoService.prazoConfirmacaoMinutos() + ' minutos'}">8 minutos</span>
+                pague no site da InfinitePay — o sistema confirma sozinho em alguns segundos. Tempo restante:
+                <span th:text="${pagamentoService.prazoConfirmacaoMinutos() + ' minutos'}">15 minutos</span>
                 — depois o horário é liberado automaticamente.
             </p>
             <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border"
-                 th:attr="data-sincronizar-pagamento-id=${item.esperandoConfirmacaoPagamento ? item.id : null}">
+                 th:attr="data-sincronizar-pagamento-id=${pagamentoService.deveSincronizarPagamentoAutomatico(item) ? item.id : null},
+                          data-expira-em=${pagamentoService.formatarExpiraEmPagamentoIso(item)}">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <strong th:text="${item.nomeCliente}">Cliente</strong>
@@ -414,7 +428,8 @@
          id="pagamentoPosAgendamentoModal"
          tabindex="-1"
          aria-hidden="true"
-         th:attr="data-sincronizar-pagamento-id=${agendamento.id}">
+         th:attr="data-sincronizar-pagamento-id=${pagamentoService.deveSincronizarPagamentoAutomatico(agendamento) ? agendamento.id : null},
+                  data-expira-em=${pagamentoService.formatarExpiraEmPagamentoIso(agendamento)}">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header px-4 py-3">
@@ -500,6 +515,9 @@
             }).then(function (html) {
                 corpo.innerHTML = html;
                 atualizarCountdownsInjetados();
+                if (window.PixInfinitePayAutoSync) {
+                    window.PixInfinitePayAutoSync.scanDom();
+                }
             }).catch(function () {
                 corpo.innerHTML = '<p class="alert alert-danger mb-0">Não foi possível abrir o pagamento. Tente novamente.</p>';
             });
@@ -569,13 +587,19 @@
 
 <script th:fragment="auto-sincronizar-pix-script">
     (function () {
-        if (window.__pixAutoSyncBound) {
+        if (window.PixInfinitePayAutoSync) {
             return;
         }
-        window.__pixAutoSyncBound = true;
 
-        if (document.body.getAttribute('data-pagamento-auto-sync') !== 'true') {
-            return;
+        var INTERVALO_MS = 4000;
+        var PRIMEIRA_CONSULTA_MS = 2000;
+        var ativos = new Map();
+        var intervalId = null;
+        var primeiraConsultaId = null;
+
+        function habilitado() {
+            return document.body
+                && document.body.getAttribute('data-pagamento-auto-sync') === 'true';
         }
 
         function tokenCsrf() {
@@ -586,15 +610,30 @@
             return { nome: input.getAttribute('name') || '_csrf', valor: input.value };
         }
 
-        function idsAguardandoPix() {
-            var ids = new Set();
-            document.querySelectorAll('[data-sincronizar-pagamento-id]').forEach(function (el) {
-                var id = el.getAttribute('data-sincronizar-pagamento-id');
-                if (id) {
-                    ids.add(id);
-                }
-            });
-            return Array.from(ids);
+        function parseExpiraEm(expiraEmIso) {
+            if (!expiraEmIso) {
+                return null;
+            }
+            var valor = new Date(expiraEmIso).getTime();
+            return Number.isNaN(valor) ? null : valor;
+        }
+
+        function expirou(expiraEmMs) {
+            return expiraEmMs != null && Date.now() >= expiraEmMs;
+        }
+
+        function registrar(id, expiraEmIso) {
+            if (!id || !habilitado()) {
+                return;
+            }
+            var chave = String(id);
+            var expiraEmMs = parseExpiraEm(expiraEmIso);
+            if (expirou(expiraEmMs)) {
+                ativos.delete(chave);
+                return;
+            }
+            ativos.set(chave, expiraEmMs);
+            iniciarCiclo();
         }
 
         function consultarPagamento(id) {
@@ -623,21 +662,83 @@
         }
 
         function cicloSincronizacao() {
-            var ids = idsAguardandoPix();
-            if (!ids.length) {
+            if (!ativos.size) {
+                pararCiclo();
                 return;
             }
-            ids.forEach(function (id) {
+            ativos.forEach(function (expiraEmMs, id) {
+                if (expirou(expiraEmMs)) {
+                    ativos.delete(id);
+                    return;
+                }
                 consultarPagamento(id).then(function (resultado) {
                     if (resultado && resultado.pago) {
+                        ativos.delete(id);
                         window.location.reload();
+                        return;
+                    }
+                    if (resultado && resultado.expirado) {
+                        ativos.delete(id);
                     }
                 });
             });
+            if (!ativos.size) {
+                pararCiclo();
+            }
         }
 
-        window.setTimeout(cicloSincronizacao, 4000);
-        window.setInterval(cicloSincronizacao, 5000);
+        function iniciarCiclo() {
+            if (!habilitado() || !ativos.size) {
+                return;
+            }
+            if (primeiraConsultaId) {
+                window.clearTimeout(primeiraConsultaId);
+            }
+            primeiraConsultaId = window.setTimeout(cicloSincronizacao, PRIMEIRA_CONSULTA_MS);
+            if (intervalId) {
+                return;
+            }
+            intervalId = window.setInterval(cicloSincronizacao, INTERVALO_MS);
+        }
+
+        function pararCiclo() {
+            if (primeiraConsultaId) {
+                window.clearTimeout(primeiraConsultaId);
+                primeiraConsultaId = null;
+            }
+            if (intervalId) {
+                window.clearInterval(intervalId);
+                intervalId = null;
+            }
+        }
+
+        function scanDom() {
+            if (!habilitado()) {
+                return;
+            }
+            document.querySelectorAll('[data-sincronizar-pagamento-id]').forEach(function (el) {
+                var id = el.getAttribute('data-sincronizar-pagamento-id');
+                if (!id) {
+                    return;
+                }
+                var expiraEm = el.getAttribute('data-expira-em');
+                if (!expiraEm) {
+                    var countdown = el.querySelector('[data-expira-em]');
+                    if (countdown) {
+                        expiraEm = countdown.getAttribute('data-expira-em');
+                    }
+                }
+                registrar(id, expiraEm);
+            });
+        }
+
+        window.PixInfinitePayAutoSync = {
+            registrar: registrar,
+            scanDom: scanDom,
+            parar: pararCiclo
+        };
+
+        document.addEventListener('DOMContentLoaded', scanDom);
     })();
 </script>
 

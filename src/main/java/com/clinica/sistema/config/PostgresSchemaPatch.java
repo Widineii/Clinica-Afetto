@@ -251,6 +251,7 @@ public class PostgresSchemaPatch implements ApplicationRunner {
             criarTabelaSenhaRecuperacaoSeNecessario();
             criarTabelaContratoLicenciamentoSeNecessario();
             criarTabelaAuditoriaEventosSeNecessario();
+            criarTabelaPacienteCadernoObservacaoSeNecessario();
             log.info("Schema PostgreSQL: colunas de pagamento, usuarios e status_pagamento verificadas.");
         } catch (Exception e) {
             log.warn("Nao foi possivel aplicar patch de schema no PostgreSQL: {}", e.getMessage());
@@ -378,5 +379,74 @@ public class PostgresSchemaPatch implements ApplicationRunner {
                 """
         );
         log.info("Schema PostgreSQL: tabela auditoria_eventos verificada.");
+    }
+
+    private void criarTabelaPacienteCadernoObservacaoSeNecessario() {
+        jdbcTemplate.execute(
+                """
+                CREATE TABLE IF NOT EXISTS paciente_caderno_observacao (
+                    id BIGSERIAL PRIMARY KEY,
+                    id_profissional BIGINT NOT NULL,
+                    chave_caderno VARCHAR(40) NOT NULL,
+                    texto VARCHAR(2000) NOT NULL,
+                    criado_em TIMESTAMP,
+                    atualizado_em TIMESTAMP NOT NULL
+                )
+                """
+        );
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE paciente_caderno_observacao
+                ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP
+                """
+        );
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE paciente_caderno_observacao
+                ADD COLUMN IF NOT EXISTS evolucao_clinica VARCHAR(20)
+                """
+        );
+        jdbcTemplate.execute(
+                """
+                ALTER TABLE paciente_caderno_observacao
+                ADD COLUMN IF NOT EXISTS lembrete_em TIMESTAMP
+                """
+        );
+        jdbcTemplate.update(
+                """
+                UPDATE paciente_caderno_observacao
+                SET criado_em = atualizado_em
+                WHERE criado_em IS NULL
+                """
+        );
+        List<String> uniques = jdbcTemplate.queryForList(
+                """
+                SELECT c.conname
+                FROM pg_constraint c
+                JOIN pg_class t ON c.conrelid = t.oid
+                WHERE t.relname = 'paciente_caderno_observacao'
+                  AND c.contype = 'u'
+                """,
+                String.class
+        );
+        for (String constraint : uniques) {
+            jdbcTemplate.execute(
+                    "ALTER TABLE paciente_caderno_observacao DROP CONSTRAINT IF EXISTS \"" + constraint + "\""
+            );
+        }
+        List<String> indicesUnicos = jdbcTemplate.queryForList(
+                """
+                SELECT indexname
+                FROM pg_indexes
+                WHERE tablename = 'paciente_caderno_observacao'
+                  AND indexdef ILIKE '%UNIQUE%'
+                  AND indexname NOT LIKE '%_pkey'
+                """,
+                String.class
+        );
+        for (String index : indicesUnicos) {
+            jdbcTemplate.execute("DROP INDEX IF EXISTS \"" + index + "\"");
+        }
+        log.info("Schema PostgreSQL: tabela paciente_caderno_observacao verificada.");
     }
 }

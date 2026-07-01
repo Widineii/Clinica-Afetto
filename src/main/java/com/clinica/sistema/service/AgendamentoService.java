@@ -3,6 +3,10 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AcompanhamentoAgendaFiltros;
 import com.clinica.sistema.dto.ClienteProfissionalLinhaView;
 import com.clinica.sistema.dto.PacienteAgendamentoCardView;
+import com.clinica.sistema.dto.PacienteCadernoAnotacaoView;
+import com.clinica.sistema.dto.PacienteCadernoResumoView;
+import com.clinica.sistema.dto.PacienteCadernoResumoSemanalView;
+import com.clinica.sistema.dto.PacienteCadernoLembreteView;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelocacaoAgendamentoForm;
 import com.clinica.sistema.dto.AgendaGradeCelula;
@@ -84,6 +88,8 @@ public class AgendamentoService {
     private final NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService;
     private final FeriadoBeloHorizonteService feriadoBeloHorizonteService;
     private final AuditoriaService auditoriaService;
+    private final PacienteCadernoObservacaoService pacienteCadernoObservacaoService;
+    private final PacienteCadernoPdfService pacienteCadernoPdfService;
     private final int mesesHistoricoAgenda;
     private final int diasHistoricoGestao;
 
@@ -98,6 +104,8 @@ public class AgendamentoService {
             NovoAgendamentoNotificacaoService novoAgendamentoNotificacaoService,
             FeriadoBeloHorizonteService feriadoBeloHorizonteService,
             AuditoriaService auditoriaService,
+            PacienteCadernoObservacaoService pacienteCadernoObservacaoService,
+            PacienteCadernoPdfService pacienteCadernoPdfService,
             @Value("${app.agenda.meses-historico:4}") int mesesHistoricoAgenda,
             @Value("${app.agenda.dias-historico-gestao:14}") int diasHistoricoGestao
     ) {
@@ -111,6 +119,8 @@ public class AgendamentoService {
         this.novoAgendamentoNotificacaoService = novoAgendamentoNotificacaoService;
         this.feriadoBeloHorizonteService = feriadoBeloHorizonteService;
         this.auditoriaService = auditoriaService;
+        this.pacienteCadernoObservacaoService = pacienteCadernoObservacaoService;
+        this.pacienteCadernoPdfService = pacienteCadernoPdfService;
         this.mesesHistoricoAgenda = Math.max(1, Math.min(mesesHistoricoAgenda, MESES_HISTORICO_AGENDA_PADRAO));
         this.diasHistoricoGestao = Math.max(1, Math.min(diasHistoricoGestao, DIAS_HISTORICO_GESTAO_PADRAO));
     }
@@ -1214,6 +1224,12 @@ public class AgendamentoService {
         if (cancelar.isEmpty()) {
             throw new RuntimeException("Não há consultas mensais futuras para cancelar.");
         }
+        if (referencia.getProfissional() != null) {
+            pacienteCadernoObservacaoService.apagar(
+                    referencia.getProfissional(),
+                    PacienteCadernoObservacaoService.chaveMensal(agendamentoId)
+            );
+        }
         repository.deleteAll(cancelar);
         return cancelar.size();
     }
@@ -1813,6 +1829,12 @@ public class AgendamentoService {
                 .orElseThrow(() -> new RuntimeException("Agendamento não encontrado."));
         validarPermissaoCancelamento(agendamento, usuarioLogado);
         auditoriaService.registrarAgendamentoCancelado(usuarioLogado, agendamento);
+        if (agendamento.isAvulsoSemMensal() && agendamento.getProfissional() != null) {
+            pacienteCadernoObservacaoService.apagar(
+                    agendamento.getProfissional(),
+                    PacienteCadernoObservacaoService.chaveAvulso(id)
+            );
+        }
         repository.deleteById(id);
     }
 
@@ -1864,6 +1886,21 @@ public class AgendamentoService {
         encerramentoSerieRegistroRepository.save(registro);
         auditoriaService.registrarSerieEncerrada(usuarioLogado, registro);
 
+        if (referencia.getProfissional() != null) {
+            Usuario profissionalSerie = referencia.getProfissional();
+            pacienteCadernoObservacaoService.apagar(
+                    profissionalSerie,
+                    PacienteCadernoObservacaoService.chaveSerie(id)
+            );
+            for (Agendamento agendamentoSerie : serieCompleta) {
+                if (agendamentoSerie.getId() != null && !agendamentoSerie.getId().equals(id)) {
+                    pacienteCadernoObservacaoService.apagar(
+                            profissionalSerie,
+                            PacienteCadernoObservacaoService.chaveSerie(agendamentoSerie.getId())
+                    );
+                }
+            }
+        }
         repository.deleteAll(serieCompleta);
     }
 
@@ -2764,7 +2801,168 @@ public class AgendamentoService {
         }
 
         cards.sort(Comparator.comparing(PacienteAgendamentoCardView::getNomeExibicao, String.CASE_INSENSITIVE_ORDER));
-        return cards;
+        return pacienteCadernoObservacaoService.enriquecerCardsComBuscaAnotacoes(profissional, cards);
+    }
+
+    public List<PacienteCadernoAnotacaoView> listarAnotacoesCadernoPaciente(Usuario profissional, String cardId) {
+        return pacienteCadernoObservacaoService.listar(profissional, cardId);
+    }
+
+    public PacienteCadernoAnotacaoView criarAnotacaoCadernoPaciente(
+            Usuario profissional,
+            String cardId,
+            String texto,
+            String evolucao,
+            String lembreteEm
+    ) {
+        return pacienteCadernoObservacaoService.criar(profissional, cardId, texto, evolucao, lembreteEm);
+    }
+
+    public PacienteCadernoAnotacaoView atualizarAnotacaoCadernoPaciente(
+            Usuario profissional,
+            String cardId,
+            Long anotacaoId,
+            String texto,
+            String evolucao,
+            String lembreteEm
+    ) {
+        return pacienteCadernoObservacaoService.atualizar(
+                profissional,
+                cardId,
+                anotacaoId,
+                texto,
+                evolucao,
+                lembreteEm
+        );
+    }
+
+    public PacienteCadernoResumoSemanalView montarResumoSemanalCaderno(
+            Usuario profissional,
+            List<PacienteAgendamentoCardView> cards
+    ) {
+        return pacienteCadernoObservacaoService.montarResumoSemanal(profissional, cards);
+    }
+
+    public List<PacienteCadernoLembreteView> listarLembretesCaderno(
+            Usuario profissional,
+            List<PacienteAgendamentoCardView> cards
+    ) {
+        return pacienteCadernoObservacaoService.listarLembretesProximos(profissional, cards);
+    }
+
+    public byte[] exportarPdfAnotacoesCaderno(
+            Usuario profissional,
+            PacienteAgendamentoCardView card,
+            String cardId
+    ) {
+        List<PacienteCadernoAnotacaoView> anotacoes = listarAnotacoesCadernoPaciente(profissional, cardId);
+        String nomeProfissional = profissional != null && profissional.getNome() != null
+                ? profissional.getNome()
+                : "Profissional";
+        return pacienteCadernoPdfService.gerarPdf(
+                card != null ? card.getNomeExibicao() : cardId,
+                nomeProfissional,
+                anotacoes
+        );
+    }
+
+    public String nomeArquivoPdfAnotacoesCaderno(PacienteAgendamentoCardView card) {
+        return pacienteCadernoPdfService.nomeArquivoPdf(card != null ? card.getNomeExibicao() : "paciente");
+    }
+
+    public Optional<PacienteAgendamentoCardView> buscarCardPacienteAgendamento(
+            Usuario profissional,
+            String cardId,
+            Usuario usuarioLogado
+    ) {
+        if (cardId == null || cardId.isBlank()) {
+            return Optional.empty();
+        }
+        String chave = cardId.trim();
+        return listarCardsPacientesAgendamento(profissional, usuarioLogado).stream()
+                .filter(card -> chave.equals(card.getCardId()))
+                .findFirst();
+    }
+
+    public PacienteCadernoResumoView montarResumoCadernoPaciente(PacienteAgendamentoCardView card) {
+        if (card == null) {
+            return PacienteCadernoResumoView.vazio();
+        }
+        Agendamento referencia = resolverReferenciaPacienteCaderno(card).orElse(null);
+        if (referencia == null) {
+            return PacienteCadernoResumoView.vazio();
+        }
+
+        List<Agendamento> agendamentos = listarAgendamentosDaSerie(referencia);
+        if (agendamentos.isEmpty()) {
+            agendamentos = List.of(referencia);
+        }
+
+        int sessoesRealizadas = (int) agendamentos.stream()
+                .filter(this::ocorrenciaPassada)
+                .count();
+
+        BigDecimal totalLiquido = agendamentos.stream()
+                .filter(Agendamento::isPagamentoPago)
+                .map(this::valorLiquidoAgendamento)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        String nomeCliente = referencia.getNomeCliente() != null ? referencia.getNomeCliente().trim() : "";
+        String salaFiltro = resolverSalaFiltroCancelamento(card, referencia);
+        int canceladas = (int) auditoriaService.contarCancelamentosCliente(nomeCliente, salaFiltro);
+
+        return new PacienteCadernoResumoView(
+                sessoesRealizadas,
+                MoedaBrasilUtil.formatar(totalLiquido),
+                canceladas
+        );
+    }
+
+    private Optional<Agendamento> resolverReferenciaPacienteCaderno(PacienteAgendamentoCardView card) {
+        if (card.getTipo() == PacienteAgendamentoCardView.TipoCard.AVULSO) {
+            return card.getAvulsos().stream().findFirst();
+        }
+        if (card.getTipo() == PacienteAgendamentoCardView.TipoCard.MENSAL) {
+            if (card.getMensal() == null || card.getMensal().getAgendamentoReferenciaId() == null) {
+                return Optional.empty();
+            }
+            return repository.findById(card.getMensal().getAgendamentoReferenciaId());
+        }
+        if (card.getSerie() == null || card.getSerie().getAgendamentoReferenciaId() == null) {
+            return Optional.empty();
+        }
+        return repository.findById(card.getSerie().getAgendamentoReferenciaId());
+    }
+
+    private String resolverSalaFiltroCancelamento(PacienteAgendamentoCardView card, Agendamento referencia) {
+        if (card.getTipo() == PacienteAgendamentoCardView.TipoCard.FIXO
+                || card.getTipo() == PacienteAgendamentoCardView.TipoCard.QUINZENAL) {
+            return card.getSerie() != null ? card.getSerie().getSalaNome() : null;
+        }
+        if (card.getTipo() == PacienteAgendamentoCardView.TipoCard.AVULSO
+                && referencia.getSala() != null
+                && referencia.getSala().getNome() != null) {
+            return referencia.getSala().getNome();
+        }
+        return null;
+    }
+
+    private BigDecimal valorLiquidoAgendamento(Agendamento agendamento) {
+        if (agendamento == null) {
+            return BigDecimal.ZERO;
+        }
+        if (agendamento.getValorLiquidoProfissional() != null) {
+            return agendamento.getValorLiquidoProfissional();
+        }
+        BigDecimal profissional = agendamento.getValorProfissionalRecebe();
+        BigDecimal clinica = agendamento.getValorClinicaCobra();
+        if (profissional == null) {
+            return BigDecimal.ZERO;
+        }
+        if (clinica == null) {
+            return profissional;
+        }
+        return valorConsultaService.calcularLiquido(profissional, clinica);
     }
 
     private String telefoneSerie(Agendamento agendamento) {

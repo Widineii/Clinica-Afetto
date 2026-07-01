@@ -1960,6 +1960,71 @@
             font-size: 2.35rem;
         }
 
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal {
+            border: 0;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.18);
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__kicker {
+            color: #0f766e;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__intro {
+            color: #475569;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__secao + .pendencias-dona-login-modal__secao {
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__secao-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__badge {
+            background: #fef3c7;
+            color: #92400e;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.65rem;
+            white-space: nowrap;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__item:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__item-texto {
+            min-width: 0;
+        }
+
+        #pendenciasDonaLoginModal .pendencias-dona-login-modal__acao {
+            flex-shrink: 0;
+        }
+
         .bloqueio-agendamento-passos {
             background: linear-gradient(180deg, #fff7ed 0%, #fef2f2 100%);
             border: 1px solid #fecaca;
@@ -2324,6 +2389,7 @@
     </style>
 </head>
 <body th:attr="data-pagamento-auto-sync=${pagamentoService != null and !pagamentoService.modoTestePagamento()}">
+<input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 <div class="app-shell">
     <th:block th:replace="~{fragments/site-menu-principal :: barra(paginaAtiva='AGENDA')}"></th:block>
@@ -3157,7 +3223,8 @@
                             Nenhum atendimento hoje.
                         </div>
                         <article th:each="registro : ${agendamentosDoDia}" class="agenda-dia-card"
-                                 th:attr="data-sincronizar-pagamento-id=${registro.esperandoConfirmacaoPagamento ? registro.id : null}">
+                                 th:attr="data-sincronizar-pagamento-id=${pagamentoService.deveSincronizarPagamentoAutomatico(registro) ? registro.id : null},
+                                          data-expira-em=${pagamentoService.formatarExpiraEmPagamentoIso(registro)}">
                             <div class="agenda-dia-card__head">
                                 <span class="agenda-dia-card__hora"
                                       th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' – ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 – 09:00</span>
@@ -3222,7 +3289,8 @@
                                 </td>
                             </tr>
                             <tr th:each="registro : ${agendamentosDoDia}"
-                                th:attr="data-sincronizar-pagamento-id=${registro.esperandoConfirmacaoPagamento ? registro.id : null}">
+                                th:attr="data-sincronizar-pagamento-id=${pagamentoService.deveSincronizarPagamentoAutomatico(registro) ? registro.id : null},
+                                         data-expira-em=${pagamentoService.formatarExpiraEmPagamentoIso(registro)}">
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' - ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 - 09:00</td>
                                 <td th:text="${registro.sala != null ? registro.sala.nome : '-'}">Sala 2</td>
@@ -3401,6 +3469,7 @@
 <div th:replace="~{fragments/pagamento-consulta :: modal-pix-confirmado(agendamento=${pixConfirmadoAgendamento})}"></div>
 <div th:replace="~{fragments/cadastro-contato-profissional :: modal}"></div>
 <div th:replace="~{fragments/boas-vindas-login :: modal}"></div>
+<div th:replace="~{fragments/pendencias-dona-login :: modal}"></div>
 <th:block th:replace="~{fragments/pagamento-consulta :: abrir-pagamento-modal-script}"></th:block>
 <th:block th:replace="~{fragments/pagamento-consulta :: copiar-chave-script}"></th:block>
 
@@ -3539,8 +3608,12 @@
     var exibirModalTrocarSenhaObrigatoria = /*[[${exibirModalTrocarSenhaObrigatoria}]]*/ false;
     var exibirModalCadastroContato = /*[[${exibirModalCadastroContato}]]*/ false;
     var exibirModalBoasVindasLogin = /*[[${exibirModalBoasVindasLogin}]]*/ false;
+    var exibirModalPendenciasDona = /*[[${exibirModalPendenciasDona}]]*/ false;
     var pendenciasPagamentoDepoisBoasVindas = /*[[${pendenciasPagamentoDepoisBoasVindas}]]*/ false;
     var novidadesDepoisBoasVindas = /*[[${novidadesDepoisBoasVindas}]]*/ false;
+    var boasVindasDepoisPendenciasDona = /*[[${boasVindasDepoisPendenciasDona}]]*/ false;
+    var pendenciasPagamentoDepoisPendenciasDona = /*[[${pendenciasPagamentoDepoisPendenciasDona}]]*/ false;
+    var novidadesDepoisPendenciasDona = /*[[${novidadesDepoisPendenciasDona}]]*/ false;
     var pagamentoBloqueioAtivo = /*[[${pagamentoBloqueioAtivo}]]*/ false;
     var abrirModalBloqueioAgendamento = /*[[${abrirModalBloqueioAgendamento}]]*/ false;
     var urlMeusPagamentosBloqueio = /*[[${resumoBloqueioAgendamento != null ? resumoBloqueioAgendamento.urlMeusPagamentos() : '/agendamentos/meus-pagamentos'}]]*/ '/agendamentos/meus-pagamentos';
@@ -3591,7 +3664,8 @@
     }
 
     function abrirModalNovidadesEntrada() {
-        if (exibirModalTrocarSenhaObrigatoria || exibirModalCadastroContato || exibirModalBoasVindasLogin || !exibirModalNovidades) {
+        if (exibirModalTrocarSenhaObrigatoria || exibirModalCadastroContato
+                || exibirModalBoasVindasLogin || exibirModalPendenciasDona || !exibirModalNovidades) {
             return;
         }
         var novidadesModalEl = document.getElementById('novidadesModal');
@@ -3737,6 +3811,78 @@
         atualizarPagamentoSelecionado();
     }
 
+    function continuarModaisAposPendenciasDona() {
+        exibirModalPendenciasDona = false;
+        if (boasVindasDepoisPendenciasDona) {
+            exibirModalBoasVindasLogin = true;
+            if (document.getElementById('boasVindasLoginModal')) {
+                abrirModalBoasVindasLoginEntrada();
+                return;
+            }
+        }
+        if (pendenciasPagamentoDepoisPendenciasDona) {
+            exibirModalPendenciasPagamento = true;
+            abrirModalPendenciasPagamentoEntrada(novidadesDepoisPendenciasDona);
+            return;
+        }
+        if (novidadesDepoisPendenciasDona) {
+            exibirModalNovidades = true;
+            abrirModalNovidadesEntrada();
+            return;
+        }
+        window.setTimeout(rolarParaGradeSemanal, 300);
+    }
+
+    function dispensarPendenciasDonaLoginSessao(callback) {
+        var csrf = document.querySelector('input[name="_csrf"]');
+        if (!csrf) {
+            if (callback) {
+                callback();
+            }
+            return;
+        }
+        var body = new URLSearchParams();
+        body.append(csrf.name, csrf.value);
+        fetch('/conta/pendencias-dona/pular', {
+            method: 'POST',
+            body: body,
+            credentials: 'same-origin'
+        }).finally(function () {
+            if (callback) {
+                callback();
+            }
+        });
+    }
+
+    function abrirModalPendenciasDonaEntrada() {
+        if (!exibirModalPendenciasDona) {
+            return;
+        }
+        var modalEl = document.getElementById('pendenciasDonaLoginModal');
+        if (!modalEl) {
+            return;
+        }
+        fecharModalPendenciasSeAberto();
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        modal.show();
+        var verDepois = document.getElementById('pendenciasDonaLoginModalVerDepois');
+        var fechar = document.getElementById('pendenciasDonaLoginModalFechar');
+        function aoDispensar() {
+            dispensarPendenciasDonaLoginSessao(continuarModaisAposPendenciasDona);
+        }
+        if (verDepois && !verDepois.dataset.listenerPendenciasDona) {
+            verDepois.dataset.listenerPendenciasDona = 'true';
+            verDepois.addEventListener('click', aoDispensar);
+        }
+        if (fechar && !fechar.dataset.listenerPendenciasDona) {
+            fechar.dataset.listenerPendenciasDona = 'true';
+            fechar.addEventListener('click', aoDispensar);
+        }
+    }
+
     function continuarModaisAposBoasVindas() {
         exibirModalBoasVindasLogin = false;
         if (pendenciasPagamentoDepoisBoasVindas) {
@@ -3833,6 +3979,10 @@
             } else if (pixConfirmadoModalEl) {
                 bootstrap.Modal.getOrCreateInstance(pixConfirmadoModalEl).show();
             }
+            return;
+        }
+        if (exibirModalPendenciasDona) {
+            abrirModalPendenciasDonaEntrada();
             return;
         }
         if (exibirModalBoasVindasLogin) {
