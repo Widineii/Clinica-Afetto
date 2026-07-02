@@ -1951,13 +1951,22 @@ public class PagamentoConsultaService {
         }
         if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())
                 && !agendamento.possuiQrPagamentoAtivo()) {
-            return false;
+            return reservaFuturaOcupaGrade(agendamento);
         }
         if (PagamentoStatus.AGUARDANDO_CONFIRMACAO_DINHEIRO.equals(agendamento.getStatusPagamento())
                 && agendamento.confirmacaoDinheiroVencida()) {
-            return false;
+            return reservaFuturaOcupaGrade(agendamento);
         }
         return exibirNaGradeComoReservado(agendamento);
+    }
+
+    /** Consulta futura com PIX expirado ainda aparece na grade (gestor confirma comprovante). */
+    private boolean reservaFuturaOcupaGrade(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getDataHoraInicio() == null) {
+            return false;
+        }
+        return agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())
+                && exibirNaGradeComoReservado(agendamento);
     }
 
     public boolean podeVerPagamento(Agendamento agendamento, Usuario usuarioLogado) {

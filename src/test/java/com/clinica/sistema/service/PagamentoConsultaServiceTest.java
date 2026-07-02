@@ -1267,6 +1267,36 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
+    void consultaFuturaComPixExpiradoContinuaNaGrade() {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3).withHour(11).withMinute(0));
+        agendamento.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        agendamento.setPagamentoExpiraEm(LocalDateTime.now().minusMinutes(5));
+        agendamento.setPagamentoLink("000201pix");
+
+        assertTrue(pagamentoConsultaService.ocupaVagaNaGrade(agendamento));
+    }
+
+    @Test
+    void consultaPagaApareceNaGrade() {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3).withHour(11).withMinute(0));
+        agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+
+        assertTrue(pagamentoConsultaService.ocupaVagaNaGrade(agendamento));
+    }
+
+    @Test
+    void consultaPassadaComPixExpiradoNaoOcupaGrade() {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setDataHoraInicio(LocalDateTime.now().minusDays(1).withHour(11).withMinute(0));
+        agendamento.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        agendamento.setPagamentoExpiraEm(LocalDateTime.now().minusDays(2));
+
+        assertFalse(pagamentoConsultaService.ocupaVagaNaGrade(agendamento));
+    }
+
+    @Test
     void rotuloLiberadoAposHorarioMostraPagamentoExpirado() {
         Agendamento liberadoAtrasado = new Agendamento();
         liberadoAtrasado.setProfissional(new Usuario());
