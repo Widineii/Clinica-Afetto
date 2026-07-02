@@ -48,7 +48,8 @@ class CentralProfissionaisIntegracaoTest {
         ExtendedModelMap model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
-        String view = agendamentoController.abrirCentralProfissionais("equipe", null, false, model, session);
+        String view = agendamentoController.abrirCentralProfissionais(
+                "equipe", null, null, null, false, model, session);
 
         assertEquals("central-profissionais", view);
         assertNotNull(model.get("secoesAvisoWhatsapp"));
