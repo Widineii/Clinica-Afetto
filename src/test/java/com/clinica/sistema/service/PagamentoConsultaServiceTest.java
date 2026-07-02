@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -971,7 +972,7 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void expirarPrimeiroPagamentoDaSerieRemoveTodaSerieNaoPaga() {
+    void expirarPrimeiroPagamentoDaSerieReabreConsultasSemExcluir() {
         Agendamento expirado = new Agendamento();
         expirado.setId(99L);
         expirado.setSerieFixaId("serie-julia-1");
@@ -979,20 +980,30 @@ class PagamentoConsultaServiceTest {
         expirado.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
         expirado.setPagamentoExpiraEm(LocalDateTime.now().minusMinutes(1));
 
+        Agendamento futura = new Agendamento();
+        futura.setId(100L);
+        futura.setSerieFixaId("serie-julia-1");
+        futura.setDataHoraInicio(LocalDate.now().plusDays(8).atTime(10, 0));
+        futura.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        futura.setPagamentoExpiraEm(LocalDateTime.now().minusMinutes(1));
+
         when(repository.findByStatusPagamentoAndPagamentoExpiraEmBefore(
                 eq(PagamentoStatus.ESPERANDO_CONFIRMACAO),
                 any(LocalDateTime.class)
         )).thenReturn(java.util.List.of(expirado));
         when(repository.findFirstBySerieFixaIdOrderByDataHoraInicioAsc("serie-julia-1"))
                 .thenReturn(java.util.Optional.of(expirado));
-        when(repository.deleteBySerieFixaIdAndStatusPagamentoNot("serie-julia-1", PagamentoStatus.PAGO))
-                .thenReturn(3);
+        when(repository.findBySerieFixaIdOrderByDataHoraInicioAsc("serie-julia-1"))
+                .thenReturn(java.util.List.of(expirado, futura));
 
-        int removidos = pagamentoConsultaService.expirarPagamentosVencidos();
+        int reabertos = pagamentoConsultaService.expirarPagamentosVencidos();
 
-        assertEquals(3, removidos);
-        verify(repository, never()).deleteById(99L);
-        verify(repository).deleteBySerieFixaIdAndStatusPagamentoNot("serie-julia-1", PagamentoStatus.PAGO);
+        assertEquals(2, reabertos);
+        assertEquals(PagamentoStatus.AGUARDANDO_PAGAMENTO, expirado.getStatusPagamento());
+        assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, futura.getStatusPagamento());
+        verify(repository, never()).deleteById(any());
+        verify(repository, never()).deleteBySerieFixaIdAndStatusPagamentoNot(any(), any());
+        verify(repository, times(2)).save(any(Agendamento.class));
     }
 
     @Test
@@ -1031,9 +1042,10 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void expirarPagamentoAvulsoRemoveSomenteHorario() {
+    void expirarPagamentoAvulsoMantemHorarioNaAgenda() {
         Agendamento avulso = new Agendamento();
         avulso.setId(77L);
+        avulso.setDataHoraInicio(LocalDate.now().plusDays(1).atTime(11, 0));
         avulso.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
         avulso.setPagamentoExpiraEm(LocalDateTime.now().minusMinutes(1));
 
@@ -1042,10 +1054,12 @@ class PagamentoConsultaServiceTest {
                 any(LocalDateTime.class)
         )).thenReturn(java.util.List.of(avulso));
 
-        int removidos = pagamentoConsultaService.expirarPagamentosVencidos();
+        int reabertos = pagamentoConsultaService.expirarPagamentosVencidos();
 
-        assertEquals(1, removidos);
-        verify(repository).deleteById(77L);
+        assertEquals(1, reabertos);
+        assertEquals(PagamentoStatus.AGUARDANDO_PAGAMENTO, avulso.getStatusPagamento());
+        verify(repository).save(avulso);
+        verify(repository, never()).deleteById(77L);
         verify(repository, never()).deleteBySerieFixaIdAndStatusPagamentoNot(any(), any());
     }
 

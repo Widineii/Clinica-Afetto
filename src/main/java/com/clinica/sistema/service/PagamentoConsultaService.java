@@ -2935,19 +2935,32 @@ public class PagamentoConsultaService {
         if (agendamento == null || agendamento.getId() == null) {
             return 0;
         }
-
         if (deveExcluirSerieInteiraAoExpirarPrimeiroQr(agendamento)) {
-            return repository.deleteBySerieFixaIdAndStatusPagamentoNot(
-                    agendamento.getSerieFixaId(),
-                    PagamentoStatus.PAGO
-            );
+            String serieId = agendamento.getSerieFixaId();
+            int reabertos = 0;
+            for (Agendamento consultaSerie : repository.findBySerieFixaIdOrderByDataHoraInicioAsc(serieId)) {
+                if (consultaSerie.isPagamentoPago()) {
+                    continue;
+                }
+                if (!PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(consultaSerie.getStatusPagamento())) {
+                    continue;
+                }
+                reabrirPagamentoAposQrExpirado(consultaSerie);
+                reabertos++;
+            }
+            if (reabertos == 0) {
+                reabrirPagamentoAposQrExpirado(agendamento);
+                return 1;
+            }
+            return reabertos;
         }
 
-        if (deveExcluirApenasAgendamentoExpirado(agendamento)) {
-            repository.deleteById(agendamento.getId());
-            return 1;
-        }
+        reabrirPagamentoAposQrExpirado(agendamento);
+        return 1;
+    }
 
+    private void reabrirPagamentoAposQrExpirado(Agendamento agendamento) {
+        limparDadosPagamentoEmAberto(agendamento);
         agendamento.setPagamentoExpiraEm(null);
         if (deveAbrirPagamentoAgora(agendamento)) {
             agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
@@ -2955,11 +2968,6 @@ public class PagamentoConsultaService {
             agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
         }
         repository.save(agendamento);
-        return 1;
-    }
-
-    private boolean deveExcluirApenasAgendamentoExpirado(Agendamento agendamento) {
-        return agendamento.getSerieFixaId() == null || agendamento.getSerieFixaId().isBlank();
     }
 
     private boolean deveExcluirSerieInteiraAoExpirarPrimeiroQr(Agendamento agendamento) {
