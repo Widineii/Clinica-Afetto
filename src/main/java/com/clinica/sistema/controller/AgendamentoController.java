@@ -1363,7 +1363,6 @@ public class AgendamentoController {
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         model.addAttribute("cardsPacientes", cards);
         model.addAttribute("totalClientes", cards.size());
-        model.addAttribute("resumoSemanalCaderno", service.montarResumoSemanalCaderno(usuarioLogado, cards));
         model.addAttribute("lembretesCaderno", service.listarLembretesCaderno(usuarioLogado, cards));
         return "meus-pacientes";
     }
@@ -1388,7 +1387,6 @@ public class AgendamentoController {
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         model.addAttribute("card", cardPaciente);
         model.addAttribute("resumoCaderno", service.montarResumoCadernoPaciente(cardPaciente));
-        model.addAttribute("resumoSemanalCaderno", service.montarResumoSemanalCaderno(usuarioLogado, List.of(cardPaciente)));
         model.addAttribute("anotacoesCaderno", service.listarAnotacoesCadernoPaciente(usuarioLogado, cardId));
         return "meus-pacientes-detalhe";
     }

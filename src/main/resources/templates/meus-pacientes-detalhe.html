@@ -82,18 +82,6 @@
                 </div>
             </div>
 
-            <div class="pacientes-caderno-painel mb-4"
-                 th:if="${resumoSemanalCaderno != null and !resumoSemanalCaderno.vazio}">
-                <div class="pacientes-caderno-painel__titulo">Resumo automático da semana</div>
-                <p class="pacientes-caderno-painel__sub mb-2"
-                   th:text="${'Período ' + resumoSemanalCaderno.periodoRotulo}">
-                    Período
-                </p>
-                <ul class="mb-0">
-                    <li th:each="linha : ${resumoSemanalCaderno.linhas}" th:text="${linha}">Resumo</li>
-                </ul>
-            </div>
-
             <div class="d-flex flex-wrap gap-2 mb-3">
                 <form th:action="@{/agendamentos/meus-pacientes/{id}/anotacoes/exportar-pdf(id=${card.cardId})}"
                       method="post"

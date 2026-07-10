@@ -179,21 +179,6 @@
             </div>
 
             <div class="pacientes-caderno-painel"
-                 th:if="${resumoSemanalCaderno != null and !resumoSemanalCaderno.vazio}">
-                <div class="pacientes-caderno-painel__titulo">
-                    <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
-                    Resumo automático da semana
-                </div>
-                <p class="pacientes-caderno-painel__sub mb-2"
-                   th:text="${'Período ' + resumoSemanalCaderno.periodoRotulo + ' · ' + resumoSemanalCaderno.totalAnotacoes + (resumoSemanalCaderno.totalAnotacoes == 1 ? ' anotação' : ' anotações')}">
-                    Período
-                </p>
-                <ul>
-                    <li th:each="linha : ${resumoSemanalCaderno.linhas}" th:text="${linha}">Resumo</li>
-                </ul>
-            </div>
-
-            <div class="pacientes-caderno-painel"
                  th:if="${lembretesCaderno != null and !lembretesCaderno.isEmpty()}">
                 <div class="pacientes-caderno-painel__titulo">
                     <i class="fa-solid fa-bell me-1" aria-hidden="true"></i>

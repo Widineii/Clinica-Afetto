@@ -16,6 +16,9 @@ import com.clinica.sistema.dto.ProfissionalValoresConsultaLinhaView;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.EncerramentoSerieRegistro;
+import com.clinica.sistema.model.NovoAgendamentoNotificacaoRegistro;
+import com.clinica.sistema.model.PacienteCadernoObservacao;
 import com.clinica.sistema.model.PeriodicidadePagamento;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
@@ -1081,16 +1084,43 @@ public class UsuarioService {
         if (!"ROLE_PROFISSIONAL".equals(alvo.getCargo())) {
             throw new RuntimeException("Somente profissionais podem ser excluidos por aqui.");
         }
-        if (agendamentoRepository.existsByProfissionalId(usuarioId)) {
-            throw new RuntimeException(
-                    "Nao e possivel excluir: o profissional ainda possui agendamentos. "
-                            + "Encerre ou transfira os horarios antes de excluir."
-            );
-        }
-
-        agendamentoRepository.deleteByProfissionalIdIn(List.of(usuarioId));
+        limparVinculosProfissional(usuarioId);
         auditoriaService.registrarProfissionalExcluido(usuarioLogado, alvo);
         usuarioRepository.delete(alvo);
+    }
+
+    private void limparVinculosProfissional(Long profissionalId) {
+        agendamentoRepository.deleteByProfissionalIdIn(List.of(profissionalId));
+        entityManager.createQuery(
+                        "DELETE FROM PacienteCadernoObservacao o WHERE o.profissional.id = :profissionalId"
+                )
+                .setParameter("profissionalId", profissionalId)
+                .executeUpdate();
+        entityManager.createQuery(
+                        "DELETE FROM EncerramentoSerieRegistro e "
+                                + "WHERE e.profissional.id = :profissionalId "
+                                + "OR e.encerradoPor.id = :profissionalId"
+                )
+                .setParameter("profissionalId", profissionalId)
+                .executeUpdate();
+        entityManager.createQuery(
+                        "DELETE FROM NovoAgendamentoNotificacaoRegistro n "
+                                + "WHERE n.profissional.id = :profissionalId "
+                                + "OR n.registradoPor.id = :profissionalId"
+                )
+                .setParameter("profissionalId", profissionalId)
+                .executeUpdate();
+        entityManager.createNativeQuery(
+                        "DELETE FROM novidades_leitura_usuario WHERE usuario_id = :profissionalId"
+                )
+                .setParameter("profissionalId", profissionalId)
+                .executeUpdate();
+        entityManager.createNativeQuery(
+                        "DELETE FROM senha_recuperacao WHERE usuario_id = :profissionalId"
+                )
+                .setParameter("profissionalId", profissionalId)
+                .executeUpdate();
+        entityManager.flush();
     }
 
     private void aplicarNovaSenha(
